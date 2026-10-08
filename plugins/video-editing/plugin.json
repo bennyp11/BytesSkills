@@ -1,0 +1,9 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "video-editing",
+  "version": "0.1.0",
+  "description": "BytesSkills video editing scaffold; workflows are not yet implemented.",
+  "author": {
+    "name": "bennyp11"
+  }
+}

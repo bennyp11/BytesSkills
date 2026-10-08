@@ -1,0 +1,21 @@
+---
+name: replace-with-folder-name
+description: Describe the task and when this skill should activate.
+metadata:
+  domain: replace-with-domain
+  stage: replace-with-stage
+---
+
+# Skill title
+
+## Inputs
+List required material and optional constraints.
+
+## Workflow
+Describe the procedure, capability checks, and missing-input handling.
+
+## Output
+Define the deliverable and how to report unperformed operations.
+
+## Quality checks
+Define observable success criteria.

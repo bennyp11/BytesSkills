@@ -1,0 +1,27 @@
+# BytesSkills catalog convention; hosts do not automatically read this file.
+schema_version: 1
+name: BytesSkills
+categories:
+  - content-strategy
+  - writing-storytelling
+  - video-editing
+  - visual-design
+  - publishing-distribution
+  - performance-learning
+plugins:
+  - id: video-editing
+    path: plugins/video-editing
+    status: scaffold
+    skills:
+      - id: pacing
+        stage: post-production
+        tags: [timing, editing]
+        inputs: [video, transcript, edit-plan]
+        outputs: [cut-list, edited-video]
+        status: scaffold
+      - id: captions
+        stage: post-production
+        tags: [text, accessibility]
+        inputs: [video, timed-transcript]
+        outputs: [caption-plan, edited-video]
+        status: scaffold
