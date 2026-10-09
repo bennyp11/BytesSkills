@@ -205,10 +205,11 @@ merely by installing this skill. For execution read the bundled
 
 ## Reaction format
 
-`--format=reaction` selects the draft concept of progressively reacting on camera
-to a changing word, phrase or number that changes the context of a hook question.
-Clarify the question, value sequence, reactions and timing. The user's word
-“shaking” needs clarification before prescribing the physical performance. Music,
-effects, speech and ending are not yet selected. The numeric sequence need not
-increase and the reactions need not escalate in intensity. Brainstorm execution
+`--format=reaction` selects a short on-camera reaction, approximately 0.5 seconds,
+repeated as a loop while changing text or numbers recontextualize the hook question.
+Nodding yes or shaking the head no is common but optional. The same reaction can
+repeat across several context states; no new performance is required for each.
+Text holds are independently timed for readability, not forced to 0.5 seconds.
+Clarify the actual question, values, reaction source, timing and presentation when
+unresolved. Music, effects and overall ending remain choices. Brainstorm execution
 remains design-only; this definition does not implement a generator.

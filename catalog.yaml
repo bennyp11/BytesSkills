@@ -37,7 +37,7 @@ definitions:
   formats:
     - id: reaction
       path: definitions/formats/reaction.json
-      status: draft-needs-example
+      status: draft
     - id: troll
       path: definitions/formats/troll.json
       status: draft

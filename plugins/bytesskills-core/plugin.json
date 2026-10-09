@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "bytesskills-core",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "BytesSkills entry skill for help, Git sync and progressive three-length clipping with available media tools. Other creative commands remain design-only.",
   "author": {
     "name": "bennyp11"

@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "id": "reaction",
-  "version": "0.1.0",
-  "status": "draft-needs-example",
+  "version": "0.2.0",
+  "status": "draft",
   "name": "Reaction",
   "extends": null,
-  "purpose": "An on-camera progressive reaction to a changing string or number that changes the context of an on-screen hook question.",
+  "purpose": "A short on-camera reaction loops while changing text or numbers recontextualize an on-screen hook question and the apparent meaning of that same reaction.",
   "user_description": "I'm shaking doing a progressive reaction to a string or number changing the context of the text hook question.",
   "workflow": "reaction-production",
   "default_treatment": null,
@@ -13,7 +13,7 @@
     "on_screen_hook_question",
     "ordered_text_or_number_states",
     "meaning_of_each_context_change",
-    "intended_reaction_progression"
+    "reaction_loop_source_or_performance_plan"
   ],
   "structure": [
     {
@@ -25,50 +25,57 @@
       "instruction": "Present the specified sequence of text or numeric states. Each state must change how the hook question is understood or answered."
     },
     {
-      "stage": "progressive-reaction",
-      "instruction": "Align the performer\u2019s visible reaction with the corresponding state. Reactions develop across the sequence; do not assume they must increase in intensity or that numbers must increase."
+      "stage": "looped-reaction",
+      "instruction": "Repeat the short reaction across the changing context states. The meaning progresses through the text or number changes; a new performed reaction is not required at each state. Nodding yes and shaking the head no are common, not mandatory."
     },
     {
       "stage": "final-state",
-      "instruction": "Give the final context and reaction enough time to be understood. Ending behavior remains a creative choice, not an automatic follow CTA."
+      "instruction": "Make the final text state understandable alongside the repeated reaction. Choose the overall video ending separately from the short reaction loop; no automatic CTA."
     }
   ],
   "defaults": {
-    "presentation": "on-camera-reaction",
+    "presentation": "looped-on-camera-reaction",
     "hook_text": true,
     "changing_value_type": "text-or-number",
     "duration_seconds": null,
     "speech": "not-specified",
     "music": "not-selected",
     "sfx": "not-selected",
-    "animation_style": null
+    "animation_style": null,
+    "reaction_loop": {
+      "approximate_seconds": 0.5,
+      "guidance": "Approximate loop length, not a strict duration or a text-change interval. Select natural loop boundaries from the performance.",
+      "motion": "user-selected; yes/no head movement is optional"
+    }
   },
   "beat_model": {
-    "note": "Proposed planning structure; timings remain unset until source or creative choices establish them.",
+    "note": "Context beats reference a shared reaction loop. Text hold timing is independent of the approximately half-second video loop.",
     "fields": [
       "order",
       "display_value",
       "context_meaning",
-      "intended_reaction",
+      "reaction_loop_reference",
       "start_seconds",
       "hold_seconds"
     ]
   },
   "review_checks": [
-    "Does the changing value actually recontextualize the question?",
-    "Is the intended sequence clear and readable?",
-    "Does each reaction match the context visible at that moment?",
-    "Are text and performance synchronized?"
+    "Does the changing text or number recontextualize the question and repeated reaction?",
+    "Is each context state readable for long enough, independent of the loop interval?",
+    "Does the short reaction repeat cleanly without distracting visual jumps?",
+    "Is nodding/head shaking optional rather than forced?",
+    "Are looped source audio and the chosen soundtrack handled deliberately?"
   ],
   "open_decisions": [
-    "Clarify what shaking means: body motion, head shaking, or another performance instruction",
-    "Obtain one actual question and its sequence of values",
-    "Number of beats and timing",
+    "Obtain one actual hook question and sequence of values",
+    "Choose the reaction motion and usable source loop",
+    "Number of context beats and their timing",
     "Whether the question stays fixed or also changes",
-    "Spoken versus silent performance and need for speech captions",
+    "Source audio handling, speech and any speech captions",
     "Music selection from a curated list once actual tracks exist",
-    "SFX and animation style",
-    "Final expression, hold, loop or CTA"
+    "Optional SFX and animation style",
+    "Overall video length and ending"
   ],
-  "note": "Only the core mechanism is established. No specific physical motion, emotion, numerical direction, escalation curve, music track or example sequence has been inferred."
+  "note": "The reaction is a repeated short performance, not a succession of newly performed reactions. Approximately 0.5 seconds describes the reaction loop, not each text hold or the whole video.",
+  "user_clarification": "The person performs a roughly 0.5-second reaction that loops. Often, but not always, this is nodding yes or shaking their head no."
 }
