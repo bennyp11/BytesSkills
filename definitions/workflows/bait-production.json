@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "id": "bait-production",
+  "version": "0.1.0",
+  "status": "design-only",
+  "stages": [
+    {
+      "id": "intake",
+      "instruction": "Resolve mode(s), topic or seed, audience, count or length as relevant. For rage, clarify who is in the know and what they know. For comment, clarify the intended response. Accept explicit delegation."
+    },
+    {
+      "id": "concept",
+      "instruction": "Define the premise and desired audience reaction. Separate the actual shared knowledge from the narrator\u2019s deliberately wrong statement."
+    },
+    {
+      "id": "hook",
+      "instruction": "Find a natural opening that establishes the bit without announcing that it is a joke."
+    },
+    {
+      "id": "script",
+      "instruction": "Develop the selected mode. In combined mode connect the help request to the absurd premise. Keep truth/bit notes in metadata rather than forcing an explanatory ending."
+    },
+    {
+      "id": "performance-plan",
+      "instruction": "Specify straight-faced delivery and timing; resolve presentation choices before executing an edit."
+    },
+    {
+      "id": "review",
+      "instruction": "Check insider recognition, intentionality, delivery and relevance of the audience question. Do not evaluate the bit as if it were a reductions explainer."
+    }
+  ],
+  "note": "Stage descriptions are design contracts, not implemented generation tools."
+}

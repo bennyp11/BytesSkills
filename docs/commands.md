@@ -14,7 +14,7 @@ remain design-only; namespacing does not implement them.
 ## Grammar
 
 Use `/bytes verb`, named flags, quoted strings and typed pointers. Accept `--key=value`
-and `--key value`. Reject unknown flags, conflicting duplicate flags and malformed
+and `--key value`. Reject unknown flags, conflicting duplicate scalar flags and malformed
 references with an actionable error. `--req` is an editing instruction, not executable
 code. Missing creative inputs trigger the clarification-first intake below before generation.
 
@@ -156,3 +156,14 @@ or pushing. `/bytes sync --help` has no sync side effects. The
 the complete assistant procedure. Conflicts stop rather than overwrite artifact
 identities or immutable revisions. No native CLI parser is implemented. Source sync
 and installed-plugin refresh are reported separately.
+
+## Format-specific parameters: bait
+
+Concept, hook and script generation with `--format=bait` accepts repeatable
+`--bait=rage` and `--bait=comment`. Both flags select the combined mode. Values form
+a set, deduplicate, and replace inherited modes when explicitly supplied. Modes are
+recorded in artifact/run settings and inherited by downstream work. An omitted
+unresolved mode triggers clarification. Unknown values, or bait flags on an
+incompatible format, require correction rather than being ignored. See
+[bait.md](bait.md) for the full format and examples. For rage, intake includes the
+in-group and shared knowledge; for comment, the desired audience response.

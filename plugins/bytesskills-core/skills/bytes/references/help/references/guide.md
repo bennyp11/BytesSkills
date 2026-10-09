@@ -156,3 +156,21 @@ a terminal parser or automatic background process. Source checkout, GitHub and t
 installed/loaded plugin are separate states. Sync cannot promise to refresh every
 chat or a cached plugin installation. Its report states which source commit it read
 and whether the installed plugin still needs a supported update or reload.
+
+## Bait format modes
+
+```text
+/bytes brainstorm --concepts --format=bait --bait=rage
+/bytes brainstorm --concepts --format=bait --bait=comment
+/bytes brainstorm --concepts --format=bait --bait=rage --bait=comment
+```
+
+Rage is a straight-faced absurd bit legible to people who know the topic. Comment
+invites a specific audience response or help. Both combines the absurd premise
+with an apparently sincere help request. The flag is repeatable for this set-valued
+choice, including hook/script development; scalar flags are not arbitrarily repeatable.
+Explicit modes replace inherited modes; omission inherits a settled selection or
+asks which modes are wanted. Unknown modes or incompatible formats are errors.
+For rage, clarify the in-group and shared knowledge; for comment, the desired
+response. These questions accept delegation like other creative intake. Bait does
+not inherit Reductions’ explanatory ending or follow CTA. Generation remains planned.

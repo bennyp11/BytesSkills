@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "id": "bait",
+  "version": "0.1.0",
+  "status": "draft",
+  "name": "Bait",
+  "extends": null,
+  "purpose": "A straight-faced bit built for recognition, correction, or audience participation.",
+  "basis": "User-defined rage mode, comment mode and their combination. Structural stages and review checks are proposed execution guidance.",
+  "workflow": "bait-production",
+  "default_treatment": "deadpan-bit",
+  "parameters": {
+    "bait": {
+      "type": "set",
+      "values": [
+        "rage",
+        "comment"
+      ],
+      "min_items": 1,
+      "default": null,
+      "repeatable": true,
+      "missing": "Ask which mode: rage, comment, or both.",
+      "merge": "An explicit set replaces the inherited set; repeated flags in the same command combine."
+    }
+  },
+  "required_inputs": [
+    "topic_or_seed",
+    "bait_modes"
+  ],
+  "conditional_inputs": {
+    "rage": [
+      "in_group",
+      "shared_knowledge",
+      "deliberately_absurd_premise"
+    ],
+    "comment": [
+      "desired_audience_response"
+    ]
+  },
+  "modes": {
+    "rage": {
+      "intent": "Say something deliberately stupid or absurd with a straight face. People who know the subject recognize the bit; others may feel compelled to correct it.",
+      "delivery": "Sincere-sounding and committed. Do not wink, label the premise ragebait in the spoken performance, or automatically break character.",
+      "mechanism": "The joke depends on the gap between the stated premise and knowledge the in-group already has."
+    },
+    "comment": {
+      "intent": "Invite a specific response from the audience, including asking for help.",
+      "mechanism": "Make the audience question a natural part of the premise rather than adding an unrelated generic comment CTA.",
+      "requires_absurdity": false
+    },
+    "rage+comment": {
+      "intent": "Combine an obviously absurd premise for insiders with an apparently sincere request for help.",
+      "mechanism": "The audience can recognize the joke or want to correct the narrator; the help request gives them something concrete to answer."
+    }
+  },
+  "structure": [
+    {
+      "stage": "setup",
+      "instruction": "Introduce the premise naturally. In rage mode, establish the deliberate misunderstanding with a straight face."
+    },
+    {
+      "stage": "develop",
+      "instruction": "Add only enough coherent-but-wrong reasoning or detail to make the bit land. For comment-only, develop the actual situation or question without forcing absurdity."
+    },
+    {
+      "stage": "audience-opening",
+      "when": "comment selected",
+      "instruction": "Ask a specific, apparently sincere question or request for help that follows from the premise."
+    },
+    {
+      "stage": "end",
+      "instruction": "End cleanly. Do not automatically add the reductions format\u2019s explanation, qualification or follow CTA."
+    }
+  ],
+  "defaults": {
+    "presentation": "on-camera-bit",
+    "delivery": "straight-faced",
+    "bait": null,
+    "duration_seconds": null
+  },
+  "review_checks": [
+    "For rage: can the intended in-group explain what is deliberately wrong?",
+    "Does the delivery preserve the straight-faced bit?",
+    "For comment: is there a concrete question worth responding to?",
+    "For both: does the help request arise naturally from the absurd premise?",
+    "Is the idea an intentional bit rather than an accidental factual mistake?"
+  ],
+  "open_decisions": [
+    "In-group for each topic",
+    "Preferred length",
+    "Caption and hook-text treatment",
+    "Music and sound effects",
+    "Whether particular pieces should reveal the joke"
+  ]
+}

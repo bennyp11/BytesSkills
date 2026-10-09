@@ -66,3 +66,8 @@ Load the [bytes skill](plugins/bytesskills-core/skills/bytes/SKILL.md), then use
 `/bytes --help`, `/bytes brainstorm ...`, or `/bytes sync`. Help and sync are internal
 routes, not separate skills to stack. Creative command execution remains planned.
 Platform-native skill selection may differ; `/bytes` is the canonical text interface.
+
+## Content formats
+
+- [Reductions](docs/reductions.md): make a complex topic accessible through a surprising opening.
+- [Bait](docs/bait.md): straight-faced rage, audience-comment prompts, or both.

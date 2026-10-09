@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "id": "deadpan-bit",
+  "version": "0.1.0",
+  "status": "draft",
+  "name": "Deadpan bit",
+  "defaults": {
+    "delivery": {
+      "tone": "straight-faced",
+      "guidance": "Play the premise sincerely; let shared knowledge create the joke."
+    },
+    "edit": {
+      "guidance": "Preserve timing that supports the deadpan delivery; do not import the reductions silence-removal rule automatically."
+    },
+    "captions": {
+      "policy": "not-specified"
+    },
+    "hook_text": {
+      "policy": "not-specified"
+    },
+    "sfx": {
+      "policy": "not-specified"
+    },
+    "music": {
+      "policy": "not-specified"
+    },
+    "animation": {
+      "policy": "not-specified"
+    }
+  },
+  "basis": {
+    "user_defined": [
+      "Straight-face performance",
+      "Insider recognition of deliberate absurdity"
+    ],
+    "proposed_guidance": [
+      "Do not telegraph the joke with an unrequested comedy sting or exaggerated delivery"
+    ]
+  }
+}
