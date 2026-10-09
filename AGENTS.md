@@ -13,3 +13,8 @@ completed logical change or generation batch, inspect, commit and push its files
 Preserve unrelated edits. Report failures honestly; do not claim remote backup before
 push succeeds. Exclude credentials and caches, but do not silently exclude requested
 workspace artifacts or media. Read workspace/README.md for large-file handling.
+
+Generation and refinement use clarification-first intake. Ask about each unresolved
+applicable creative input before generating; accept “idk” as delegation for that
+field. Preserve clear inherited inputs and do not re-ask settled choices. See
+docs/commands.md for intake order and the distinction between defaults and answers.

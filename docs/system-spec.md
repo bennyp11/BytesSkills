@@ -61,14 +61,18 @@ artifacts subject to `/refine`.
 
 ## Context resolution
 
-1. Parse and validate the command and pointer types.
+1. Parse and validate the command and pointer types. Run clarification-first intake
+   for unresolved creative fields as specified in commands.md; omitted values are
+   not permission to choose defaults.
 2. Resolve pointers once to exact revisions.
 3. Find the chosen format: explicit selection first, otherwise compatible input
    context, otherwise ask if the operation needs a format.
 4. Resolve library defaults, base-to-child format defaults and selected treatment.
 5. Apply compatible settings already carried by input artifacts.
 6. Apply explicit command overrides, then validate all constraints.
-7. Save values AND the source of each value in the run specification.
+7. Save values AND the source of each value in the run specification, including
+   intake answers and explicit delegation. Defaults resolve after intake; they do
+   not bypass a question about an unresolved user-facing field.
 
 Precedence: library < base format < child format < treatment < inherited artifact
 settings < explicit arguments. An explicit format change rebuilds format/treatment
