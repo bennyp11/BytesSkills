@@ -4,16 +4,16 @@
 
 BytesSkills describes content work through commands, saves outputs as addressable
 artifacts, and carries creative context between stages. Generation and persistence
-are currently planned behavior, not an implemented runtime. This help skill can
+are currently planned behavior, not an implemented runtime. The bytes entry skill can
 explain the interface now when loaded by an assistant.
 
 ```text
---help                         General help in BytesSkills context
-/help                          Same overview
-/brainstorm --help              Brainstorm parameters and examples
-/refine --help                  Revision help
-/show --help                   Pointers, history, settings and trees
-/sync --help                   GitHub/local synchronization and refresh
+/bytes --help                  General help
+/bytes                         Same overview
+/bytes brainstorm --help              Brainstorm parameters and examples
+/bytes refine --help                  Revision help
+/bytes show --help                   Pointers, history, settings and trees
+/bytes sync --help                   GitHub/local synchronization and refresh
 ```
 
 Help is read-only and never starts the creative questionnaire. A complete command
@@ -30,11 +30,11 @@ Choose exactly one: `--concepts`, `--hooks`, or `--script`.
 - Script: `--concept=PTR`, optional selected `--hook=PTR`, `--format=ID`.
 
 ```text
-/brainstorm --concepts --format=reductions --topic="productivity"
-/brainstorm --concepts --format=reductions --seed="More tools can mean less work"
-/brainstorm --concepts --parent=@concept/002 --count=3
-/brainstorm --hooks --concept=@concept/002
-/brainstorm --script --concept=@concept/002 --hook=@hook/005
+/bytes brainstorm --concepts --format=reductions --topic="productivity"
+/bytes brainstorm --concepts --format=reductions --seed="More tools can mean less work"
+/bytes brainstorm --concepts --parent=@concept/002 --count=3
+/bytes brainstorm --hooks --concept=@concept/002
+/bytes brainstorm --script --concept=@concept/002 --hook=@hook/005
 ```
 
 `--parent` makes narrower child concepts. `--from` makes alternatives derived from
@@ -60,9 +60,9 @@ length. Refinement asks only for unresolved target and requested change.
 Exactly one target selector and an instruction:
 
 ```text
-/refine --concept=@concept/002 --req="Make the takeaway more useful"
-/refine --hook=@hook/005 --req="Start with a personal admission"
-/refine --script=@script/008 --req="Explain the mechanism more simply"
+/bytes refine --concept=@concept/002 --req="Make the takeaway more useful"
+/bytes refine --hook=@hook/005 --req="Start with a personal admission"
+/bytes refine --script=@script/008 --req="Explain the mechanism more simply"
 ```
 
 Creates a new revision of the same object. Earlier versions remain accessible.
@@ -72,10 +72,10 @@ superseding it. This command does not manage format definitions.
 ## Inspect
 
 ```text
-/show @script/008
-/show @script/008 --settings
-/show @hook/005 --history
-/show @concept/002 --tree --depth=2
+/bytes show @script/008
+/bytes show @script/008 --settings
+/bytes show @hook/005 --history
+/bytes show @concept/002 --tree --depth=2
 ```
 
 Choose at most one of settings, history or tree. Tree and depth are for concept
@@ -84,11 +84,11 @@ hierarchies. Settings shows resolved choices and where each came from.
 ## Browse, organize and archive
 
 ```text
-/list --type=concept --query="productivity" --limit=20
-/list --type=concept --parent=@concept/002
-/move @concept/018 --parent=@concept/002
-/move @concept/018 --root
-/archive @hook/005
+/bytes list --type=concept --query="productivity" --limit=20
+/bytes list --type=concept --parent=@concept/002
+/bytes move @concept/018 --parent=@concept/002
+/bytes move @concept/018 --root
+/bytes archive @hook/005
 ```
 
 List supports `--type`, `--parent`, `--status`, `--tag`, `--query`, `--limit`,
@@ -134,10 +134,10 @@ or automatic backup runner ships with this help skill yet.
 ## Sync and refresh
 
 ```text
-/sync --check
-/sync
-/sync --repo="/absolute/path/to/BytesSkills"
-/sync --help
+/bytes sync --check
+/bytes sync
+/bytes sync --repo="/absolute/path/to/BytesSkills"
+/bytes sync --help
 ```
 
 `--check` fetches the configured upstream and reports local changes and ahead/behind
@@ -151,7 +151,7 @@ Conflicts stop the workflow for resolution. Different artifacts with the same ID
 competing revisions, or broken references cannot be solved by blindly picking the
 newest file. Local saves remain intact if network access or pushing fails.
 
-The bytes-sync skill provides an assistant procedure using ordinary Git; it is not
+The sync reference provides an assistant procedure using ordinary Git; it is not
 a terminal parser or automatic background process. Source checkout, GitHub and the
 installed/loaded plugin are separate states. Sync cannot promise to refresh every
 chat or a cached plugin installation. Its report states which source commit it read

@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "bytesskills-core",
-  "version": "0.2.0",
-  "description": "Help and assistant-driven Git synchronization for BytesSkills. Creative generation remains design-only.",
+  "version": "0.3.0",
+  "description": "Single BytesSkills entry skill for namespaced help and assistant-driven Git sync. Creative commands remain design-only.",
   "author": {
     "name": "bennyp11"
   }

@@ -3,9 +3,17 @@
 Commands are assistant-facing syntax, not shell commands. Do not execute arbitrary
 parameter text in a shell. No parser or command runner exists yet.
 
+## Namespace
+
+The only canonical entry is `/bytes`. Bare `/bytes` shows help. Use
+`/bytes --help` or `/bytes COMMAND --help` for read-only guidance. Generic bare
+commands are not intercepted; they may belong to other plugins. The bytes entry
+skill routes to bundled help and sync references. Generation and artifact operations
+remain design-only; namespacing does not implement them.
+
 ## Grammar
 
-Use `/verb`, named flags, quoted strings and typed pointers. Accept `--key=value`
+Use `/bytes verb`, named flags, quoted strings and typed pointers. Accept `--key=value`
 and `--key value`. Reject unknown flags, conflicting duplicate flags and malformed
 references with an actionable error. `--req` is an editing instruction, not executable
 code. Missing creative inputs trigger the clarification-first intake below before generation.
@@ -14,18 +22,18 @@ code. Missing creative inputs trigger the clarification-first intake below befor
 
 | Command | Contract |
 | --- | --- |
-| `/brainstorm --concepts [--format=ID] [--topic="..."] [--seed="..."] [--strategy=ID] [--parent=PTR or --from=PTR] [--count=N]` | Create new concept candidates; parent/from are mutually exclusive |
-| `/brainstorm --hooks --concept=PTR [--format=ID] [--count=N]` | Create hook candidates using a concept revision |
-| `/brainstorm --hooks --format=ID` | Ask for the premise if absent; do not invent a hidden concept |
-| `/brainstorm --script --concept=PTR [--hook=PTR] [--format=ID]` | Create one script; validate the selected hook against the concept |
-| `/refine --concept=PTR --req="..."` | Append a concept revision |
-| `/refine --hook=PTR --req="..."` | Append a hook revision |
-| `/refine --script=PTR --req="..."` | Append a script revision |
-| `/show PTR [--settings or --history or --tree] [--depth=N]` | Inspect content, setting origins, revision history or concept descendants |
-| `/list --type=TYPE [--parent=PTR] [--status=STATUS] [--tag=TAG] [--query="..."] [--limit=N] [--cursor=TOKEN]` | Browse and search saved work; omit archived objects by default |
-| `/move PTR --parent=PTR` | Reparent a concept after cycle checks; no creative-context changes |
-| `/move PTR --root` | Remove the organizational parent |
-| `/archive PTR` | Archive this object only; no recursive behavior in v0.1 |
+| `/bytes brainstorm --concepts [--format=ID] [--topic="..."] [--seed="..."] [--strategy=ID] [--parent=PTR or --from=PTR] [--count=N]` | Create new concept candidates; parent/from are mutually exclusive |
+| `/bytes brainstorm --hooks --concept=PTR [--format=ID] [--count=N]` | Create hook candidates using a concept revision |
+| `/bytes brainstorm --hooks --format=ID` | Ask for the premise if absent; do not invent a hidden concept |
+| `/bytes brainstorm --script --concept=PTR [--hook=PTR] [--format=ID]` | Create one script; validate the selected hook against the concept |
+| `/bytes refine --concept=PTR --req="..."` | Append a concept revision |
+| `/bytes refine --hook=PTR --req="..."` | Append a hook revision |
+| `/bytes refine --script=PTR --req="..."` | Append a script revision |
+| `/bytes show PTR [--settings or --history or --tree] [--depth=N]` | Inspect content, setting origins, revision history or concept descendants |
+| `/bytes list --type=TYPE [--parent=PTR] [--status=STATUS] [--tag=TAG] [--query="..."] [--limit=N] [--cursor=TOKEN]` | Browse and search saved work; omit archived objects by default |
+| `/bytes move PTR --parent=PTR` | Reparent a concept after cycle checks; no creative-context changes |
+| `/bytes move PTR --root` | Remove the organizational parent |
+| `/bytes archive PTR` | Archive this object only; no recursive behavior in v0.1 |
 
 Exactly one output selector is required for brainstorm and one target selector for
 refine. Suggested candidate count: 3; scripts produce one output. An omitted candidate
@@ -44,19 +52,19 @@ Source: @concept/002:v1
 Format: reductions (version 1)
 
 Next:
-/brainstorm --script --concept=@concept/002 --hook=@hook/005
+/bytes brainstorm --script --concept=@concept/002 --hook=@hook/005
 ```
 
 Return copyable pointers, a short result preview and one sensible next command.
 Show meaningful conflicts and limitations; keep routine metadata available through
-`/show`. Explicit overrides and inherited choices must be inspectable.
+`/bytes show`. Explicit overrides and inherited choices must be inspectable.
 
 ## Definition editing
 
 For now, edit format, treatment and workflow files through an explicit natural-
 language request and review the resulting file diff. Dedicated `/format` or
 `/treatment` management commands are deferred until real authoring examples establish
-their needs. This avoids claiming that `/refine` also edits every kind of definition.
+their needs. This avoids claiming that `/bytes refine` also edits every kind of definition.
 
 ## Clarification-first intake
 
@@ -110,7 +118,7 @@ when interrupted. Do not create creative artifacts until generation actually occ
 Example (proposed interaction):
 
 ```text
-User: /brainstorm --concepts --format=reductions
+User: /bytes brainstorm --concepts --format=reductions
 Assistant: Do you have a topic or a surprising thought to start from?
 User: idk
 Assistant: I'll explore broadly. What should guide the search—contradictions,
@@ -131,20 +139,20 @@ format without making that format the concept's permanent identity.
 
 ## Help
 
-`--help`, `/help`, and `/COMMAND --help` request read-only guidance and take
+`/bytes --help` and `/bytes COMMAND --help` request read-only guidance and take
 precedence over execution and creative intake. The assistant-readable
-[bytes-help skill](../plugins/bytesskills-core/skills/bytes-help/SKILL.md) provides
+[bytes help reference](../plugins/bytesskills-core/skills/bytes/references/help/instructions.md) provides
 overview, command-specific help, examples and terminology. These are interpreted
 aliases, not native commands registered by the host. Update its guide when changing
 this contract. The help package does not implement generation or persistence.
 
 ## Sync
 
-`/sync [--repo="/absolute/path"]` reconciles the selected checkout and its tracked
+`/bytes sync [--repo="/absolute/path"]` reconciles the selected checkout and its tracked
 workspace with the configured upstream, then rereads relevant source instructions.
-`/sync --check` fetches and reports drift without changing working files, committing
-or pushing. `/sync --help` has no sync side effects. The
-[bytes-sync skill](../plugins/bytesskills-core/skills/bytes-sync/SKILL.md) contains
+`/bytes sync --check` fetches and reports drift without changing working files, committing
+or pushing. `/bytes sync --help` has no sync side effects. The
+[bytes sync reference](../plugins/bytesskills-core/skills/bytes/references/sync/instructions.md) contains
 the complete assistant procedure. Conflicts stop rather than overwrite artifact
 identities or immutable revisions. No native CLI parser is implemented. Source sync
 and installed-plugin refresh are reported separately.

@@ -13,14 +13,10 @@ plugins:
     path: plugins/bytesskills-core
     status: assistant-help-and-sync
     skills:
-      - id: bytes-help
-        status: authored
-        inputs: [help-request]
-        outputs: [command-guidance]
-      - id: bytes-sync
-        status: authored
-        inputs: [repository-path, sync-request]
-        outputs: [sync-report]
+      - id: bytes
+        status: authored-router-help-and-sync
+        inputs: [bytes-command]
+        outputs: [command-guidance, sync-report]
   - id: video-editing
     path: plugins/video-editing
     status: scaffold

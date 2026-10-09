@@ -4,19 +4,19 @@ The name `reductions` comes from the user. All content and setting values here a
 fictional, used only to test the proposed model. The actual draft format is in definitions/formats/reductions.json; this walkthrough
 does not override it.
 
-1. `/brainstorm --concepts --format=reductions --count=3`
+1. `/bytes brainstorm --concepts --format=reductions --count=3`
    saves new concepts including `@concept/002:v1`, “The cost of optionality”.
-2. `/brainstorm --concepts --parent=@concept/002 --count=2`
+2. `/bytes brainstorm --concepts --parent=@concept/002 --count=2`
    saves `@concept/018:v1`, “Keeping career options open”, with parent `@concept/002`
    and derivation source `@concept/002:v1`. Context is captured at generation time.
-3. `/brainstorm --hooks --concept=@concept/018 --count=3`
+3. `/bytes brainstorm --hooks --concept=@concept/018 --count=3`
    saves hooks including `@hook/005:v1`. Each carries the concept's format context.
-4. `/refine --hook=@hook/005 --req="Start with a personal admission"`
+4. `/bytes refine --hook=@hook/005 --req="Start with a personal admission"`
    saves `@hook/005:v2`. Revision 1 remains intact.
-5. `/brainstorm --script --concept=@concept/018 --hook=@hook/005`
+5. `/bytes brainstorm --script --concept=@concept/018 --hook=@hook/005`
    resolves the inputs to concept v1 and hook v2 and saves `@script/008:v1`.
 6. Refining the hook again creates v3; the script still references v2.
-7. `/move @concept/018 --root` changes its organization in a new revision. Its ID,
+7. `/bytes move @concept/018 --root` changes its organization in a new revision. Its ID,
    existing scripts and original generation provenance remain valid.
 8. A later format edit changes defaults for future resolutions; the saved script
    retains its exact settings snapshot and definition version.

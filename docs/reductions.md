@@ -35,9 +35,9 @@ resolved definition versions with its run.
 ## Illustrative invocation
 
 ```text
-/brainstorm --concepts --format=reductions --count=3
-/brainstorm --hooks --concept=@concept/002
-/brainstorm --script --concept=@concept/002 --hook=@hook/005
+/bytes brainstorm --concepts --format=reductions --count=3
+/bytes brainstorm --hooks --concept=@concept/002
+/bytes brainstorm --script --concept=@concept/002 --hook=@hook/005
 ```
 
 The pointers above are illustrative. No live creative artifacts have been created.

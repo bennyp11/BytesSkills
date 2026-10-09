@@ -8,12 +8,12 @@ local workspace.
 proposed contracts, not an implemented CLI or installed slash commands.
 
 ```text
-/brainstorm --concepts --format=reductions --count=5
-/brainstorm --hooks --concept=@concept/002
-/brainstorm --script --concept=@concept/002 --hook=@hook/005
-/refine --hook=@hook/005 --req="Make it more personal"
-/show @concept/002 --tree
-/show @script/008 --settings
+/bytes brainstorm --concepts --format=reductions --count=5
+/bytes brainstorm --hooks --concept=@concept/002
+/bytes brainstorm --script --concept=@concept/002 --hook=@hook/005
+/bytes refine --hook=@hook/005 --req="Make it more personal"
+/bytes show @concept/002 --tree
+/bytes show @script/008 --settings
 ```
 
 ## Start here
@@ -53,9 +53,16 @@ See [workspace policy](workspace/README.md) for details.
 
 ## Help
 
-The [BytesSkills help skill](plugins/bytesskills-core/skills/bytes-help/SKILL.md)
-explains `--help`, `/help`, and `/brainstorm --help` when loaded by an assistant.
-The core package also includes an assistant-driven [sync workflow](plugins/bytesskills-core/skills/bytes-sync/SKILL.md) for `/sync` and `/sync --check`.
-Its [guide](plugins/bytesskills-core/skills/bytes-help/references/guide.md) is also
+The [BytesSkills help skill](plugins/bytesskills-core/skills/bytes/references/help/instructions.md)
+explains `/bytes --help` and `/bytes brainstorm --help` when loaded by an assistant.
+The core package also includes an assistant-driven [sync workflow](plugins/bytesskills-core/skills/bytes/references/sync/instructions.md) for `/bytes sync` and `/bytes sync --check`.
+Its [guide](plugins/bytesskills-core/skills/bytes/references/help/references/guide.md) is also
 readable directly. It is packaged in `plugins/bytesskills-core` for installation;
 creating it in this repo does not install it across chats.
+
+## One entry point
+
+Load the [bytes skill](plugins/bytesskills-core/skills/bytes/SKILL.md), then use
+`/bytes --help`, `/bytes brainstorm ...`, or `/bytes sync`. Help and sync are internal
+routes, not separate skills to stack. Creative command execution remains planned.
+Platform-native skill selection may differ; `/bytes` is the canonical text interface.

@@ -19,7 +19,7 @@ applicable creative input before generating; accept “idk” as delegation for 
 field. Preserve clear inherited inputs and do not re-ask settled choices. See
 docs/commands.md for intake order and the distinction between defaults and answers.
 
-For explicit BytesSkills /sync requests, use
-plugins/bytesskills-core/skills/bytes-sync/SKILL.md. Do not equate a Git pull with
+For explicit BytesSkills /bytes sync requests, use
+plugins/bytesskills-core/skills/bytes/references/sync/instructions.md. Do not equate a Git pull with
 refreshing a cached plugin. Preserve workspace identities and revision history; stop
-for semantic conflicts even when Git can merge the text. /sync --help is read-only.
+for semantic conflicts even when Git can merge the text. /bytes sync --help is read-only.

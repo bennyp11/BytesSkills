@@ -57,7 +57,7 @@ Numeric examples are illustrative; the allocator must continue beyond three digi
 The workspace has its own stable ID. Shorthand pointers resolve only in the active
 workspace. Cross-workspace merging is outside v0.1; never resolve an ambiguous
 reference by guessing. Runs are records with lifecycle status rather than creative
-artifacts subject to `/refine`.
+artifacts subject to `/bytes refine`.
 
 ## Context resolution
 
