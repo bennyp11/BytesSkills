@@ -42,3 +42,9 @@ configured in this skeleton.
 - [OpenAI Claude plugin compatibility](https://developers.openai.com/plugins/guides/submit-claude-plugin)
 - [Claude plugin manifests](https://code.claude.com/docs/en/plugins-reference)
 - [Claude skills](https://code.claude.com/docs/en/skills)
+
+## Content model
+
+Plugin boundaries are packaging choices. The domain model and command behavior are
+defined in [system-spec.md](system-spec.md) and [commands.md](commands.md). The local
+workspace is tracked in Git alongside these definitions by explicit user request.

@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "id": "acc3351e-d092-433c-a7e1-8fc3e807ebd4",
+  "name": "BytesSkills",
+  "status": "empty",
+  "storage": "local-files",
+  "pointer_scope": "workspace"
+}

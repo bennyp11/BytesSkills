@@ -1,49 +1,52 @@
 # BytesSkills
 
-A personal, cross-platform library of reusable AI skills, grouped into plugins.
+A CLI-like content workflow system: reusable definitions, skills, and persistent
+creative artifacts with stable pointers. GitHub backs up both the system and its
+local workspace.
 
-## Structure
+**Current status: design specification plus plugin skeleton.** Commands below are
+proposed contracts, not an implemented CLI or installed slash commands.
 
 ```text
-BytesSkills/
-├── catalog.yaml                 # Library taxonomy; our own convention
-├── docs/architecture.md
-├── templates/SKILL.md.template  # Copy when authoring a skill
-└── plugins/video-editing/
-    ├── plugin.json              # Portable Agent Plugins manifest for OpenAI
-    ├── .claude-plugin/plugin.json
-    ├── skills/                  # Shared skill instructions and resources
-    ├── scripts/                 # Shared executable helpers
-    └── adapters/                # Explicit platform integration points
+/brainstorm --concepts --format=reductions --count=5
+/brainstorm --hooks --concept=@concept/002
+/brainstorm --script --concept=@concept/002 --hook=@hook/005
+/refine --hook=@hook/005 --req="Make it more personal"
+/show @concept/002 --tree
+/show @script/008 --settings
 ```
 
-The starter plugin contains scaffold skills for pacing and captions. **The full
-Clipping Skill Bible has not been imported, and these are not production workflows.**
+## Start here
 
-## Add a skill
+- [System specification](docs/system-spec.md): ontology, relationships and behavior.
+- [Command reference](docs/commands.md): proposed grammar and command contracts.
+- [Worked example](examples/reductions/README.md): illustrative end-to-end flow.
+- [Workspace](workspace/README.md): local records, revisions and GitHub backups.
+- [Plugin packaging](docs/architecture.md): platform boundaries.
 
-1. Create `plugins/<plugin>/skills/<skill>/` and copy `templates/SKILL.md.template`
-   to `SKILL.md` within it.
-2. Set the skill name to match its folder and write a precise activation description.
-3. Add instructions, reference material, examples, and optional helpers.
-4. Add the skill to `catalog.yaml`; keep taxonomy out of directory nesting.
-5. Test on both intended hosts before changing its status to ready.
+## Repository
 
-## Use the library
-
-Install individual folders under `plugins/`, not the repository root.
-Claude Code can test the starter from a local checkout with:
-
-```sh
-claude --plugin-dir ./plugins/video-editing
+```text
+catalog.yaml                  Library taxonomy (our convention)
+definitions/                  Formats, treatments and workflows
+plugins/                      Installable packaging and skill scaffolds
+templates/                    Authoring templates
+workspace/                    Tracked local creative work and run records
+examples/                     Fictional examples, outside the live pointer namespace
+docs/                         System and command contracts
 ```
 
-For ChatGPT/Codex, package or register `plugins/video-editing` through the supported
-plugin installation flow for your surface. The root `plugin.json` uses the portable
-Agent Plugins schema. Merely sharing this repository URL with a chat does not
-install it. Claude chat skill uploads are a separate distribution path from Claude
-Code plugins. No account installation is performed by this repository.
+The Video Editing plugin still contains unfinished pacing and captions scaffolds.
+Its portable and Claude Code manifests share the same skill folders. Installation
+is separate per host. No storage service, database or MCP server is required for
+the current design. No production definition of `reductions` has been supplied yet.
 
-Adapters are ordinary directories, not automatically selected by either platform.
-Wire configuration explicitly and make shared skills check available capabilities.
-See [architecture](docs/architecture.md).
+## Working agreement
+
+Keep definitions and the workspace in this private repository. After each completed
+logical change or saved generation batch, commit and push the relevant files. Report
+backup failures; a local save is not a confirmed remote backup. Never commit secrets,
+credentials or temporary caches. Large binary media requires a verified Git LFS or
+other explicit backup arrangement; do not claim a path alone backs up its contents.
+
+See [workspace policy](workspace/README.md) for details.
