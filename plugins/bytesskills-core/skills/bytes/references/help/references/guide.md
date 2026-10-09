@@ -160,6 +160,7 @@ and whether the installed plugin still needs a supported update or reload.
 ## Troll and engagement tactics
 
 ```text
+/bytes brainstorm --concepts --format=reaction --bait=share
 /bytes brainstorm --concepts --format=troll --bait=rage
 /bytes brainstorm --concepts --format=troll --bait=comment
 /bytes brainstorm --concepts --format=troll --bait=rage --bait=comment
@@ -168,8 +169,10 @@ and whether the installed plugin still needs a supported update or reload.
 
 Troll is the straight-faced absurd bit; deadpan is its delivery treatment. Bait is
 an engagement setting shared across compatible formats. Rage seeks a reaction;
-comment invites a specific response or help. Both can be combined. `--bait=none`
-selects neither and cannot be combined with other values. Omission inherits a settled
+comment invites a specific response or help; share makes someone want to send the
+piece to a particular person or group through recognition, relatability or utility.
+A share CTA is optional. Any compatible combination is allowed. `--bait=none`
+selects no tactics and cannot be combined with other values. Omission inherits a settled
 selection or triggers a question. Explicit sets replace inherited ones. Tactics
 never override format requirements. A reduction must explain its surprising opening;
 a troll can leave the bit intact. For troll, clarify the in-group and shared knowledge.

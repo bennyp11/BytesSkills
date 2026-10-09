@@ -1,19 +1,20 @@
 {
   "schema_version": 1,
   "id": "bait",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "status": "draft",
   "name": "Engagement tactics",
   "parameter": {
     "type": "set",
     "values": [
       "rage",
-      "comment"
+      "comment",
+      "share"
     ],
     "min_items": 0,
     "default": null,
     "repeatable": true,
-    "missing": "Ask whether rage, comment, both, or none is desired if not already resolved.",
+    "missing": "Ask which of rage, comment, share, any combination, or none is desired if unresolved.",
     "merge": "An explicit set replaces the inherited set; repeated flags in the same command combine.",
     "empty_set_syntax": "--bait=none; cannot be combined with other values"
   },
@@ -31,11 +32,19 @@
     "rage+comment": {
       "intent": "Combine an obviously absurd premise for insiders with an apparently sincere request for help.",
       "mechanism": "The audience can recognize the joke or want to correct the narrator; the help request gives them something concrete to answer."
+    },
+    "share": {
+      "intent": "Make a viewer want to send the piece to a specific person or group.",
+      "mechanism": "Build a recognizable, relatable or useful moment that brings a recipient to mind: this is you, this is us, or you need to see this.",
+      "delivery": "Let the content provide the reason to share. A relevant send-this-to prompt is optional, not mandatory.",
+      "requires_absurdity": false
     }
   },
   "compatibility": {
-    "troll": "Rage, comment or both can support the intentional bit.",
-    "reductions": "Comment can invite a response; a rage-provoking opening must still resolve into a defensible explanation. Tactics do not override format truth requirements."
+    "troll": "Rage, comment and share can support the intentional bit, alone or combined; share can hinge on recognition of a friend or shared in-group joke.",
+    "reductions": "Comment can invite a response; share can emphasize a useful explanation worth sending to someone. A rage-provoking opening must still resolve into a defensible explanation.",
+    "reaction": "Share can hinge on a recognizable person, group or shared situation revealed by the changing context; comment can invite identification or a response. Tactics must preserve the looped-reaction format."
   },
-  "intake": "Ask for the desired tactic if unresolved; accept none or explicit delegation. Do not force a tactic onto every format."
+  "intake": "Ask for the desired tactic if unresolved; accept none or explicit delegation. Do not force a tactic onto every format.",
+  "combination_rule": "Any subset of rage, comment and share can combine where compatible with the format; pair-specific examples are illustrative, not an exhaustive enum."
 }

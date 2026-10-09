@@ -159,8 +159,8 @@ and installed-plugin refresh are reported separately.
 
 ## Engagement parameters
 
-Generation commands accept repeatable `--bait=rage` and `--bait=comment` where
-compatible with the selected format. Both combine; `--bait=none` selects neither
+Generation commands accept repeatable `--bait=rage`, `--bait=comment`, and `--bait=share` where
+compatible with the selected format. Any compatible subset combines; `--bait=none` selects no tactics
 and cannot accompany another value. Explicit sets replace inherited choices.
 Unresolved selections trigger clarification. See [bait.md](bait.md). Bait does not
 override format requirements: reductions resolve into a true explanation; troll
