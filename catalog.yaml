@@ -35,22 +35,22 @@ plugins:
         status: scaffold
 definitions:
   formats:
-    - id: bait
-      path: definitions/formats/bait.json
+    - id: troll
+      path: definitions/formats/troll.json
       status: draft
     - id: reductions
       path: definitions/formats/reductions.json
       status: draft
   treatments:
-    - id: deadpan-bit
-      path: definitions/treatments/deadpan-bit.json
+    - id: deadpan
+      path: definitions/treatments/deadpan.json
       status: draft
     - id: restrained-narrator
       path: definitions/treatments/restrained-narrator.json
       status: draft
   workflows:
-    - id: bait-production
-      path: definitions/workflows/bait-production.json
+    - id: troll-production
+      path: definitions/workflows/troll-production.json
       status: design-only
     - id: reduction-production
       path: definitions/workflows/reduction-production.json
@@ -59,3 +59,7 @@ definitions:
     - id: reductions-light
       path: definitions/sound-libraries/reductions-light.json
       status: proposed-palette-no-audio
+  engagement:
+    - id: bait
+      path: definitions/engagement/bait.json
+      status: draft

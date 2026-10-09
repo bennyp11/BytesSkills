@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "id": "bait",
+  "version": "0.1.0",
+  "status": "draft",
+  "name": "Engagement tactics",
+  "parameter": {
+    "type": "set",
+    "values": [
+      "rage",
+      "comment"
+    ],
+    "min_items": 0,
+    "default": null,
+    "repeatable": true,
+    "missing": "Ask whether rage, comment, both, or none is desired if not already resolved.",
+    "merge": "An explicit set replaces the inherited set; repeated flags in the same command combine.",
+    "empty_set_syntax": "--bait=none; cannot be combined with other values"
+  },
+  "tactics": {
+    "rage": {
+      "intent": "Say something deliberately stupid or absurd with a straight face. People who know the subject recognize the bit; others may feel compelled to correct it.",
+      "delivery": "Sincere-sounding and committed. Do not wink, label the premise ragebait in the spoken performance, or automatically break character.",
+      "mechanism": "The joke depends on the gap between the stated premise and knowledge the in-group already has."
+    },
+    "comment": {
+      "intent": "Invite a specific response from the audience, including asking for help.",
+      "mechanism": "Make the audience question a natural part of the premise rather than adding an unrelated generic comment CTA.",
+      "requires_absurdity": false
+    },
+    "rage+comment": {
+      "intent": "Combine an obviously absurd premise for insiders with an apparently sincere request for help.",
+      "mechanism": "The audience can recognize the joke or want to correct the narrator; the help request gives them something concrete to answer."
+    }
+  },
+  "compatibility": {
+    "troll": "Rage, comment or both can support the intentional bit.",
+    "reductions": "Comment can invite a response; a rage-provoking opening must still resolve into a defensible explanation. Tactics do not override format truth requirements."
+  },
+  "intake": "Ask for the desired tactic if unresolved; accept none or explicit delegation. Do not force a tactic onto every format."
+}

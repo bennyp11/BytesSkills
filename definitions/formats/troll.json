@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "id": "troll",
+  "version": "0.1.0",
+  "status": "draft",
+  "name": "Troll",
+  "extends": null,
+  "purpose": "Perform a deliberately stupid or absurd premise with a straight face, so an audience with the relevant knowledge recognizes the joke.",
+  "workflow": "troll-production",
+  "default_treatment": "deadpan",
+  "engagement_options": "bait",
+  "required_inputs": [
+    "topic_or_seed",
+    "in_group",
+    "shared_knowledge",
+    "deliberately_absurd_premise"
+  ],
+  "structure": [
+    {
+      "stage": "premise",
+      "instruction": "State the absurd premise sincerely, without announcing the joke."
+    },
+    {
+      "stage": "develop",
+      "instruction": "Commit to the misunderstanding with concise, internally coherent but deliberately wrong reasoning."
+    },
+    {
+      "stage": "ending",
+      "instruction": "Land or sustain the bit. If comment bait is selected, add a specific question or sincere-sounding request for help arising from the premise. Do not automatically explain the joke."
+    }
+  ],
+  "defaults": {
+    "presentation": "on-camera-bit",
+    "delivery": "straight-faced",
+    "duration_seconds": null
+  },
+  "review_checks": [
+    "Is the deliberate misunderstanding legible to the selected in-group?",
+    "Does the performance stay straight-faced?",
+    "Is the joke intentional rather than an accidental factual error?",
+    "Does any comment request follow naturally from the premise?"
+  ],
+  "open_decisions": [
+    "Audience/in-group",
+    "Length",
+    "Captions and hook text",
+    "Music and SFX",
+    "Selected engagement tactics"
+  ],
+  "note": "Troll is the format. Bait is an optional engagement setting; deadpan is the treatment. Joke is a broader conversational description, not a separate registered format."
+}

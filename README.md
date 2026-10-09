@@ -70,4 +70,5 @@ Platform-native skill selection may differ; `/bytes` is the canonical text inter
 ## Content formats
 
 - [Reductions](docs/reductions.md): make a complex topic accessible through a surprising opening.
-- [Bait](docs/bait.md): straight-faced rage, audience-comment prompts, or both.
+- [Troll](docs/troll.md): a straight-faced absurd bit.
+- [Bait](docs/bait.md): reusable rage/comment engagement settings.

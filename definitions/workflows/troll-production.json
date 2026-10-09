@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "id": "bait-production",
+  "id": "troll-production",
   "version": "0.1.0",
   "status": "design-only",
   "stages": [
     {
       "id": "intake",
-      "instruction": "Resolve mode(s), topic or seed, audience, count or length as relevant. For rage, clarify who is in the know and what they know. For comment, clarify the intended response. Accept explicit delegation."
+      "instruction": "Resolve topic or seed, audience/in-group, shared knowledge, and count or length. Ask about engagement tactics if unresolved; none or delegation is valid."
     },
     {
       "id": "concept",
@@ -18,7 +18,7 @@
     },
     {
       "id": "script",
-      "instruction": "Develop the selected mode. In combined mode connect the help request to the absurd premise. Keep truth/bit notes in metadata rather than forcing an explanatory ending."
+      "instruction": "Develop the intentional straight-faced bit. When comment bait is selected, connect the audience question to the absurd premise. Keep explanatory truth/bit notes in metadata rather than forcing a reveal."
     },
     {
       "id": "performance-plan",

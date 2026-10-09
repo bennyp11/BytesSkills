@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "id": "deadpan-bit",
+  "id": "deadpan",
   "version": "0.1.0",
   "status": "draft",
-  "name": "Deadpan bit",
+  "name": "Deadpan delivery",
   "defaults": {
     "delivery": {
       "tone": "straight-faced",

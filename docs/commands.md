@@ -157,13 +157,12 @@ the complete assistant procedure. Conflicts stop rather than overwrite artifact
 identities or immutable revisions. No native CLI parser is implemented. Source sync
 and installed-plugin refresh are reported separately.
 
-## Format-specific parameters: bait
+## Engagement parameters
 
-Concept, hook and script generation with `--format=bait` accepts repeatable
-`--bait=rage` and `--bait=comment`. Both flags select the combined mode. Values form
-a set, deduplicate, and replace inherited modes when explicitly supplied. Modes are
-recorded in artifact/run settings and inherited by downstream work. An omitted
-unresolved mode triggers clarification. Unknown values, or bait flags on an
-incompatible format, require correction rather than being ignored. See
-[bait.md](bait.md) for the full format and examples. For rage, intake includes the
-in-group and shared knowledge; for comment, the desired audience response.
+Generation commands accept repeatable `--bait=rage` and `--bait=comment` where
+compatible with the selected format. Both combine; `--bait=none` selects neither
+and cannot accompany another value. Explicit sets replace inherited choices.
+Unresolved selections trigger clarification. See [bait.md](bait.md). Bait does not
+override format requirements: reductions resolve into a true explanation; troll
+preserves an intentional bit. `--format=bait` is retired: suggest `--format=troll`
+when the user means the straight-faced joke rather than silently translating it.
