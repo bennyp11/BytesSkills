@@ -1,0 +1,23 @@
+{
+  "batch_id": "8a3da8b1-c1c4-4c5a-abe5-6c154acee0a1",
+  "status": "saved",
+  "delivery": "ordinary authored files; general BytesSkills pointer runtime not implemented",
+  "command": "/bytes brainstorm --concepts --format=troll --bait=share --seed=\"something i vibe coded goes horribly wrong\"",
+  "intake": {
+    "audience": "Any of vibe coders, experienced developers or startup founders",
+    "failure_type": "unexpected costs",
+    "count": 5
+  },
+  "definitions": {
+    "troll": "0.1.0",
+    "bait": "0.2.0"
+  },
+  "outputs": [
+    "concept-01.md",
+    "concept-02.md",
+    "concept-03.md",
+    "concept-04.md",
+    "concept-05.md"
+  ],
+  "note": "All premises and illustrative dollar amounts are fictional comedy material."
+}
