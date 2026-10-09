@@ -202,3 +202,13 @@ remain pending; a plan must not be presented as an edited video. A source too sh
 or a point that cannot fit safely triggers a targeted decision. No video is produced
 merely by installing this skill. For execution read the bundled
 [clip procedure](../../clip/instructions.md).
+
+## Reaction format
+
+`--format=reaction` selects the draft concept of progressively reacting on camera
+to a changing word, phrase or number that changes the context of a hook question.
+Clarify the question, value sequence, reactions and timing. The user's word
+“shaking” needs clarification before prescribing the physical performance. Music,
+effects, speech and ending are not yet selected. The numeric sequence need not
+increase and the reactions need not escalate in intensity. Brainstorm execution
+remains design-only; this definition does not implement a generator.

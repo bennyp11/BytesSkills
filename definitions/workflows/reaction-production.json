@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "id": "reaction-production",
+  "version": "0.1.0",
+  "status": "design-only",
+  "stages": [
+    {
+      "id": "clarify",
+      "operation": "resolve format-specific inputs",
+      "output": "brief",
+      "instructions": "Ask one unresolved creative question at a time. Clarify shaking and obtain a real hook/value example before prescribing the performance. Idk delegates a creative choice; it does not create missing footage."
+    },
+    {
+      "id": "sequence",
+      "operation": "plan context and reaction beats",
+      "output": "plan",
+      "instructions": "Pair each text or number state with its meaning and intended reaction; establish the order without assuming numeric increase or emotional escalation."
+    },
+    {
+      "id": "record",
+      "operation": "obtain on-camera footage",
+      "output": "video input",
+      "instructions": "Use supplied footage or provide a performance plan. Do not claim recording has occurred without a real source."
+    },
+    {
+      "id": "edit",
+      "operation": "align text states and performance",
+      "output": "video or edit plan",
+      "instructions": "Use available editing tools; set readable holds and match each state to its reaction. Resolve music and optional effects before adding them. Do not claim an export if only a plan is possible."
+    },
+    {
+      "id": "review",
+      "operation": "inspect sequence",
+      "output": "review notes",
+      "instructions": "Check readability, context changes, synchronization and the ending; report checks that were not performed."
+    }
+  ],
+  "note": "Workflow operations are design descriptions, not installed commands or an implemented renderer."
+}

@@ -71,6 +71,8 @@ Platform-native skill selection may differ; `/bytes` is the canonical text inter
 
 ## Content formats
 
+- [Reaction](docs/reaction.md): progressive on-camera reactions as changing text or numbers recontextualize a hook question; draft awaiting an example.
+
 - [Reductions](docs/reductions.md): make a complex topic accessible through a surprising opening.
 - [Troll](docs/troll.md): a straight-faced absurd bit.
 - [Bait](docs/bait.md): reusable rage/comment engagement settings.

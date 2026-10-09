@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "id": "reaction",
+  "version": "0.1.0",
+  "status": "draft-needs-example",
+  "name": "Reaction",
+  "extends": null,
+  "purpose": "An on-camera progressive reaction to a changing string or number that changes the context of an on-screen hook question.",
+  "user_description": "I'm shaking doing a progressive reaction to a string or number changing the context of the text hook question.",
+  "workflow": "reaction-production",
+  "default_treatment": null,
+  "required_inputs": [
+    "on_screen_hook_question",
+    "ordered_text_or_number_states",
+    "meaning_of_each_context_change",
+    "intended_reaction_progression"
+  ],
+  "structure": [
+    {
+      "stage": "hook-question",
+      "instruction": "Establish the readable on-screen question and its initial context."
+    },
+    {
+      "stage": "changing-context",
+      "instruction": "Present the specified sequence of text or numeric states. Each state must change how the hook question is understood or answered."
+    },
+    {
+      "stage": "progressive-reaction",
+      "instruction": "Align the performer\u2019s visible reaction with the corresponding state. Reactions develop across the sequence; do not assume they must increase in intensity or that numbers must increase."
+    },
+    {
+      "stage": "final-state",
+      "instruction": "Give the final context and reaction enough time to be understood. Ending behavior remains a creative choice, not an automatic follow CTA."
+    }
+  ],
+  "defaults": {
+    "presentation": "on-camera-reaction",
+    "hook_text": true,
+    "changing_value_type": "text-or-number",
+    "duration_seconds": null,
+    "speech": "not-specified",
+    "music": "not-selected",
+    "sfx": "not-selected",
+    "animation_style": null
+  },
+  "beat_model": {
+    "note": "Proposed planning structure; timings remain unset until source or creative choices establish them.",
+    "fields": [
+      "order",
+      "display_value",
+      "context_meaning",
+      "intended_reaction",
+      "start_seconds",
+      "hold_seconds"
+    ]
+  },
+  "review_checks": [
+    "Does the changing value actually recontextualize the question?",
+    "Is the intended sequence clear and readable?",
+    "Does each reaction match the context visible at that moment?",
+    "Are text and performance synchronized?"
+  ],
+  "open_decisions": [
+    "Clarify what shaking means: body motion, head shaking, or another performance instruction",
+    "Obtain one actual question and its sequence of values",
+    "Number of beats and timing",
+    "Whether the question stays fixed or also changes",
+    "Spoken versus silent performance and need for speech captions",
+    "Music selection from a curated list once actual tracks exist",
+    "SFX and animation style",
+    "Final expression, hold, loop or CTA"
+  ],
+  "note": "Only the core mechanism is established. No specific physical motion, emotion, numerical direction, escalation curve, music track or example sequence has been inferred."
+}

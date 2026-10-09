@@ -35,6 +35,9 @@ plugins:
         status: scaffold
 definitions:
   formats:
+    - id: reaction
+      path: definitions/formats/reaction.json
+      status: draft-needs-example
     - id: troll
       path: definitions/formats/troll.json
       status: draft
@@ -49,6 +52,9 @@ definitions:
       path: definitions/treatments/restrained-narrator.json
       status: draft
   workflows:
+    - id: reaction-production
+      path: definitions/workflows/reaction-production.json
+      status: design-only
     - id: troll-production
       path: definitions/workflows/troll-production.json
       status: design-only
