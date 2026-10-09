@@ -137,3 +137,14 @@ precedence over execution and creative intake. The assistant-readable
 overview, command-specific help, examples and terminology. These are interpreted
 aliases, not native commands registered by the host. Update its guide when changing
 this contract. The help package does not implement generation or persistence.
+
+## Sync
+
+`/sync [--repo="/absolute/path"]` reconciles the selected checkout and its tracked
+workspace with the configured upstream, then rereads relevant source instructions.
+`/sync --check` fetches and reports drift without changing working files, committing
+or pushing. `/sync --help` has no sync side effects. The
+[bytes-sync skill](../plugins/bytesskills-core/skills/bytes-sync/SKILL.md) contains
+the complete assistant procedure. Conflicts stop rather than overwrite artifact
+identities or immutable revisions. No native CLI parser is implemented. Source sync
+and installed-plugin refresh are reported separately.

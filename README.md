@@ -55,6 +55,7 @@ See [workspace policy](workspace/README.md) for details.
 
 The [BytesSkills help skill](plugins/bytesskills-core/skills/bytes-help/SKILL.md)
 explains `--help`, `/help`, and `/brainstorm --help` when loaded by an assistant.
+The core package also includes an assistant-driven [sync workflow](plugins/bytesskills-core/skills/bytes-sync/SKILL.md) for `/sync` and `/sync --check`.
 Its [guide](plugins/bytesskills-core/skills/bytes-help/references/guide.md) is also
 readable directly. It is packaged in `plugins/bytesskills-core` for installation;
 creating it in this repo does not install it across chats.

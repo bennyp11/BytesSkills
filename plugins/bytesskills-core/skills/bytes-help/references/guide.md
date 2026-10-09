@@ -13,6 +13,7 @@ explain the interface now when loaded by an assistant.
 /brainstorm --help              Brainstorm parameters and examples
 /refine --help                  Revision help
 /show --help                   Pointers, history, settings and trees
+/sync --help                   GitHub/local synchronization and refresh
 ```
 
 Help is read-only and never starts the creative questionnaire. A complete command
@@ -129,3 +130,29 @@ The planned runtime uses local files in a workspace tracked in the private GitHu
 repository. Every candidate is saved; refinement preserves history. A local save and
 a successful remote backup are separate states. No working generator, pointer store,
 or automatic backup runner ships with this help skill yet.
+
+## Sync and refresh
+
+```text
+/sync --check
+/sync
+/sync --repo="/absolute/path/to/BytesSkills"
+/sync --help
+```
+
+`--check` fetches the configured upstream and reports local changes and ahead/behind
+state; it changes remote-tracking metadata, not working files or commits. Full sync
+checkpoints reviewed local changes including workspace artifacts, fast-forwards or
+merges compatible updates, validates and pushes without force. It then rereads the
+updated source instructions. If the checkout cannot be identified, it asks for the
+path. An explicit repo path selects the checkout, not a remote destination.
+
+Conflicts stop the workflow for resolution. Different artifacts with the same ID,
+competing revisions, or broken references cannot be solved by blindly picking the
+newest file. Local saves remain intact if network access or pushing fails.
+
+The bytes-sync skill provides an assistant procedure using ordinary Git; it is not
+a terminal parser or automatic background process. Source checkout, GitHub and the
+installed/loaded plugin are separate states. Sync cannot promise to refresh every
+chat or a cached plugin installation. Its report states which source commit it read
+and whether the installed plugin still needs a supported update or reload.

@@ -10,7 +10,7 @@ Read [the command guide](references/guide.md). Treat `--help`, `/help`, and
 when this skill is available. These are interpreted text aliases, not registered
 native slash commands or a working terminal executable.
 
-For general help, show the short overview, main commands, and one example. For a
+For general help, show the short overview, main commands, and one example. For `/sync`, also explain local-vs-remote and source-vs-installed state. For a
 named command, explain its flags, missing-input behavior, output and one useful
 example. For “everything”, explain the full guide progressively with readable
 sections. Answer natural-language help requests too. Unknown commands should get

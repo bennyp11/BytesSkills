@@ -1,7 +1,7 @@
 {
   "name": "bytesskills-core",
-  "version": "0.1.0",
-  "description": "Help for the BytesSkills content workflow command language. Generation commands are still design-only.",
+  "version": "0.2.0",
+  "description": "Help and assistant-driven Git synchronization for BytesSkills. Creative generation remains design-only.",
   "author": {
     "name": "bennyp11"
   }
