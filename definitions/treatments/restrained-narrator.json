@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "id": "restrained-narrator",
+  "version": "0.1.0",
+  "status": "draft",
+  "name": "Restrained narrator edit",
+  "defaults": {
+    "edit": {
+      "remove_silences": true,
+      "guidance": "Cut dead air and redundant pauses; preserve breaths or brief pauses needed for intelligibility and natural delivery.",
+      "push_ins": "not-specified"
+    },
+    "captions": {
+      "enabled": true,
+      "source": "final-cut-transcript",
+      "construction": "manually-timed-text",
+      "guidance": "Use accurate, readable phrases; prior user preference is manual text rather than editor auto-captions."
+    },
+    "hook_text": {
+      "enabled": true,
+      "guidance": "Make the opening promise legible without competing with speech captions."
+    },
+    "sfx": {
+      "library": "reductions-light",
+      "intensity": "light",
+      "guidance": "Use sparingly at meaningful moments, never automatically on every cut."
+    },
+    "animation": {
+      "enabled": "optional",
+      "style": null,
+      "guidance": "Light explanatory animation may clarify a concept. Select a style before generating assets; none is defined yet."
+    },
+    "music": {
+      "policy": "not-specified"
+    }
+  },
+  "constraints": [
+    "Narrator and explanation remain the focus.",
+    "Sound effects must not mask speech or be obnoxious.",
+    "Do not add effects or animation solely to fill time."
+  ],
+  "basis": {
+    "user_defined": [
+      "Narrator on camera",
+      "Silences removed",
+      "Hook text and speech captions",
+      "Light, unobtrusive SFX",
+      "Optional light animation with styles to be defined"
+    ],
+    "carried_from_prior_preference": [
+      "Manually timed caption text from the final edit"
+    ],
+    "proposed_guidance": [
+      "Preserve meaningful pauses",
+      "Purpose-based effect placement"
+    ]
+  }
+}

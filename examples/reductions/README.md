@@ -1,7 +1,8 @@
 # Illustrative walkthrough (not live workspace data)
 
 The name `reductions` comes from the user. All content and setting values here are
-fictional, used only to test the proposed model. This does not define the format.
+fictional, used only to test the proposed model. The actual draft format is in definitions/formats/reductions.json; this walkthrough
+does not override it.
 
 1. `/brainstorm --concepts --format=reductions --count=3`
    saves new concepts including `@concept/002:v1`, “The cost of optionality”.

@@ -25,3 +25,20 @@ plugins:
         inputs: [video, timed-transcript]
         outputs: [caption-plan, edited-video]
         status: scaffold
+definitions:
+  formats:
+    - id: reductions
+      path: definitions/formats/reductions.json
+      status: draft
+  treatments:
+    - id: restrained-narrator
+      path: definitions/treatments/restrained-narrator.json
+      status: draft
+  workflows:
+    - id: reduction-production
+      path: definitions/workflows/reduction-production.json
+      status: design-only
+  sound_libraries:
+    - id: reductions-light
+      path: definitions/sound-libraries/reductions-light.json
+      status: proposed-palette-no-audio

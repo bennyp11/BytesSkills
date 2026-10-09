@@ -39,7 +39,7 @@ docs/                         System and command contracts
 The Video Editing plugin still contains unfinished pacing and captions scaffolds.
 Its portable and Claude Code manifests share the same skill folders. Installation
 is separate per host. No storage service, database or MCP server is required for
-the current design. No production definition of `reductions` has been supplied yet.
+the current design. The first draft format, [Reductions](docs/reductions.md), is now defined from the user’s description.
 
 ## Working agreement
 

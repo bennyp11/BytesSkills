@@ -7,8 +7,8 @@ Production definitions will live here as versioned YAML or JSON documents.
 - `treatments/`: presentation settings for pacing, captions, sound and visuals.
 - `workflows/`: stages, skill references and input/output requirements.
 
-No production definitions exist yet. In particular, `reductions` is a user-supplied
-name whose editorial meaning still needs examples. The example walkthrough is not
-an authoritative definition. Add IDs and versions explicitly; directory organization
-does not create inheritance. Keep runtime packages self-contained when distributing
-these definitions with skills.
+The first draft is `formats/reductions.json`, linked to a narrator treatment,
+production workflow, and proposed sound palette. See [Reductions](../docs/reductions.md).
+Definitions are design data; no resolver is implemented yet. Add IDs and versions
+explicitly; folders do not establish inheritance. Sound libraries describe reusable
+asset collections; their entries must point to real files before use.

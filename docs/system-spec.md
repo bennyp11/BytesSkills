@@ -123,5 +123,5 @@ outside the initial command set and must inspect incoming references first.
 Next implementation slice: concept/hook/script generation, refinement, pointer
 resolution, format inheritance, inspection and local persistence. Production media
 execution and platform adapters can follow once the text workflow is coherent.
-No actual reductions format is inferred from its name. Obtain examples and editorial
-rules before authoring a production definition.
+The reductions draft is grounded in the user’s editorial description; see
+[reductions.md](reductions.md). Its sound palette is proposed and has no audio assets.

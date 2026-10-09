@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "id": "reductions",
+  "version": "0.1.0",
+  "status": "draft",
+  "extends": null,
+  "name": "Reductions",
+  "purpose": "Make a complex topic understandable to a broad audience through an entertaining, simple explanation.",
+  "basis": "User description in the BytesSkills design conversation; editorial safeguards are implementation guidance.",
+  "required_inputs": [
+    "topic_or_concept",
+    "central_claim_and_support"
+  ],
+  "workflow": "reduction-production",
+  "default_treatment": "restrained-narrator",
+  "structure": [
+    {
+      "stage": "curiosity-hook",
+      "instruction": "Open with an oxymoron, apparent contradiction, or surprising claim that makes a knowledgeable viewer wonder how it can be true.",
+      "output": "Spoken opening and complementary on-screen hook text."
+    },
+    {
+      "stage": "plain-language-explanation",
+      "instruction": "Unfold the mechanism in ELI5 language using an accessible example or analogy. Make the explanation entertaining or interesting without assuming specialist knowledge."
+    },
+    {
+      "stage": "resolve-the-contradiction",
+      "instruction": "Explain the distinction or mechanism that makes the opening defensible. The explanation must fulfill the hook."
+    },
+    {
+      "stage": "qualification",
+      "instruction": "Near the end, acknowledge the simplification and its relevant limits while preserving a basically accurate takeaway. Avoid a generic disclaimer that excuses a false claim."
+    },
+    {
+      "stage": "follow-cta",
+      "instruction": "End with an invitation to follow if the explanation was helpful.",
+      "default_text": "If you found this helpful, hit follow."
+    }
+  ],
+  "defaults": {
+    "presentation": "on-camera-narrator",
+    "hook_text": true,
+    "speech_captions": true,
+    "explanation_style": "eli5",
+    "duration_seconds": null
+  },
+  "constraints": [
+    "Opening must be defensible in the explanation, not a fabricated falsehood for attention.",
+    "Analogies must clarify the mechanism and identify material limits.",
+    "Do not invent evidence or source claims.",
+    "Hook text and spoken opening must make compatible promises."
+  ],
+  "review_checks": [
+    "Would the opening make someone curious about the apparent contradiction?",
+    "Can a non-specialist follow the explanation?",
+    "Does the ending resolve the opening rather than quietly change its meaning?",
+    "Is the simplification qualified near the end?",
+    "Are hook text, captions and follow CTA included?"
+  ],
+  "open_decisions": [
+    "Target duration or duration range",
+    "Preferred caption typography and placement",
+    "Music policy",
+    "Animation style options",
+    "Approved sound-effect recordings"
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "id": "reduction-production",
+  "version": "0.1.0",
+  "status": "design-only",
+  "stages": [
+    {
+      "id": "concept",
+      "operation": "brainstorm concepts",
+      "output": "concept",
+      "instructions": "Identify a complex topic, the useful simplified takeaway, and why a broad audience should care."
+    },
+    {
+      "id": "claim-check",
+      "operation": "review supporting material",
+      "output": "claim notes",
+      "instructions": "Establish why the surprising claim is defensible and where simplification stops being accurate. Verify uncertain claims before presenting them as facts."
+    },
+    {
+      "id": "hook",
+      "operation": "brainstorm hooks",
+      "output": "hook",
+      "instructions": "Generate spoken openings plus hook-text options grounded in the same claim."
+    },
+    {
+      "id": "script",
+      "operation": "generate script",
+      "output": "script",
+      "instructions": "Follow the reductions structure; keep qualification near the end and finish with a follow CTA."
+    },
+    {
+      "id": "record",
+      "operation": "obtain narrator footage",
+      "output": "video input",
+      "instructions": "Request or use supplied recording; do not imply footage exists before it is provided."
+    },
+    {
+      "id": "edit-plan",
+      "operation": "plan cuts and treatments",
+      "output": "plan",
+      "instructions": "Resolve caption, SFX and optional animation decisions. Unselected media assets remain explicit gaps."
+    },
+    {
+      "id": "edit",
+      "operation": "execute with available editor",
+      "output": "video",
+      "instructions": "Remove dead air, add hook text and manual speech captions, and apply selected restrained effects. Return an edit plan if execution tools or media are unavailable."
+    },
+    {
+      "id": "review",
+      "operation": "inspect final export",
+      "output": "review notes",
+      "instructions": "Check accuracy, hook payoff, caption timing and legibility, dialogue clarity, natural pacing and CTA. Report unperformed checks."
+    }
+  ],
+  "note": "Operations are workflow descriptions, not implemented commands or registered skill IDs."
+}

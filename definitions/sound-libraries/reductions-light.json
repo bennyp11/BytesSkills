@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "id": "reductions-light",
+  "version": "0.1.0",
+  "status": "proposed-palette-no-audio",
+  "purpose": "Small, restrained sound accents supporting the explanation.",
+  "selection_rules": [
+    "Start with no effect; add only for a specific editorial purpose.",
+    "Judge level against the narrator, not a fixed universal dB value.",
+    "Avoid layering multiple accents for one event.",
+    "Do not place sounds on every cut, caption phrase or word."
+  ],
+  "categories": [
+    {
+      "id": "reveal",
+      "character": "Soft, short tonal tick or muted chime",
+      "use": "A key clarification or resolved contradiction",
+      "avoid": "Bright notification-like or celebratory sounds"
+    },
+    {
+      "id": "emphasis",
+      "character": "Quiet dry tap or muted click",
+      "use": "A meaningful term or single visual emphasis",
+      "avoid": "Repeated clicking on routine captions"
+    },
+    {
+      "id": "transition",
+      "character": "Short, low-intensity movement sound",
+      "use": "A purposeful diagram or visual transition",
+      "avoid": "Loud sweeping whooshes on narrator jump cuts"
+    },
+    {
+      "id": "illustration",
+      "character": "Subtle contextual sound linked to an explanatory example",
+      "use": "When it improves comprehension of the analogy",
+      "avoid": "Comic stings that distract from the explanation"
+    }
+  ],
+  "assets": [],
+  "asset_record_fields": [
+    "id",
+    "category",
+    "local_file",
+    "source",
+    "usage_rights",
+    "duration_seconds",
+    "notes",
+    "approval_status"
+  ],
+  "note": "Categories are proposed for review. No recordings have been selected, generated, licensed or approved. Never report an effect applied without a real asset and edit."
+}
