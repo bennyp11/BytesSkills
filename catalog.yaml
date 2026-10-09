@@ -11,12 +11,12 @@ categories:
 plugins:
   - id: bytesskills-core
     path: plugins/bytesskills-core
-    status: assistant-help-sync-and-clip
+    status: assistant-workflows-with-local-artifacts
     skills:
       - id: bytes
-        status: authored-router-help-sync-and-clip
+        status: authored-router-with-local-artifacts
         inputs: [bytes-command]
-        outputs: [command-guidance, sync-report, clip-batch]
+        outputs: [command-guidance, sync-report, clip-batch, artifact-pointer]
   - id: video-editing
     path: plugins/video-editing
     status: scaffold

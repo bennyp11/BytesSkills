@@ -70,6 +70,14 @@ Confirm upstream HEAD matches local HEAD using fresh remote information. If anot
 writer advanced meanwhile, report further changes pending. Check Git LFS uploads
 when applicable; a pointer file alone is not proof that a binary is backed up.
 
+## Rebuild pointer index
+
+After integrating Git changes and before further pointer operations, run the bundled
+`artifacts.py --workspace WORKSPACE reindex` using the verified workspace path.
+The database is a local cache; do not sync it through Git. If checksum, relationship,
+revision or parent validation fails, report workspace sync blocked and preserve
+both histories. Do not claim pointer consistency until reindex succeeds.
+
 ## Refresh instructions and report
 
 Read the updated local AGENTS.md and relevant SKILL.md/reference files using normal

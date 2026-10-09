@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "description": "Versioned authoring contracts read by the assistant; not a native command parser or validator for creative semantics.",
+  "record_schema_version": 1,
+  "operations": {
+    "brainstorm": {"version": "1.0.0", "inputs": ["brief", "concept", "hook"], "outputs": ["concept", "hook", "script"], "persistence": "new-artifacts", "handler": "references/artifacts.md"},
+    "refine": {"version": "1.0.0", "inputs": ["concept", "hook", "script"], "outputs": ["same-type"], "persistence": "append-revision", "handler": "references/artifacts.md"},
+    "show": {"version": "1.0.0", "persistence": "read-only", "handler": "references/artifacts.md"},
+    "list": {"version": "1.0.0", "persistence": "read-only", "handler": "references/artifacts.md"},
+    "move": {"version": "1.0.0", "inputs": ["concept"], "persistence": "append-revision", "handler": "references/artifacts.md"},
+    "archive": {"version": "1.0.0", "persistence": "append-revision", "handler": "references/artifacts.md"},
+    "clip": {"version": "1.0.0", "inputs": ["video"], "outputs": ["plan", "video"], "persistence": "legacy-batch-files-until-streaming-ingest", "handler": "references/clip/instructions.md"},
+    "sync": {"version": "1.0.0", "persistence": "git-reconciliation-then-reindex", "handler": "references/sync/instructions.md"}
+  },
+  "growth_rules": [
+    "Add operation, version, input/output types, persistence behavior and an existing handler before advertising a new command.",
+    "Use the shared record envelope and runtime; no independent pointer allocator inside a workflow.",
+    "Add meaningful behavior tests for new persistence invariants; include help and migration notes for breaking changes.",
+    "Bump record schema_version only with an explicit migration; never silently rewrite historical records.",
+    "Skill versions and definition versions are distinct from artifact revision numbers. Record all relevant versions in provenance."
+  ]
+}

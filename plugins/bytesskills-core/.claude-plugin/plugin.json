@@ -1,7 +1,7 @@
 {
   "name": "bytesskills-core",
-  "version": "0.4.3",
-  "description": "BytesSkills entry skill for help, Git sync and progressive three-length clipping with available media tools. Other creative commands remain design-only.",
+  "version": "0.5.0",
+  "description": "BytesSkills entry skill with local artifact pointers, revisions and search, assistant-driven content workflows, help, sync and clipping.",
   "author": {
     "name": "bennyp11"
   }

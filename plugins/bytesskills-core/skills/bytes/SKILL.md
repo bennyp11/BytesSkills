@@ -22,12 +22,14 @@ terminal executable or guarantee a slash-menu entry on every platform.
    using available tools. Ask for the checkout only when not identifiable.
 4. `/bytes clip`: read [clipping instructions](references/clip/instructions.md).
    Perform clarification-first intake, then execute the three-cut workflow using
-   available tools. Save actual files; no general pointer runtime is assumed.
-5. `brainstorm`, `refine`, `show`, `list`, `move`, `archive`: explain the current
-   implementation boundary using the [guide](references/help/references/guide.md).
-   These operations remain design-only: do not claim an operational pointer store,
-   allocate fake IDs, or pretend artifacts were saved. If the user wants to develop
-   or discuss the workflow, use clarification-first intake without claiming execution.
+   available tools. Save actual files using the documented clip batch layout.
+5. `brainstorm`, `refine`, `show`, `list`, `move`, `archive`: read
+   [artifact runtime guidance](references/artifacts.md) and the relevant operation in
+   [contracts](contracts/operations.json). Use the bundled Python helper for saving,
+   resolving and querying. Brainstorm/refine are assistant-generated; save outputs
+   through the runtime, never pretend a pointer exists. Resolve the local workspace
+   and checkout definitions before starting. If tools are unavailable, report that
+   limitation rather than advertising a successful save.
 6. Unknown command or unsupported flag: explain the issue and offer the nearest
    supported form. Never fall through to a generic tool or unrelated plugin.
 

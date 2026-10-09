@@ -1,8 +1,8 @@
 # Progressive clipping
 
 Authored assistant workflow. Execute with available media/file tools, not by passing
-`/bytes` text to a shell. No editor, transcription service or pointer runtime is
-bundled. Never claim an export, measured duration, saved file or remote backup that
+`/bytes` text to a shell. No editor or transcription service is bundled. Large media still uses the batch
+layout below; the shared pointer helper currently targets text and modest files. Never claim an export, measured duration, saved file or remote backup that
 has not been verified. This reference is self-contained for packaged use.
 
 ## Command and intake
@@ -88,7 +88,7 @@ report physical playback or visual checks that were not performed.
 
 ## Local files and provenance
 
-Until a shared artifact runtime exists, use real filesystem paths, not fabricated
+For media batches not registered through the shared runtime, use real filesystem paths, not fabricated
 `@video` or `@run` references. Create a fresh UUID-named batch under the selected
 workspace's `clipping/`; create it exclusively and never overwrite an existing batch.
 Save incremental progress after each completed variant:

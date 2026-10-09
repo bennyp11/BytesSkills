@@ -1,10 +1,10 @@
 # Local creative workspace
 
 This directory is intentionally tracked and backed up to the private GitHub repo.
-It currently contains no generated creative artifacts. Illustrative examples live
+It contains legacy brainstorm files and registered artifact records. Illustrative examples live
 under `examples/` and cannot resolve as live pointers.
 
-## Proposed record layout
+## Original proposed record layout (superseded)
 
 ```text
 workspace/
@@ -56,3 +56,12 @@ metadata and separate `60s/`, `30s/`, and `10-15s/` variant directories. These a
 real saved batches, not allocated `@video` pointers. Their paths and run metadata
 permit later migration without overwriting source files or earlier cuts. The same
 GitHub backup policy applies, including explicit handling of large media.
+
+## Implemented layout
+
+The authoritative runtime uses `records/<type>/<uuid>/vNNNNNNNN.json` and
+`blobs/sha256/<prefix>/<hash>`, with a rebuildable ignored `.index/` SQLite cache.
+The design above is retained as history; new skills must use the shared runtime,
+not implement that older layout independently. Reindex after Git changes. See
+[architecture](../docs/pointer-architecture.md). The original brainstorm files remain
+intact; pointer-migration.json maps them to registered concepts and selected revisions.

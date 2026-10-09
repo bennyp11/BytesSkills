@@ -1,7 +1,8 @@
 # BytesSkills system specification
 
-Status: proposed v0.1. This consolidates the conversation into an implementation
-contract. It is not an executable runtime. Examples are fictional.
+Status: evolving specification with an implemented local artifact runtime. See
+[pointer architecture](pointer-architecture.md) for implemented behavior and limits.
+Historical numeric pointers in examples are fictional.
 
 ## Purpose
 
@@ -48,11 +49,11 @@ Refinement of a parent does not silently update children or downstream scripts.
 
 ## Pointers and identity
 
-User pointers: `@concept/002`, `@hook/005`, `@script/008`, `@run/012`.
-Explicit revision: `@hook/005:v2`. Unversioned pointers resolve to the current
-revision when a command begins; the run records the pinned result. IDs are stable,
-unique within type and workspace, never reused, and independent of titles or paths.
-Numeric examples are illustrative; the allocator must continue beyond three digits.
+Implemented pointers use `@concept/<UUID>` or `@concept/<UUID>:v2`. An unambiguous
+UUID prefix of at least eight characters is accepted. Records store full pinned
+references. Omitted revisions resolve to latest when the operation starts. IDs are
+stable and independent of titles or file locations. Older numeric examples were
+never allocated. UUIDs avoid requiring a shared counter across future writers.
 
 The workspace has its own stable ID. Shorthand pointers resolve only in the active
 workspace. Cross-workspace merging is outside v0.1; never resolve an ambiguous
@@ -124,8 +125,9 @@ outside the initial command set and must inspect incoming references first.
 
 ## Scope
 
-Next implementation slice: concept/hook/script generation, refinement, pointer
-resolution, format inheritance, inspection and local persistence. Production media
-execution and platform adapters can follow once the text workflow is coherent.
+Local pointer resolution, immutable revisions, search, relationships and persistence
+are implemented. The assistant handles generation and context resolution using these
+contracts; no native slash parser or autonomous generation service is bundled.
+Streaming media, distributed writes and remote storage remain future work.
 The reductions draft is grounded in the user’s editorial description; see
 [reductions.md](reductions.md). Its sound palette is proposed and has no audio assets.

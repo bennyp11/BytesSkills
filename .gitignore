@@ -6,3 +6,7 @@ __pycache__/
 *.pyc
 node_modules/
 dist/
+
+# Rebuildable local query index and transient atomic-write files
+workspace/.index/
+.staging-*

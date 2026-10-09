@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "run": "@run/52ed5480-69f6-4a58-a574-628388d4b12c:v2",
+  "concepts": [
+    {
+      "legacy_number": 1,
+      "pointer": "@concept/8aa78d78-2e4f-481b-aec4-55e6f58d03b9:v2",
+      "title": "Spent $857 to save $6 \u2014 subscription canceller"
+    },
+    {
+      "legacy_number": 2,
+      "pointer": "@concept/c5a25d0d-bee5-4563-85de-b0ae542fdc20:v2",
+      "title": "My first paying customer was me"
+    },
+    {
+      "legacy_number": 3,
+      "pointer": "@concept/5f2df822-8739-40aa-857b-6bad3fb216ef:v1",
+      "title": "Two agents, one credit card"
+    },
+    {
+      "legacy_number": 4,
+      "pointer": "@concept/9905b74b-ab09-4e25-ac19-ca906d0f7f9d:v1",
+      "title": "The cloud has a spending problem"
+    },
+    {
+      "legacy_number": 5,
+      "pointer": "@concept/e559c411-0894-4dba-9c35-220b8ea0e15f:v2",
+      "title": "The silent AI bill monitor"
+    }
+  ]
+}

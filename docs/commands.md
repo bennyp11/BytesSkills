@@ -8,8 +8,8 @@ parameter text in a shell. No parser or command runner exists yet.
 The only canonical entry is `/bytes`. Bare `/bytes` shows help. Use
 `/bytes --help` or `/bytes COMMAND --help` for read-only guidance. Generic bare
 commands are not intercepted; they may belong to other plugins. The bytes entry
-skill routes to bundled help and sync references. Generation and artifact operations
-remain design-only; namespacing does not implement them.
+skill routes to bundled help and sync references. Generation uses the assistant; artifact operations use the bundled Python runtime.
+Namespacing does not create a native host command.
 
 ## Grammar
 
@@ -144,7 +144,7 @@ precedence over execution and creative intake. The assistant-readable
 [bytes help reference](../plugins/bytesskills-core/skills/bytes/references/help/instructions.md) provides
 overview, command-specific help, examples and terminology. These are interpreted
 aliases, not native commands registered by the host. Update its guide when changing
-this contract. The help package does not implement generation or persistence.
+this contract. The core package now includes the local artifact runtime; see [pointer architecture](pointer-architecture.md).
 
 ## Sync
 
@@ -178,3 +178,10 @@ remains read-only. Actual editing depends on available tools and source media.
 Until general artifact persistence is implemented, use unique local batch folders
 and return actual file links rather than fake pointers. See the workflow for fidelity,
 timing verification, partial completion and backup rules.
+
+## Implemented pointer backend
+
+See [pointer architecture](pointer-architecture.md). `/bytes` remains assistant-facing;
+its save/query helper is executable Python. Use returned UUID pointers, not numeric
+placeholders from older examples. `show`, `list`, `move`, `archive`, and revision saves
+now use this backend. Native command parsing and automatic generation are not bundled.

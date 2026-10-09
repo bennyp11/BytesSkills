@@ -3,8 +3,9 @@
 ## Quick overview
 
 BytesSkills describes content work through commands, saves outputs as addressable
-artifacts, and carries creative context between stages. General generation and pointer persistence remain planned behavior; clip supplies
-a tool-dependent assistant workflow that saves real local files. The bytes entry skill can
+artifacts, and carries creative context between stages. The assistant generates content and uses a bundled local artifact runtime for
+pointers, revisions, search and storage. Clip supplies a tool-dependent workflow
+that saves local batch files. The bytes entry skill can
 explain the interface now when loaded by an assistant.
 
 ```text
@@ -128,8 +129,8 @@ styles and actual sound recordings remain to be selected.
 
 The planned runtime uses local files in a workspace tracked in the private GitHub
 repository. Every candidate is saved; refinement preserves history. A local save and
-a successful remote backup are separate states. No working generator, pointer store,
-or automatic backup runner ships with this help skill yet.
+a successful remote backup are separate states. A Python pointer store now ships with the skill. It does not include a model
+service or automatic backup runner; the assistant performs generation and Git steps.
 
 ## Sync and refresh
 
@@ -177,7 +178,7 @@ selection or triggers a question. Explicit sets replace inherited ones. Tactics
 never override format requirements. A reduction must explain its surprising opening;
 a troll can leave the bit intact. For troll, clarify the in-group and shared knowledge.
 The old `--format=bait` name is retired; suggest troll rather than guessing intent.
-Generation remains planned. Joke is a broad description, not another registered format.
+Generation is performed by the assistant; saved outputs use the local runtime. Joke is a broad description, not another registered format.
 
 ## Clip: three lengths, same point
 
@@ -200,7 +201,7 @@ mode, one at a time; inherit known choices and accept `idk` for creative decisio
 The three lengths are built into this workflow. No extra generation flags apply.
 
 Save plans, transcripts, provenance and available exports to a new workspace batch.
-Return real file links until the pointer runtime exists. Missing tools mean exports
+Return real file links for media batches not yet registered in the pointer runtime. Missing tools mean exports
 remain pending; a plan must not be presented as an edited video. A source too short
 or a point that cannot fit safely triggers a targeted decision. No video is produced
 merely by installing this skill. For execution read the bundled
@@ -214,5 +215,23 @@ Nodding yes or shaking the head no is common but optional. The same reaction can
 repeat across several context states; no new performance is required for each.
 Text holds are independently timed for readability, not forced to 0.5 seconds.
 Clarify the actual question, values, reaction source, timing and presentation when
-unresolved. Music, effects and overall ending remain choices. Brainstorm execution
-remains design-only; this definition does not implement a generator.
+unresolved. Music, effects and overall ending remain choices. Brainstorming uses the assistant and local artifact runtime, not a dedicated
+generation service.
+
+## Real artifact pointers
+
+The implemented ID format is `@concept/FULL-UUID:v2`. Unique UUID prefixes of at
+least eight characters also resolve, e.g. `@concept/8aa78d78`. Omit a revision to
+read latest. Earlier numeric IDs in examples are placeholders, not live records.
+The five unexpected-cost concepts have been imported. In this workspace:
+
+```text
+/bytes show @concept/8aa78d78
+/bytes show @concept/e559c411 --history
+/bytes list --type=concept --tag=share
+/bytes refine --concept=@concept/8aa78d78 --req="Make the brag even more confident"
+```
+
+These three commands use the bundled helper through the assistant. Pointer support
+requires local workspace access. After Git updates, sync rebuilds the query index.
+See [runtime guidance](../../artifacts.md) for storage and limitations.

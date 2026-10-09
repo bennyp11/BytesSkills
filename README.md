@@ -4,10 +4,11 @@ A CLI-like content workflow system: reusable definitions, skills, and persistent
 creative artifacts with stable pointers. GitHub backs up both the system and its
 local workspace.
 
-**Current status: design specification with an authored entry skill for help, sync and clipping.** Commands below are
-assistant-facing contracts, not a standalone CLI or automatically installed slash commands.
-Clipping can be performed by an assistant with suitable media tools; other creative
-commands and the general pointer store remain design-only.
+**Current status:** assistant-driven skills with a working local artifact runtime.
+Stable UUID pointers, immutable revisions, metadata filters, full-text search and
+reverse references are implemented. The assistant supplies generation and calls the
+bundled Python helper; `/bytes` is not a standalone shell executable. Media clipping
+still requires appropriate tools.
 
 ```text
 /bytes brainstorm --concepts --format=reductions --count=5
@@ -66,7 +67,8 @@ creating it in this repo does not install it across chats.
 
 Load the [bytes skill](plugins/bytesskills-core/skills/bytes/SKILL.md), then use
 `/bytes --help`, `/bytes brainstorm ...`, or `/bytes sync`. Help and sync are internal
-routes, not separate skills to stack. Clipping has a tool-dependent execution procedure; other creative commands remain planned.
+routes, not separate skills to stack. Clipping is tool-dependent; other creative commands use the assistant and shared
+artifact runtime.
 Platform-native skill selection may differ; `/bytes` is the canonical text interface.
 
 ## Content formats
@@ -83,3 +85,16 @@ Platform-native skill selection may differ; `/bytes` is the canonical text inter
 10–15s cuts that preserve the same point. Read the
 [clip workflow](plugins/bytesskills-core/skills/bytes/references/clip/instructions.md).
 Missing inputs trigger clarifiers; missing rendering tools are reported explicitly.
+
+## Pointer runtime
+
+Read the [architecture](docs/pointer-architecture.md) and
+[runtime contract](plugins/bytesskills-core/skills/bytes/references/artifacts.md).
+Existing concepts now have real pointers:
+
+- `@concept/8aa78d78` — Spent $857 to save $6
+- `@concept/c5a25d0d` — My first paying customer was me
+- `@concept/e559c411` — The silent AI bill monitor
+
+Run storage tests with `python3 -m unittest discover -s tests -v`.
+SQLite is an ignored, rebuildable query cache. Records and blobs are backed up to Git.
