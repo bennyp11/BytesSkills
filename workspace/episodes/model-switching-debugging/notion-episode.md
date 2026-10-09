@@ -17,7 +17,14 @@ Software engineers recognize the temptation to assume a different model will und
 A different model can genuinely provide a useful second opinion. The joke targets repeated switching without examining the bug or clarifying the request, not all use of multiple models.
 ## Development direction
 Keep the performance committed and matter-of-fact. Escalate the logic of trying another model instead of diagnosing the issue. A sincere-sounding request for audience advice should arise from the premise and invite corrections or model recommendations.
+## Intro hook alternatives
+Five alternatives for the same episode. None selected yet.
+1. **Reassurance:** “You’re not bad at coding. You’re just on the wrong subscription.”
+2. **Normalize it:** “Normalize leaving an AI the second it asks you for context.”
+3. **Senior engineer advice:** “Junior developers read the error. Senior developers get a second opinion until the error goes away.”
+4. **Relationship advice:** “If Claude isn’t meeting your needs, you don’t owe it an explanation. ChatGPT is right there.”
+5. **Asking for a friend:** “If three different AIs can’t fix your code, what’s a good fourth one?”
 ## Next creative step
-Brainstorm alternative meme-style intro hooks for this same premise, beyond “Unpopular opinion, but…”. Hook count is awaiting the user’s choice. Keep these as alternatives attached to one episode rather than separate episode concepts.
+Choose an intro to develop into a script. These are hook alternatives attached to one episode, not separate concepts.
 ## Production status
 Idea only. No finished script, selected trial, publishing date or final main-post copy. Do not force the delayed AI reveal from the earlier fall batch onto this episode.
