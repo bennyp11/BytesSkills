@@ -1,0 +1,8 @@
+{
+  "name": "bytesskills-core",
+  "version": "0.1.0",
+  "description": "Help for the BytesSkills content workflow command language. Generation commands are still design-only.",
+  "author": {
+    "name": "bennyp11"
+  }
+}

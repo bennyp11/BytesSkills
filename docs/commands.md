@@ -128,3 +128,12 @@ accepted evidence; `--strategy` is the discovery lens. Both topic-first and seed
 routes produce the same concept structure. A concept records its angle, takeaway,
 audience value, and support/limits. Format-specific development records a selected
 format without making that format the concept's permanent identity.
+
+## Help
+
+`--help`, `/help`, and `/COMMAND --help` request read-only guidance and take
+precedence over execution and creative intake. The assistant-readable
+[bytes-help skill](../plugins/bytesskills-core/skills/bytes-help/SKILL.md) provides
+overview, command-specific help, examples and terminology. These are interpreted
+aliases, not native commands registered by the host. Update its guide when changing
+this contract. The help package does not implement generation or persistence.

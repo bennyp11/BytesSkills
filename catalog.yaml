@@ -9,6 +9,14 @@ categories:
   - publishing-distribution
   - performance-learning
 plugins:
+  - id: bytesskills-core
+    path: plugins/bytesskills-core
+    status: help-only
+    skills:
+      - id: bytes-help
+        status: authored
+        inputs: [help-request]
+        outputs: [command-guidance]
   - id: video-editing
     path: plugins/video-editing
     status: scaffold

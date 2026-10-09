@@ -50,3 +50,11 @@ credentials or temporary caches. Large binary media requires a verified Git LFS 
 other explicit backup arrangement; do not claim a path alone backs up its contents.
 
 See [workspace policy](workspace/README.md) for details.
+
+## Help
+
+The [BytesSkills help skill](plugins/bytesskills-core/skills/bytes-help/SKILL.md)
+explains `--help`, `/help`, and `/brainstorm --help` when loaded by an assistant.
+Its [guide](plugins/bytesskills-core/skills/bytes-help/references/guide.md) is also
+readable directly. It is packaged in `plugins/bytesskills-core` for installation;
+creating it in this repo does not install it across chats.
