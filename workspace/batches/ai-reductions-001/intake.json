@@ -1,0 +1,18 @@
+{
+  "command": "/bytes brainstorm --concepts --format=reductions --topic=AI",
+  "answers": {
+    "strategy": "apparent contradictions",
+    "audience": "general audience",
+    "count": 5
+  },
+  "format_version": "0.1.0",
+  "status": "completed-manually",
+  "persistence": "Individual Markdown files; no automated pointer resolver invoked.",
+  "outputs": [
+    "concept-01.md",
+    "concept-02.md",
+    "concept-03.md",
+    "concept-04.md",
+    "concept-05.md"
+  ]
+}
