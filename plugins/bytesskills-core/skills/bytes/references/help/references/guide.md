@@ -3,8 +3,8 @@
 ## Quick overview
 
 BytesSkills describes content work through commands, saves outputs as addressable
-artifacts, and carries creative context between stages. Generation and persistence
-are currently planned behavior, not an implemented runtime. The bytes entry skill can
+artifacts, and carries creative context between stages. General generation and pointer persistence remain planned behavior; clip supplies
+a tool-dependent assistant workflow that saves real local files. The bytes entry skill can
 explain the interface now when loaded by an assistant.
 
 ```text
@@ -175,3 +175,30 @@ never override format requirements. A reduction must explain its surprising open
 a troll can leave the bit intact. For troll, clarify the in-group and shared knowledge.
 The old `--format=bait` name is retired; suggest troll rather than guessing intent.
 Generation remains planned. Joke is a broad description, not another registered format.
+
+## Clip: three lengths, same point
+
+```text
+/bytes clip --source="/path/to/recording.mov"
+/bytes clip --source="/path/to/recording.mov" --point="More tools can become a way to avoid work" --format=none --mode=render
+/bytes clip --help
+```
+
+Clip is an authored assistant workflow, available when file/media tools support it.
+It saves a 60-second cut, a 30-second cut and a 10–15-second cut, each progressively
+tighter while retaining the same central point. They are separate variants, not
+replacements. Work from original media for every export. Targets of 60s and 30s are
+ceilings; final timing must be measured. Never remove essential qualifiers just to fit.
+
+Flags: `--source` accessible media/attachment or real video pointer; `--point`
+one-sentence takeaway; `--format` available format ID or `none`; `--mode=render|plan`;
+`--output` local workspace path. Ask for unresolved source, point, presentation and
+mode, one at a time; inherit known choices and accept `idk` for creative decisions.
+The three lengths are built into this workflow. No extra generation flags apply.
+
+Save plans, transcripts, provenance and available exports to a new workspace batch.
+Return real file links until the pointer runtime exists. Missing tools mean exports
+remain pending; a plan must not be presented as an edited video. A source too short
+or a point that cannot fit safely triggers a targeted decision. No video is produced
+merely by installing this skill. For execution read the bundled
+[clip procedure](../../clip/instructions.md).

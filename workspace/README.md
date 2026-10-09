@@ -48,3 +48,11 @@ silently exclude large media, replace it with an expiring URL, or treat an LFS p
 alone as proof of remote storage. No LFS policy is configured yet because the workspace
 is empty. Archived content remains tracked. Permanent removal requires a separate
 explicit action and does not erase older Git commits.
+
+## Clipping batches before the artifact runtime
+
+The clip workflow may save actual files under `clipping/<batch-uuid>/`, with run
+metadata and separate `60s/`, `30s/`, and `10-15s/` variant directories. These are
+real saved batches, not allocated `@video` pointers. Their paths and run metadata
+permit later migration without overwriting source files or earlier cuts. The same
+GitHub backup policy applies, including explicit handling of large media.

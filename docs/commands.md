@@ -166,3 +166,15 @@ Unresolved selections trigger clarification. See [bait.md](bait.md). Bait does n
 override format requirements: reductions resolve into a true explanation; troll
 preserves an intentional bit. `--format=bait` is retired: suggest `--format=troll`
 when the user means the straight-faced joke rather than silently translating it.
+
+## Clip
+
+`/bytes clip [--source=PATH_OR_POINTER] [--point="..."] [--format=ID_OR_none]
+[--mode=render|plan] [--output=WORKSPACE_PATH]` invokes the authored
+[three-cut workflow](../plugins/bytesskills-core/skills/bytes/references/clip/instructions.md).
+It saves separate 60s, 30s, and 10–15s variants of the same point. Ask about unresolved
+creative inputs before editing; these durations are inherent to the command. Help
+remains read-only. Actual editing depends on available tools and source media.
+Until general artifact persistence is implemented, use unique local batch folders
+and return actual file links rather than fake pointers. See the workflow for fidelity,
+timing verification, partial completion and backup rules.

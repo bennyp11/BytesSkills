@@ -14,6 +14,8 @@ an honest error and the supported list, not invented syntax.
 Help takes precedence over execution and intake: never ask the creative questionnaire,
 generate content, allocate pointers or change workspace files for a help request.
 Use example pointers only as examples. State that generation/persistence operations
-are currently specifications; the package supplies assistant-readable help and a tool-backed sync procedure.
+are mostly specifications; clip is a tool-dependent assistant workflow saving real
+files, and sync is an assistant Git procedure. For clip help, read the clipping
+section of the guide and explain the three independent saves and capability limits.
 Installing this package and reading its instructions is separate from executing a
 native CLI. Do not claim installation has occurred merely because files exist.

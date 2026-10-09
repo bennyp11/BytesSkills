@@ -4,8 +4,10 @@ A CLI-like content workflow system: reusable definitions, skills, and persistent
 creative artifacts with stable pointers. GitHub backs up both the system and its
 local workspace.
 
-**Current status: design specification plus plugin skeleton.** Commands below are
-proposed contracts, not an implemented CLI or installed slash commands.
+**Current status: design specification with an authored entry skill for help, sync and clipping.** Commands below are
+assistant-facing contracts, not a standalone CLI or automatically installed slash commands.
+Clipping can be performed by an assistant with suitable media tools; other creative
+commands and the general pointer store remain design-only.
 
 ```text
 /bytes brainstorm --concepts --format=reductions --count=5
@@ -64,7 +66,7 @@ creating it in this repo does not install it across chats.
 
 Load the [bytes skill](plugins/bytesskills-core/skills/bytes/SKILL.md), then use
 `/bytes --help`, `/bytes brainstorm ...`, or `/bytes sync`. Help and sync are internal
-routes, not separate skills to stack. Creative command execution remains planned.
+routes, not separate skills to stack. Clipping has a tool-dependent execution procedure; other creative commands remain planned.
 Platform-native skill selection may differ; `/bytes` is the canonical text interface.
 
 ## Content formats
@@ -72,3 +74,10 @@ Platform-native skill selection may differ; `/bytes` is the canonical text inter
 - [Reductions](docs/reductions.md): make a complex topic accessible through a surprising opening.
 - [Troll](docs/troll.md): a straight-faced absurd bit.
 - [Bait](docs/bait.md): reusable rage/comment engagement settings.
+
+## Progressive clipping
+
+`/bytes clip --source="/path/to/recording.mov"` produces separate 60s, 30s and
+10–15s cuts that preserve the same point. Read the
+[clip workflow](plugins/bytesskills-core/skills/bytes/references/clip/instructions.md).
+Missing inputs trigger clarifiers; missing rendering tools are reported explicitly.
