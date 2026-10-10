@@ -13,6 +13,7 @@ async function walk(dir) {
 await walk(resolve(root, "definitions"));
 for (const p of [
   "docs/commands.md",
+  "plugins/bytesskills-core/skills/bytes/references/versions.md",
   "docs/system-spec.md",
   "plugins/bytesskills-core/skills/bytes/references/cloud.md",
   "plugins/bytesskills-core/skills/bytes/contracts/operations.json",
@@ -20,6 +21,6 @@ for (const p of [
   entries[p] = await readFile(resolve(root, p), "utf8");
 await writeFile(
   "src/library.json",
-  JSON.stringify({ version: "0.6.0", entries }, null, 2) + "\n",
+  JSON.stringify({ version: "0.7.0", entries }, null, 2) + "\n",
 );
 console.log(`Bundled ${Object.keys(entries).length} library entries`);

@@ -198,7 +198,7 @@ export class Store {
       );
     return this.resolve(row.pointer);
   }
-  async save(raw: unknown) {
+  async save(raw: unknown, workflowId?: string) {
     const req = saveSchema.parse(raw);
     if (new TextEncoder().encode(canonical(req)).length > 250_000)
       throw new ApiError(413, "Metadata/content too large");
@@ -278,7 +278,13 @@ export class Store {
       record_checksum: await sha(canonical(record)),
     });
     try {
-      await this.persist(complete, body, req.request_id, fingerprint);
+      await this.persist(
+        complete,
+        body,
+        req.request_id,
+        fingerprint,
+        workflowId,
+      );
     } catch (error) {
       const duplicate = await this.replay(req.request_id, fingerprint);
       if (duplicate) return duplicate;
@@ -291,6 +297,7 @@ export class Store {
     body: string,
     requestId?: string,
     fingerprint?: string,
+    workflowId?: string,
   ) {
     const db = this.env.DB;
     const p = (sql: string, ...args: (string | number | null)[]) =>
@@ -308,13 +315,16 @@ export class Store {
       );
     batch.push(
       p(
-        "INSERT INTO revisions VALUES (?,?,?,?,?,?)",
+        workflowId
+          ? "INSERT INTO revisions SELECT ?,?,?,?,?,? WHERE EXISTS (SELECT 1 FROM workflow_sessions s LEFT JOIN skill_revocations v ON v.skill=s.skill AND v.version=s.version WHERE s.id=? AND s.expires_at>? AND v.skill IS NULL)"
+          : "INSERT INTO revisions VALUES (?,?,?,?,?,?)",
         r.pointer,
         r.id,
         r.type,
         r.revision,
         r.record_checksum,
         canonical(r),
+        ...(workflowId ? [workflowId, new Date().toISOString()] : []),
       ),
     );
     batch.push(

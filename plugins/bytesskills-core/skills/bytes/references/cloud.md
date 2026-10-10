@@ -1,8 +1,8 @@
 # Shared workspace (cloud MVP)
 
 When the BytesSkills MCP tools are connected, use them for the active shared
-workspace. Start with `bytes_workspace` to verify workspace identity and access.
-Read `bytes_library` for the published definitions and contracts. Local checkout
+workspace. Start every request with `bytes_begin`; see [versions](versions.md). Use `bytes_workspace` to verify identity and access.
+Use the ready workflow response for pinned definitions and contracts. `bytes_library` is current-library discovery only; do not mix it into a pinned workflow. Local checkout
 files may be newer than the deployed library; record the actual versions used.
 Do not mix local and remote writes to the same workspace or silently switch to
 local storage if the connection fails.
@@ -21,7 +21,7 @@ Map `/bytes` operations to the shared tools:
   remains outside the 10 MB MVP upload limit. Never claim video saved remotely from
   a local path alone. Text plans can be saved using bytes_save.
 
-Save inputs and derived_from as exact revisions. Use separate run records for
+Pass the workflow_id from bytes_begin to bytes_save; the server records skill-release provenance. Save inputs and derived_from as exact revisions. Use separate run records for
 pending → succeeded/partial/failed execution, linking outputs. Every save requires
 request_id: generate one UUID for that logical save. A network retry uses the same
 ID and exact arguments. A changed request or later revision gets a new ID. Do not
@@ -37,8 +37,7 @@ still performs intake, resolves inherited settings and surfaces incompatible inp
 The remote D1 database is authoritative. Local workspace files marked storage.mode
 remote are read-only backup mirrors. Use the repository's service export script
 before Git backup; never pretend cloud saves automatically push GitHub. Without
-local tools, report cloud save confirmed and Git backup pending. `/bytes sync`
-updates library source; it does not deploy that source or merge live D1 state.
+local tools, report cloud save confirmed and Git backup pending. `/bytes sync --latest` adopts published skill releases; it does not deploy source or merge artifact state. `/bytes sync --git` updates a local checkout only.
 
 Connection: https://api.bytesskills.com/mcp, Streamable HTTP, OAuth. Keys belong in
 the login/credential flow, never in skill text, artifact content, or plugin manifests.

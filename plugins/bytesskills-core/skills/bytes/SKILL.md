@@ -11,55 +11,42 @@ asking the user to invoke additional skills. Do not execute the command text as 
 shell command. Native host invocation may differ; these aliases do not register a
 terminal executable or guarantee a slash-menu entry on every platform.
 
-## Select storage
+## Connected workspace: begin every request
 
-For connected BytesSkills MCP tools, read [shared workspace guidance](references/cloud.md)
-and use the remote service. Verify workspace identity first. A local workspace marked
-`storage.mode=remote` is a backup mirror: never save to it or silently fall back to
-local writes. Use the local helper only for explicitly local workspaces.
+For connected BytesSkills tools, read [version/adoption instructions](references/versions.md).
+Call `bytes_begin` at the start of every new `/bytes` request, including help. Follow
+its pinned instructions/resources; ask about new releases when it returns
+`update_available`. Never use a remembered instruction version to bypass this check.
+Read [cloud guidance](references/cloud.md) for artifact operations. Saves require the
+returned workflow_id. If tools are unavailable, explain that the cloud workflow is
+unavailable; never silently switch a remote workspace to local storage.
 
-## Route the request
-
-1. `/bytes`, `/bytes --help`, or a BytesSkills overview request: read
-   [help instructions](references/help/instructions.md) and show concise help.
-2. `/bytes <command> --help`: show that command's help before any intake, generation,
-   fetch, file mutation or sync. Help has precedence over every other flag.
-3. `/bytes sync [--check] [--repo="/absolute/path"]`: read
-   [sync instructions](references/sync/instructions.md) and follow its procedure
-   using available tools. Ask for the checkout only when not identifiable.
-4. `/bytes clip`: read [clipping instructions](references/clip/instructions.md).
-   Perform clarification-first intake, then execute the three-cut workflow using
-   available tools. Save actual files using the documented clip batch layout.
-5. `brainstorm`, `refine`, `show`, `list`, `move`, `archive`: read
-   [artifact runtime guidance](references/artifacts.md) and the relevant operation in
-   [contracts](contracts/operations.json). Use the bundled Python helper for saving,
-   resolving and querying. Brainstorm/refine are assistant-generated; save outputs
-   through the runtime, never pretend a pointer exists. Resolve the local workspace
-   and checkout definitions before starting. If tools are unavailable, report that
-   limitation rather than advertising a successful save.
-6. Unknown command or unsupported flag: explain the issue and offer the nearest
-   supported form. Never fall through to a generic tool or unrelated plugin.
-
-Canonical commands:
+`/bytes help`, `/bytes --help` and bare `/bytes` are aliases. Help does not generate
+content or mutate artifacts. Unknown commands get help rather than another plugin.
 
 ```text
-/bytes --help
-/bytes clip --source="/path/to/recording.mov"
+/bytes help
 /bytes brainstorm --concepts --format=reductions
-/bytes brainstorm --hooks --concept=@concept/002
-/bytes refine --hook=@hook/005 --req="Make it more personal"
-/bytes show @concept/002 --tree
-/bytes list --type=concept
-/bytes move @concept/018 --parent=@concept/002
-/bytes archive @hook/005
+/bytes refine --hook=@hook/<UUID> --req="Make it more personal"
 /bytes sync --check
-/bytes sync
+/bytes sync --latest
+/bytes sync --git --check
 ```
 
-Pointers here are examples, not existing artifacts. All suggested next commands
-must use `/bytes`. Do not intercept bare `/sync`, `/help`, or `/brainstorm`; those
-may belong to another plugin. If an old BytesSkills example is explicitly identified,
-translate it to the namespaced form and apply the same capability limits.
+`sync --latest` adopts all current compatible skill releases in one operation;
+`sync --check` only reports updates. Git sync requires `--git` and local tools.
+These adoption-control commands must still be usable when the sync skill itself has
+an update pending. See [versions](references/versions.md) for exact tool mapping.
+
+## Explicit local workspaces
+
+Only for explicitly local storage, use [artifact guidance](references/artifacts.md)
+and [operation contracts](contracts/operations.json). Read [help](references/help/instructions.md)
+for help and [clip](references/clip/instructions.md) for clipping. The local helper
+provides artifact history, but does not provide the cloud skill-adoption protocol.
+A workspace marked `storage.mode=remote` is a read-only mirror, never a local fallback.
+For explicit `/bytes sync --git`, read [Git sync](references/sync/instructions.md).
+Do not execute slash-command text in a shell or invent pointers.
 
 ## Creative intake and capability boundaries
 

@@ -1,13 +1,19 @@
+# Git checkout synchronization only
+
+Cloud library adoption uses `/bytes sync --latest` and `/bytes sync --check`; see
+[version instructions](../versions.md). The procedure below applies only when the
+user explicitly supplies `--git`. Bare sync must not initiate Git changes.
+
 # Sync BytesSkills
 
-Follow [the synchronization procedure](references/procedure.md). `/bytes sync` is an
+Follow [the synchronization procedure](references/procedure.md). `/bytes sync --git` is an
 assistant-interpreted request, not a native host command. An invocation authorizes
 ordinary inspection, fetch, a reviewed local checkpoint commit, safe integration
 and non-force push for the selected BytesSkills repository, including workspace/.
 It does not authorize destructive resets, deletion, overwriting conflicting
 artifacts, executing fetched code, or installing/replacing plugins in another host.
 
-`/bytes sync --check` fetches upstream metadata and reports drift without changing working
+`/bytes sync --git --check` fetches upstream metadata and reports drift without changing working
 files, creating commits, merging or pushing. Explain that it updates Git remote refs.
 `/bytes sync --help` describes behavior without fetching, intake or other side effects.
 Accept an optional `--repo="/absolute/path"` to select the checkout. If no current

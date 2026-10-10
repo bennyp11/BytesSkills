@@ -29,6 +29,36 @@ before(async () => {
     .replace(/--[^\n]*/g, "")
     .replace(/\n/g, " ");
   await db.exec(sql);
+  await db.exec(
+    (await readFile("migrations/0002_skill_releases.sql", "utf8"))
+      .replace(/--[^\n]*/g, "")
+      .replace(/\n/g, " "),
+  );
+  const fixture = [
+    "help",
+    "brainstorm",
+    "refine",
+    "inspect",
+    "organize",
+    "clip",
+    "sync",
+  ].map((skill) => ({
+    skill,
+    version: "0.7.0",
+    summary: "Initial test release",
+    protocol: 1,
+    required_scopes: ["bytes:read"],
+    instructions: "Fixture workflow: " + skill,
+    resources: { "format.json": '{"version":1}' },
+  }));
+  assert.equal((await api("/v1/releases", { releases: fixture })).status, 200);
+  const preview = await tool("bytes_updates", {});
+  await tool("bytes_adopt", {
+    request_id: randomUUID(),
+    expected_revision: preview.state_revision,
+    catalog_hash: preview.catalog_hash,
+    action: "sync",
+  });
 });
 after(async () => {
   await mf?.dispose();
@@ -54,6 +84,11 @@ async function save(extra = {}) {
   });
   assert.equal(r.status, 200, JSON.stringify(r.body));
   return r.body;
+}
+async function tool(name, args) {
+  const result = await rpc("tools/call", { name, arguments: args });
+  assert.ok(!result.body.result.isError, JSON.stringify(result));
+  return JSON.parse(result.body.result.content[0].text);
 }
 async function rpc(method, params = {}, token = key) {
   const r = await mf.dispatchFetch(base + "/mcp", {
@@ -91,6 +126,12 @@ test("MCP initialization, list, and actual artifact save/get", async () => {
     arguments: {
       request_id: randomUUID(),
       type: "hook",
+      workflow_id: (
+        await tool("bytes_begin", {
+          request_id: randomUUID(),
+          command: "/bytes brainstorm --hooks",
+        })
+      ).workflow_id,
       title: "MCP hook",
       text: "Hello",
     },
@@ -105,11 +146,13 @@ test("MCP initialization, list, and actual artifact save/get", async () => {
 });
 test("BytesSkills help is discoverable, read-only and provides the command contract", async () => {
   const list = await rpc("tools/list");
-  const tool = list.body.result.tools.find(t => t.name === "bytes_help");
+  const tool = list.body.result.tools.find((t) => t.name === "bytes_help");
   assert.ok(tool.description.includes("/bytes help"));
   assert.equal(tool.annotations.readOnlyHint, true);
-  const before = await db.prepare("SELECT COUNT(*) AS n FROM revisions").first();
-  const result = await rpc("tools/call", {name: "bytes_help", arguments: {}});
+  const before = await db
+    .prepare("SELECT COUNT(*) AS n FROM revisions")
+    .first();
+  const result = await rpc("tools/call", { name: "bytes_help", arguments: {} });
   assert.ok(!result.body.result.isError);
   const help = JSON.parse(result.body.result.content[0].text);
   assert.ok(help.aliases.includes("/bytes help"));
@@ -295,7 +338,9 @@ test("OAuth registration, PKCE consent, read scope and refresh", async () => {
   );
   const tampered = new URLSearchParams(query);
   tampered.set("redirect_uri", "https://unregistered.example/callback");
-  const invalidCallback = await mf.dispatchFetch(base + "/authorize?" + tampered);
+  const invalidCallback = await mf.dispatchFetch(
+    base + "/authorize?" + tampered,
+  );
   assert.equal(invalidCallback.status, 400);
 
   const cookie = page.headers.get("set-cookie").split(";")[0],
@@ -341,7 +386,11 @@ test("OAuth registration, PKCE consent, read scope and refresh", async () => {
   assert.equal(allowed.status, 303, await allowed.clone().text());
   const replay = await mf.dispatchFetch(base + "/authorize", {
     method: "POST",
-    headers: { Origin: base, Cookie: cookie, "Content-Type": "application/x-www-form-urlencoded" },
+    headers: {
+      Origin: base,
+      Cookie: cookie,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
     body: body.toString(),
   });
   assert.equal(replay.status, 400);
@@ -383,6 +432,33 @@ test("OAuth registration, PKCE consent, read scope and refresh", async () => {
     tokens.access_token,
   );
   assert.equal(write.body.result.isError, true);
+  const publication = await rpc(
+    "tools/call",
+    {
+      name: "bytes_publish",
+      arguments: {
+        releases: [
+          {
+            skill: "help",
+            version: "9.0.0",
+            summary: "Unauthorized",
+            protocol: 1,
+            required_scopes: ["bytes:read"],
+            instructions: "Not allowed",
+            resources: {},
+          },
+        ],
+      },
+    },
+    tokens.access_token,
+  );
+  assert.equal(publication.body.result.isError, true);
+  assert.equal(
+    await db
+      .prepare("SELECT version FROM skill_releases WHERE version='9.0.0'")
+      .first(),
+    null,
+  );
   const refresh = await mf.dispatchFetch(base + "/oauth/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -443,4 +519,235 @@ test("import real local records preserves checksums and export snapshot is stabl
     "/v1/export?limit=100&snapshot=" + ex.body.snapshot,
   );
   assert.equal(snapshot.body.records.length, before);
+});
+
+test("skill releases are immutable; adoption is shared and each run pins its resources", async () => {
+  const first = await tool("bytes_begin", {
+    request_id: randomUUID(),
+    command: "/bytes brainstorm --concepts",
+  });
+  assert.equal(first.version, "0.7.0");
+  const next = {
+    skill: "brainstorm",
+    version: "0.8.0",
+    summary: "New question ordering",
+    protocol: 1,
+    required_scopes: ["bytes:read"],
+    instructions: "New immutable instructions",
+    resources: { "format.json": '{"version":2}' },
+  };
+  assert.equal((await api("/v1/releases", { releases: [next] })).status, 200);
+  assert.equal(
+    (
+      await api("/v1/releases", {
+        releases: [{ ...next, instructions: "Overwrite attempt" }],
+      })
+    ).status,
+    409,
+  );
+  const request = {
+    request_id: randomUUID(),
+    command: "/bytes brainstorm --concepts",
+  };
+  const offered = await tool("bytes_begin", request);
+  assert.equal(offered.status, "update_available");
+  const keep = {
+    request_id: randomUUID(),
+    expected_revision: offered.state_revision,
+    catalog_hash: offered.catalog_hash,
+    skill: "brainstorm",
+    action: "keep",
+  };
+  const kept = await tool("bytes_adopt", keep);
+  assert.deepEqual(await tool("bytes_adopt", keep), kept);
+  const continued = await tool("bytes_begin", request);
+  assert.equal(continued.version, "0.7.0");
+  assert.equal(
+    (
+      await tool("bytes_begin", {
+        request_id: randomUUID(),
+        command: "/bytes brainstorm --hooks",
+      })
+    ).version,
+    "0.7.0",
+  );
+  const preview = await tool("bytes_updates", {});
+  await tool("bytes_adopt", {
+    request_id: randomUUID(),
+    expected_revision: preview.state_revision,
+    catalog_hash: preview.catalog_hash,
+    action: "sync",
+  });
+  const second = await tool("bytes_begin", {
+    request_id: randomUUID(),
+    command: "/bytes brainstorm --concepts",
+  });
+  assert.equal(second.version, "0.8.0");
+  assert.equal(second.resources["format.json"], '{"version":2}');
+  assert.equal((await tool("bytes_begin", request)).version, "0.7.0");
+  const record = await tool("bytes_save", {
+    workflow_id: first.workflow_id,
+    request_id: randomUUID(),
+    type: "concept",
+    title: "Pinned test",
+    text: "content",
+    provenance: { skill_release: { version: "fake" } },
+  });
+  assert.equal(record.provenance.skill_release.version, "0.7.0");
+  const missing = await rpc("tools/call", {
+    name: "bytes_save",
+    arguments: {
+      request_id: randomUUID(),
+      type: "concept",
+      title: "Bypass",
+      text: "x",
+    },
+  });
+  assert.equal(missing.body.result.isError, true);
+  const help = await tool("bytes_begin", {
+    request_id: randomUUID(),
+    command: "/bytes help",
+  });
+  const prohibited = await rpc("tools/call", {
+    name: "bytes_save",
+    arguments: {
+      workflow_id: help.workflow_id,
+      request_id: randomUUID(),
+      type: "concept",
+      title: "Bad help",
+      text: "x",
+    },
+  });
+  assert.equal(prohibited.body.result.isError, true);
+});
+
+test("bulk adoption is atomic, rejects stale previews and concurrent preference changes", async () => {
+  let preview = await tool("bytes_updates", {});
+  const request = {
+    request_id: randomUUID(),
+    expected_revision: preview.state_revision,
+    catalog_hash: preview.catalog_hash,
+    action: "sync",
+  };
+  await api("/v1/releases", {
+    releases: [
+      {
+        skill: "refine",
+        version: "0.8.0",
+        summary: "Refine update",
+        protocol: 1,
+        required_scopes: ["bytes:read"],
+        instructions: "Refine next",
+        resources: {},
+      },
+    ],
+  });
+  const stale = await rpc("tools/call", {
+    name: "bytes_adopt",
+    arguments: request,
+  });
+  assert.equal(stale.body.result.isError, true);
+  assert.equal(
+    (await tool("bytes_updates", {})).state_revision,
+    preview.state_revision + 1,
+  );
+  preview = await tool("bytes_updates", {});
+  const decisions = await Promise.all(
+    ["refine", "brainstorm"].map((skill) =>
+      rpc("tools/call", {
+        name: "bytes_adopt",
+        arguments: {
+          request_id: randomUUID(),
+          expected_revision: preview.state_revision,
+          catalog_hash: preview.catalog_hash,
+          skill,
+          action: "keep",
+        },
+      }),
+    ),
+  );
+  assert.equal(decisions.filter((r) => !r.body.result.isError).length, 1);
+  assert.equal(
+    (await tool("bytes_updates", {})).state_revision,
+    preview.state_revision + 1,
+  );
+});
+
+test("auto adoption never escalates scopes; revoked and expired workflows cannot save", async () => {
+  let p = await tool("bytes_updates", {});
+  await tool("bytes_adopt", {
+    request_id: randomUUID(),
+    expected_revision: p.state_revision,
+    catalog_hash: p.catalog_hash,
+    skill: "brainstorm",
+    action: "auto",
+  });
+  const release = {
+    skill: "brainstorm",
+    version: "0.9.0",
+    summary: "Compatible update",
+    protocol: 1,
+    required_scopes: ["bytes:read"],
+    instructions: "Auto release",
+    resources: {},
+  };
+  await api("/v1/releases", { releases: [release] });
+  const ready = await tool("bytes_begin", {
+    request_id: randomUUID(),
+    command: "/bytes brainstorm --concepts",
+  });
+  assert.equal(ready.version, "0.9.0");
+  await api("/v1/releases", {
+    releases: [
+      {
+        ...release,
+        version: "0.10.0",
+        required_scopes: ["bytes:read", "bytes:manage"],
+      },
+    ],
+  });
+  const offer = await tool("bytes_begin", {
+    request_id: randomUUID(),
+    command: "/bytes brainstorm --concepts",
+  });
+  assert.equal(offer.status, "update_available");
+  await db
+    .prepare("INSERT INTO skill_revocations VALUES(?,?,?)")
+    .bind("brainstorm", "0.9.0", "test revocation")
+    .run();
+  const blocked = await rpc("tools/call", {
+    name: "bytes_save",
+    arguments: {
+      workflow_id: ready.workflow_id,
+      request_id: randomUUID(),
+      type: "concept",
+      title: "Revoked",
+      text: "x",
+    },
+  });
+  assert.equal(blocked.body.result.isError, true);
+  const id = randomUUID();
+  await db
+    .prepare("INSERT INTO workflow_sessions VALUES(?,?,?,?,?,?,?)")
+    .bind(
+      id,
+      "test",
+      "refine",
+      "0.7.0",
+      "/bytes refine",
+      "2000-01-01T00:00:00.000Z",
+      "2000-01-02T00:00:00.000Z",
+    )
+    .run();
+  const expired = await rpc("tools/call", {
+    name: "bytes_save",
+    arguments: {
+      workflow_id: id,
+      request_id: randomUUID(),
+      type: "concept",
+      title: "Expired",
+      text: "x",
+    },
+  });
+  assert.equal(expired.body.result.isError, true);
 });

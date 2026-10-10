@@ -26,7 +26,7 @@ await client.connect(
   }),
 );
 const tools = await client.listTools();
-assert.equal(tools.tools.length, 8);
+assert.equal(tools.tools.length, 12);
 const call = async (name, args) => {
   const r = await client.callTool({ name, arguments: args });
   assert.ok(!r.isError, JSON.stringify(r));
@@ -38,7 +38,13 @@ const existing = await call("bytes_get", {
 });
 assert.equal(existing.revision, 2);
 assert.ok(existing.text.includes("857"));
+const workflow = await call("bytes_begin", {
+  request_id: randomUUID(),
+  command: "/bytes brainstorm --concepts",
+});
+assert.equal(workflow.status, "ready");
 const args = {
+  workflow_id: workflow.workflow_id,
   request_id: randomUUID(),
   type: "run",
   title: "MVP live integration smoke test",
@@ -51,6 +57,7 @@ const created = await call("bytes_save", args);
 assert.equal((await call("bytes_save", args)).pointer, created.pointer);
 const revised = await call("bytes_save", {
   request_id: randomUUID(),
+  workflow_id: workflow.workflow_id,
   pointer: created.pointer,
   expected_revision: 1,
   status: "succeeded",
@@ -60,6 +67,7 @@ const conflict = await client.callTool({
   name: "bytes_save",
   arguments: {
     request_id: randomUUID(),
+    workflow_id: workflow.workflow_id,
     pointer: created.pointer,
     expected_revision: 1,
     text: "stale",
@@ -68,6 +76,7 @@ const conflict = await client.callTool({
 assert.equal(conflict.isError, true);
 await call("bytes_save", {
   request_id: randomUUID(),
+  workflow_id: workflow.workflow_id,
   pointer: revised.pointer,
   expected_revision: 2,
   status: "archived",

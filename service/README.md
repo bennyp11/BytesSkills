@@ -147,3 +147,15 @@ metadata changes, start a new chat, select @BytesSkills, then send `/bytes help`
 The read-only `bytes_help` tool returns the deployed command contract and cloud
 workflow instructions; the assistant interprets subsequent `/bytes` requests.
 ChatGPT tool selection must still be verified in the client.
+
+### Versioned skill releases (service 0.2.0 / plugin 0.7.0)
+
+See [release architecture](../docs/skill-releases.md). New tools: `bytes_begin`,
+`bytes_updates`, `bytes_adopt`, `bytes_publish`. MCP `bytes_save` now requires the
+workflow_id from bytes_begin. Refresh existing custom MCP connections once.
+
+Apply migration 0002 before deploying this server. Build/publish the release JSON,
+then explicitly adopt it through bytes_updates + bytes_adopt. Database migration
+alone creates no selections or published skill content. Deploying Worker code does
+not publish or adopt an instruction release. This separation prevents accidental
+updates from a code deploy.

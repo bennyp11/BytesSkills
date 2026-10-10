@@ -6,7 +6,7 @@ parameter text in a shell. No parser or command runner exists yet.
 ## Namespace
 
 The only canonical entry is `/bytes`. Bare `/bytes` shows help. Use
-`/bytes --help` or `/bytes COMMAND --help` for read-only guidance. Generic bare
+`/bytes help`, `/bytes --help` or `/bytes COMMAND --help` for read-only guidance. Generic bare
 commands are not intercepted; they may belong to other plugins. The bytes entry
 skill routes to bundled help and sync references. Generation uses the assistant; artifact operations use the bundled Python runtime.
 Namespacing does not create a native host command.
@@ -185,3 +185,20 @@ See [pointer architecture](pointer-architecture.md). `/bytes` remains assistant-
 its save/query helper is executable Python. Use returned UUID pointers, not numeric
 placeholders from older examples. `show`, `list`, `move`, `archive`, and revision saves
 now use this backend. Native command parsing and automatic generation are not bundled.
+
+## Cloud skill releases (0.7.0)
+
+Every new command starts with bytes_begin. Use its immutable instructions/resources
+and workflow_id throughout that operation. Update prompts offer update, keep, or
+auto; preferences persist per skill in the workspace. Help/inspection workflows
+cannot save creative artifacts. All MCP saves require a valid workflow_id.
+
+- `/bytes sync --check`: preview selected/latest skill releases.
+- `/bytes sync --latest`: adopt the entire compatible library atomically, without
+  changing future ask/auto preferences. This is not a Git operation.
+- `/bytes sync --git [--check]`: the separate local repository workflow.
+
+Published skill content is immutable. New instruction releases are published via
+bytes_publish (separate management permission) or the authenticated publication
+script. Publishing and adoption are separate; ordinary writes grant no publishing
+rights. Pinned workflows retain exact resources even after another machine updates.

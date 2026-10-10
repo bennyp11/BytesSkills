@@ -101,3 +101,16 @@ Existing concepts now have real pointers:
 
 Run storage tests with `python3 -m unittest discover -s tests -v`.
 SQLite is an ignored, rebuildable query cache. Records and blobs are backed up to Git.
+
+## Release 0.7.0: shared skill versions
+
+The remote library separates publication from adoption. Each `/bytes` request
+starts with `bytes_begin`; new skill versions offer Update / Stay / Always latest.
+Preferences follow the workspace across devices. `/bytes sync --latest` adopts
+the current library in one step; `/bytes sync --check` previews changes. Git sync
+is now explicitly `/bytes sync --git`. See [release architecture](docs/skill-releases.md).
+
+Existing custom MCP connections need one metadata refresh for the new tools and
+required workflow_id on saves. Instruction-only releases thereafter do not need
+a tool refresh. The remote server cannot edit the installed ChatGPT plugin package
+or guarantee model routing; select @BytesSkills when invoking it.

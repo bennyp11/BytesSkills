@@ -1,18 +1,19 @@
 {
   "worker": "bytesskills-mvp",
-  "version_id": "b0a61fe7-9989-4b64-adc1-f29deec5f35b",
-  "verified_at": "2026-10-10T18:56:19.460443+00:00",
+  "version_id": "674f0ad3-eb06-41ee-b2ec-fbb9e76d400f",
+  "verified_at": "2026-10-10T19:21:01.731428+00:00",
   "domains": [
     "bytesskills.com",
     "api.bytesskills.com"
   ],
   "mcp_url": "https://api.bytesskills.com/mcp",
-  "library_version": "0.6.0",
-  "library_entries": 18,
+  "library_version": "0.7.0",
+  "library_entries": 19,
   "tests": {
-    "service": 11,
+    "service": 14,
     "local": 13
   },
   "host_chat_connected": false,
-  "verification": "Typecheck, build, 11 service tests; live MCP discovery and read-only bytes_help call succeeded. Host routing requires connection metadata refresh and client verification."
+  "verification": "Typecheck/build/skill validation, 14 integration tests, live two-client library adoption and version-stamped save; all seven skills selected at 0.7.0 with ask policy. Custom ChatGPT plugin requires metadata refresh.",
+  "service_version": "0.2.0"
 }

@@ -1,0 +1,15 @@
+{
+  "verified_at": "2026-10-10T19:20:33.831Z",
+  "release": "0.7.0",
+  "checks": [
+    "shared adoption across two MCP clients",
+    "all skills selected with ask policy",
+    "begin returns pinned definitions",
+    "save stamps skill provenance",
+    "idempotent save",
+    "cross-client pointer lookup",
+    "help begins correct workflow"
+  ],
+  "test_artifact": "@run/68f17ece-0891-4be5-b6e7-192866b97305:v1",
+  "chatgpt_host_refresh_verified": false
+}
