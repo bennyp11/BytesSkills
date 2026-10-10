@@ -273,12 +273,27 @@ test("OAuth registration, PKCE consent, read scope and refresh", async () => {
   });
   const page = await mf.dispatchFetch(base + "/authorize?" + query);
   assert.equal(page.status, 200);
+  assert.equal(page.headers.get("referrer-policy"), "same-origin");
   const cookie = page.headers.get("set-cookie").split(";")[0],
     html = await page.text(),
     handle = html.match(/name="handle" value="([^"]+)"/)[1];
   const body = new URLSearchParams({ handle, key, decision: "approve" });
   body.append("scope", "bytes:read");
   body.append("scope", "offline_access");
+  // Invalid origins must fail even with a valid consent cookie and handle.
+  for (const origin of ["null", "https://other.example", undefined]) {
+    const headers = {
+      Cookie: cookie,
+      "Content-Type": "application/x-www-form-urlencoded",
+    };
+    if (origin !== undefined) headers.Origin = origin;
+    const rejected = await mf.dispatchFetch(base + "/authorize", {
+      method: "POST",
+      headers,
+      body: body.toString(),
+    });
+    assert.equal(rejected.status, 403);
+  }
   const denied = await mf.dispatchFetch(base + "/authorize", {
     method: "POST",
     headers: {

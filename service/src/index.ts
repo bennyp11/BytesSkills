@@ -16,7 +16,8 @@ function html(body: string, headers = new Headers()) {
     "Content-Security-Policy",
     "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
   );
-  headers.set("Referrer-Policy", "no-referrer");
+  // Preserve Origin on same-origin form POSTs; suppress cross-origin referrers.
+  headers.set("Referrer-Policy", "same-origin");
   headers.set("X-Content-Type-Options", "nosniff");
   return new Response(
     `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>BytesSkills</title><style>${styles}</style><main>${body}</main></html>`,
