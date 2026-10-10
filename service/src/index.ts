@@ -270,8 +270,29 @@ export default {
           },
           400,
         );
-      if (e instanceof AuthorizationError || e instanceof CimdFetchError)
-        return json({ error: "Authorization failed; restart connection" }, 400);
+      if (e instanceof AuthorizationError) {
+        // Report only known safe categories, never OAuth parameters or credentials.
+        const description = e.description ?? "";
+        const reason = description.includes("not started in this browser")
+          ? "consent_cookie_missing"
+          : description.includes("different browser session")
+            ? "consent_cookie_mismatch"
+            : description.includes("expired or was already used")
+              ? "consent_expired"
+              : description.includes("Missing transaction handle")
+                ? "consent_handle_missing"
+                : e.code;
+        const messages: Record<string, string> = {
+          consent_cookie_missing: "The authorization cookie is missing. Start Connect again and complete it in the same browser, allowing cookies for api.bytesskills.com.",
+          consent_cookie_mismatch: "This form belongs to a different browser session. Start Connect again and complete it in the same browser.",
+          consent_expired: "This authorization expired or was already submitted. Start a fresh Connect attempt from ChatGPT.",
+          consent_handle_missing: "The authorization form is incomplete. Start a fresh Connect attempt from ChatGPT.",
+        };
+        console.warn("OAuth authorization rejected", reason);
+        return json({ error: messages[reason] ?? "Authorization request rejected. Start a fresh connection from your AI client.", reason }, 400);
+      }
+      if (e instanceof CimdFetchError)
+        return json({ error: "Could not verify the AI client's identity. Try connecting again shortly.", reason: "client_metadata_unavailable" }, 400);
       console.error(
         "Request failed",
         e instanceof Error ? e.message : "unknown",

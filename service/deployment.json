@@ -1,7 +1,7 @@
 {
   "worker": "bytesskills-mvp",
-  "version_id": "249ae342-f83b-4b3d-99ed-17886aa43bf2",
-  "verified_at": "2026-10-10T18:35:30.787293+00:00",
+  "version_id": "4fd9ae72-9669-4463-9998-60f66a28d0ba",
+  "verified_at": "2026-10-10T18:43:13.742790+00:00",
   "domains": [
     "bytesskills.com",
     "api.bytesskills.com"
@@ -14,5 +14,5 @@
     "local": 13
   },
   "host_chat_connected": false,
-  "verification": "OAuth form policy fix: typecheck, build, 10 service integration tests; live ChatGPT CIMD consent page HTTP 200 with same-origin policy."
+  "verification": "Typecheck, build, 10 service tests including missing-cookie and reused-consent diagnostics. Browser-specific failure awaiting diagnostic reason."
 }

@@ -303,6 +303,7 @@ test("OAuth registration, PKCE consent, read scope and refresh", async () => {
     body: body.toString(),
   });
   assert.equal(denied.status, 400);
+  assert.equal((await denied.json()).reason, "consent_cookie_missing");
   const allowed = await mf.dispatchFetch(base + "/authorize", {
     method: "POST",
     redirect: "manual",
@@ -314,6 +315,13 @@ test("OAuth registration, PKCE consent, read scope and refresh", async () => {
     body: body.toString(),
   });
   assert.equal(allowed.status, 302, await allowed.clone().text());
+  const replay = await mf.dispatchFetch(base + "/authorize", {
+    method: "POST",
+    headers: { Origin: base, Cookie: cookie, "Content-Type": "application/x-www-form-urlencoded" },
+    body: body.toString(),
+  });
+  assert.equal(replay.status, 400);
+  assert.equal((await replay.json()).reason, "consent_expired");
   const code = new URL(allowed.headers.get("location")).searchParams.get(
     "code",
   );
