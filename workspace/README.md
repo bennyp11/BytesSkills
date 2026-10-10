@@ -1,4 +1,9 @@
-# Local creative workspace
+# Creative workspace and backup mirror
+
+On the MVP branch, after migration, `workspace.json` marks this directory as a
+read-only mirror of the hosted workspace. Export cloud data before Git backup with
+`node scripts/workspace.mjs export ../workspace` from service/. The remote service
+is authoritative; do not fork local revisions of its IDs.
 
 This directory is intentionally tracked and backed up to the private GitHub repo.
 It contains legacy brainstorm files and registered artifact records. Illustrative examples live

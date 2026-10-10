@@ -4,7 +4,10 @@ A CLI-like content workflow system: reusable definitions, skills, and persistent
 creative artifacts with stable pointers. GitHub backs up both the system and its
 local workspace.
 
-**Current status:** assistant-driven skills with a working local artifact runtime.
+**MVP branch:** a deployed shared workspace is available at [bytesskills.com](https://bytesskills.com).
+Connect via `https://api.bytesskills.com/mcp` using OAuth. See [service setup and architecture](service/README.md).
+
+**Current status:** assistant-driven skills with local and hosted artifact runtimes.
 Stable UUID pointers, immutable revisions, metadata filters, full-text search and
 reverse references are implemented. The assistant supplies generation and calls the
 bundled Python helper; `/bytes` is not a standalone shell executable. Media clipping

@@ -1,5 +1,9 @@
 # Pointer architecture: local first, storage-independent identity
 
+The `mvp` branch adds a hosted implementation: see [cloud service](../service/README.md).
+This document describes the original local backend; remote D1 records are authoritative
+and local exports are read-only mirrors after cutover.
+
 The local artifact runtime is implemented in the bytes skill's `scripts/artifacts.py`.
 The assistant generates content; this helper saves, resolves, revisions and queries it.
 No hosted model service or native slash-command parser is implied.

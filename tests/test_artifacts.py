@@ -83,6 +83,14 @@ class ArtifactsTest(unittest.TestCase):
         self.s.objects.path(rec['content']['key']).write_text('tampered')
         with self.assertRaises(a.StoreError):
             self.s.save({'pointer':rec['pointer'],'expected_revision':1,'status':'selected'})
+    def test_remote_mirror_rejects_local_writes(self):
+        rec=self.concept()
+        path=self.root/'workspace.json';meta=json.loads(path.read_text())
+        meta['storage']={'mode':'remote','url':'https://api.bytesskills.com'}
+        path.write_text(json.dumps(meta));mirror=a.Store(self.root)
+        self.assertEqual(mirror.get(rec['pointer'])['id'],rec['id'])
+        with self.assertRaises(a.StoreError):
+            mirror.save({'pointer':rec['pointer'],'expected_revision':1,'text':'fork'})
     def test_lock_and_immutable_storage(self):
         self.s.ensure_index()
         with self.s.lock():

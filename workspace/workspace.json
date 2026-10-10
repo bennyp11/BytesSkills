@@ -3,7 +3,10 @@
   "id": "acc3351e-d092-433c-a7e1-8fc3e807ebd4",
   "name": "BytesSkills",
   "status": "active",
-  "storage": "local-files",
+  "storage": {
+    "mode": "remote",
+    "url": "https://api.bytesskills.com"
+  },
   "pointer_scope": "workspace",
   "artifact_schema_version": 1
 }

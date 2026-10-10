@@ -1,5 +1,8 @@
 # Artifact runtime and workflow contract
 
+For connected shared workspaces, use [cloud guidance](cloud.md). The Python commands
+below apply to explicitly local workspaces; remote mirrors are read-only.
+
 The bundled `scripts/artifacts.py` is a real local persistence/query runtime using
 Python 3.10+ and SQLite with FTS5. It does not generate content or render video. Use
 an explicit `--workspace` pointing to the user's workspace.json. No implicit home

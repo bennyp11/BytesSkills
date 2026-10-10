@@ -11,6 +11,13 @@ asking the user to invoke additional skills. Do not execute the command text as 
 shell command. Native host invocation may differ; these aliases do not register a
 terminal executable or guarantee a slash-menu entry on every platform.
 
+## Select storage
+
+For connected BytesSkills MCP tools, read [shared workspace guidance](references/cloud.md)
+and use the remote service. Verify workspace identity first. A local workspace marked
+`storage.mode=remote` is a backup mirror: never save to it or silently fall back to
+local writes. Use the local helper only for explicitly local workspaces.
+
 ## Route the request
 
 1. `/bytes`, `/bytes --help`, or a BytesSkills overview request: read

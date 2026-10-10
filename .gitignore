@@ -10,3 +10,8 @@ dist/
 # Rebuildable local query index and transient atomic-write files
 workspace/.index/
 .staging-*
+
+# Cloud service build state and owner credentials
+.wrangler/
+.secrets/
+.dev.vars

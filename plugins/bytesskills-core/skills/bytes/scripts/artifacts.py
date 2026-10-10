@@ -70,7 +70,9 @@ class Store:
         self.root = Path(root).resolve()
         self.objects = LocalObjects(self.root)
         try:
-            self.workspace = json.loads((self.root / 'workspace.json').read_text())['id']
+            metadata = json.loads((self.root / 'workspace.json').read_text())
+            self.workspace = metadata['id']
+            self.remote = isinstance(metadata.get('storage'), dict) and metadata['storage'].get('mode') == 'remote'
             uuid.UUID(self.workspace)
         except (OSError, KeyError, ValueError) as exc:
             raise StoreError('Select a workspace with a valid workspace.json ID') from exc
@@ -177,6 +179,8 @@ class Store:
                 c.execute('INSERT INTO edges VALUES (?,?,?)',(rec['pointer'],kind,target))
 
     def save(self, req):
+        if self.remote:
+            raise StoreError("Remote workspace mirror is read-only; save through the shared service")
         self.ensure_index()
         with self.lock():
             allowed={'type','title','text','file','media_type','pointer','expected_revision',

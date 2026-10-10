@@ -1,0 +1,17 @@
+{
+  "worker": "bytesskills-mvp",
+  "version_id": "528b7e83-8609-4bfd-8179-96996d622ced",
+  "verified_at": "2026-10-10T15:25:41.906Z",
+  "domains": [
+    "bytesskills.com",
+    "api.bytesskills.com"
+  ],
+  "mcp_url": "https://api.bytesskills.com/mcp",
+  "library_version": "0.6.0",
+  "library_entries": 18,
+  "tests": {
+    "service": 10,
+    "local": 13
+  },
+  "host_chat_connected": false
+}

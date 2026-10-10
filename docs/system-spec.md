@@ -128,6 +128,7 @@ outside the initial command set and must inspect incoming references first.
 Local pointer resolution, immutable revisions, search, relationships and persistence
 are implemented. The assistant handles generation and context resolution using these
 contracts; no native slash parser or autonomous generation service is bundled.
-Streaming media, distributed writes and remote storage remain future work.
+The MVP branch implements authenticated remote storage and concurrent-write checks;
+see [service](../service/README.md). Large streaming media and multi-user tenancy remain future work.
 The reductions draft is grounded in the user’s editorial description; see
 [reductions.md](reductions.md). Its sound palette is proposed and has no audio assets.

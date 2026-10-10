@@ -235,3 +235,10 @@ The five unexpected-cost concepts have been imported. In this workspace:
 These three commands use the bundled helper through the assistant. Pointer support
 requires local workspace access. After Git updates, sync rebuilds the query index.
 See [runtime guidance](../../artifacts.md) for storage and limitations.
+
+## Shared workspace
+
+When the BytesSkills MCP connection is available, pointers resolve in the shared cloud
+workspace. Same commands, shared state across connected clients. Verify identity with
+bytes_workspace; read [cloud guidance](../../cloud.md). Local mirrors are read-only.
+Syncing Git does not deploy the Worker or refresh its bundled definitions.

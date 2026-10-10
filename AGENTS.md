@@ -23,7 +23,9 @@ plugins/bytesskills-core/skills/bytes/references/sync/instructions.md. Do not eq
 refreshing a cached plugin. Preserve workspace identities and revision history; stop
 for semantic conflicts even when Git can merge the text. /bytes sync --help is read-only.
 
-All new pointer-backed saves and queries must use the shared artifacts.py runtime
-and contracts/operations.json in the bytes skill. Reindex after Git sync or external
+All new pointer-backed saves and queries use the shared runtime and operation
+contracts: connected MCP service for remote workspaces, artifacts.py for explicitly
+local workspaces. Never save locally to a workspace marked storage.mode=remote.
+Export cloud revisions/blobs before committing workspace backups; see service/README.md. Reindex after Git sync or external
 record changes. Never allocate IDs by guessing or write immutable records manually.
 Return actual saved pointers. The ignored SQLite cache is not a backup artifact.

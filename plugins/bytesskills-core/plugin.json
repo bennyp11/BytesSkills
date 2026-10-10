@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "bytesskills-core",
-  "version": "0.5.0",
-  "description": "BytesSkills entry skill with local artifact pointers, revisions and search, assistant-driven content workflows, help, sync and clipping.",
+  "version": "0.6.0",
+  "description": "BytesSkills content workflows with a shared authenticated artifact workspace, stable pointers, revisions, search and local backup support.",
   "author": {
     "name": "bennyp11"
   }
