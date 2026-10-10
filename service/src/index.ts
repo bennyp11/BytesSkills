@@ -9,12 +9,18 @@ import { mcp, libraryResult } from "./mcp";
 const escape = (s: string) =>
   s.replace(/[&<>"']/g, (c) => "&#" + c.charCodeAt(0) + ";");
 const styles = `body{font:17px/1.6 system-ui;background:#f4f3ef;color:#222;margin:0;padding:8vh 24px}main{max-width:620px;margin:auto}h1{font-size:40px;letter-spacing:-1.4px}code{background:#e6e5e0;padding:4px 7px;border-radius:5px;overflow-wrap:anywhere}input[type=password]{box-sizing:border-box;width:100%;padding:14px;border:1px solid #aaa;border-radius:8px;font:inherit}button{padding:12px 20px;border:0;border-radius:8px;font:inherit;cursor:pointer;background:#202a23;color:white;margin:18px 8px 0 0}p{margin:18px 0}.muted{color:#666}label{display:block}`;
-function html(body: string, headers = new Headers()) {
+function html(body: string, headers = new Headers(), validatedRedirectUri?: string) {
+  // Chrome applies form-action to the OAuth redirect as well as the form POST.
+  // Only accept a redirect already validated by the OAuth provider.
+  const callbackOrigin = validatedRedirectUri ? new URL(validatedRedirectUri).origin : undefined;
+  const formAction = callbackOrigin && callbackOrigin !== "null"
+    ? `'self' ${callbackOrigin}`
+    : "'self'";
   headers.set("Content-Type", "text/html; charset=utf-8");
   headers.set("Cache-Control", "no-store");
   headers.set(
     "Content-Security-Policy",
-    "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
+    `default-src 'none'; style-src 'unsafe-inline'; form-action ${formAction}; frame-ancestors 'none'; base-uri 'none'`,
   );
   // Preserve Origin on same-origin form POSTs; suppress cross-origin referrers.
   headers.set("Referrer-Policy", "same-origin");
@@ -33,6 +39,7 @@ async function authorize(req: Request, env: Env) {
     return html(
       `<p class="muted">BYTESSKILLS · PRIVATE WORKSPACE</p><h1>Connect ${escape(details.clientName)}</h1><p>${details.clientDomain ? "Client domain: <strong>" + escape(details.clientDomain) + "</strong>" : "This client registered itself; its name is not verified."}</p><p>Access returns to <strong>${escape(details.redirectHost)}</strong>.</p>${details.redirectIsLoopback ? "<p>This sends access to an app on your computer. Continue only if you started this connection.</p>" : ""}<form method="post"><input type="hidden" name="handle" value="${escape(consent.handle)}"><p>Enter your workspace access key to approve this connection.</p><input type="password" name="key" required autocomplete="current-password" aria-label="Workspace access key"><p>Permissions:</p><label><input type="checkbox" name="scope" value="bytes:read" checked> Read and search workspace content</label><label><input type="checkbox" name="scope" value="bytes:write" ${details.scope.includes("bytes:write") ? "checked" : ""}> Create artifacts and save revisions</label><label><input type="checkbox" name="scope" value="offline_access" checked> Stay connected using refresh tokens</label><button name="decision" value="approve">Connect</button><button name="decision" value="deny" formnovalidate>Cancel</button></form>`,
       consent.headers,
+      auth.redirectUri,
     );
   }
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
@@ -42,7 +49,7 @@ async function authorize(req: Request, env: Env) {
     handle = form.get("handle") ?? "";
   if (form.get("decision") !== "approve") {
     const denied = await oauth.denyConsent(req, handle);
-    return new Response(null, { status: 302, headers: denied.headers });
+    return new Response(null, { status: 303, headers: denied.headers });
   }
   if (!(await ownerKey(form.get("key") ?? "", env)))
     throw new ApiError(
@@ -61,7 +68,7 @@ async function authorize(req: Request, env: Env) {
     props: { workspace_id: env.WORKSPACE_ID, scopes: approved.request.scope },
   });
   approved.headers.set("Location", redirectTo);
-  return new Response(null, { status: 302, headers: approved.headers });
+  return new Response(null, { status: 303, headers: approved.headers });
 }
 async function api(req: Request, env: Env) {
   if (

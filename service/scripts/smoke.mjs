@@ -117,7 +117,7 @@ const approved = await fetch(base + "/authorize", {
   },
   body: form.toString(),
 });
-assert.equal(approved.status, 302, await approved.clone().text());
+assert.equal(approved.status, 303, await approved.clone().text());
 const code = new URL(approved.headers.get("location")).searchParams.get("code");
 const token = await fetch(base + "/oauth/token", {
   method: "POST",

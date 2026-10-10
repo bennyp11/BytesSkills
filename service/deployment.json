@@ -1,7 +1,7 @@
 {
   "worker": "bytesskills-mvp",
-  "version_id": "4fd9ae72-9669-4463-9998-60f66a28d0ba",
-  "verified_at": "2026-10-10T18:43:13.742790+00:00",
+  "version_id": "c42595b3-5a87-4a7b-ad97-910a9292d803",
+  "verified_at": "2026-10-10T18:52:13.748879+00:00",
   "domains": [
     "bytesskills.com",
     "api.bytesskills.com"
@@ -14,5 +14,5 @@
     "local": 13
   },
   "host_chat_connected": false,
-  "verification": "Typecheck, build, 10 service tests including missing-cookie and reused-consent diagnostics. Browser-specific failure awaiting diagnostic reason."
+  "verification": "Typecheck, build, 10 service tests. Live Chromium cancel-consent regression: before fix callback blocked with one form-action violation; after fix callback reached with zero violations."
 }

@@ -274,6 +274,15 @@ test("OAuth registration, PKCE consent, read scope and refresh", async () => {
   const page = await mf.dispatchFetch(base + "/authorize?" + query);
   assert.equal(page.status, 200);
   assert.equal(page.headers.get("referrer-policy"), "same-origin");
+  assert.equal(
+    page.headers.get("content-security-policy").match(/form-action ([^;]+)/)[1],
+    "'self' http://localhost:8484",
+  );
+  const tampered = new URLSearchParams(query);
+  tampered.set("redirect_uri", "https://unregistered.example/callback");
+  const invalidCallback = await mf.dispatchFetch(base + "/authorize?" + tampered);
+  assert.equal(invalidCallback.status, 400);
+
   const cookie = page.headers.get("set-cookie").split(";")[0],
     html = await page.text(),
     handle = html.match(/name="handle" value="([^"]+)"/)[1];
@@ -314,7 +323,7 @@ test("OAuth registration, PKCE consent, read scope and refresh", async () => {
     },
     body: body.toString(),
   });
-  assert.equal(allowed.status, 302, await allowed.clone().text());
+  assert.equal(allowed.status, 303, await allowed.clone().text());
   const replay = await mf.dispatchFetch(base + "/authorize", {
     method: "POST",
     headers: { Origin: base, Cookie: cookie, "Content-Type": "application/x-www-form-urlencoded" },
