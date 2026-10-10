@@ -26,7 +26,7 @@ await client.connect(
   }),
 );
 const tools = await client.listTools();
-assert.equal(tools.tools.length, 7);
+assert.equal(tools.tools.length, 8);
 const call = async (name, args) => {
   const r = await client.callTool({ name, arguments: args });
   assert.ok(!r.isError, JSON.stringify(r));

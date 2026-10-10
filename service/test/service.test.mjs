@@ -103,6 +103,21 @@ test("MCP initialization, list, and actual artifact save/get", async () => {
   });
   assert.equal(JSON.parse(got.body.result.content[0].text).text, "Hello");
 });
+test("BytesSkills help is discoverable, read-only and provides the command contract", async () => {
+  const list = await rpc("tools/list");
+  const tool = list.body.result.tools.find(t => t.name === "bytes_help");
+  assert.ok(tool.description.includes("/bytes help"));
+  assert.equal(tool.annotations.readOnlyHint, true);
+  const before = await db.prepare("SELECT COUNT(*) AS n FROM revisions").first();
+  const result = await rpc("tools/call", {name: "bytes_help", arguments: {}});
+  assert.ok(!result.body.result.isError);
+  const help = JSON.parse(result.body.result.content[0].text);
+  assert.ok(help.aliases.includes("/bytes help"));
+  assert.ok(help.commands.content.includes("/bytes brainstorm"));
+  assert.ok(help.shared_workspace.content.includes("bytes_save"));
+  const after = await db.prepare("SELECT COUNT(*) AS n FROM revisions").first();
+  assert.equal(after.n, before.n);
+});
 test("idempotent retries and mismatched request detection", async () => {
   const req = {
     request_id: randomUUID(),

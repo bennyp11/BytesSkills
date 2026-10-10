@@ -1,7 +1,7 @@
 {
   "worker": "bytesskills-mvp",
-  "version_id": "c42595b3-5a87-4a7b-ad97-910a9292d803",
-  "verified_at": "2026-10-10T18:52:13.748879+00:00",
+  "version_id": "b0a61fe7-9989-4b64-adc1-f29deec5f35b",
+  "verified_at": "2026-10-10T18:56:19.460443+00:00",
   "domains": [
     "bytesskills.com",
     "api.bytesskills.com"
@@ -10,9 +10,9 @@
   "library_version": "0.6.0",
   "library_entries": 18,
   "tests": {
-    "service": 10,
+    "service": 11,
     "local": 13
   },
   "host_chat_connected": false,
-  "verification": "Typecheck, build, 10 service tests. Live Chromium cancel-consent regression: before fix callback blocked with one form-action violation; after fix callback reached with zero violations."
+  "verification": "Typecheck, build, 11 service tests; live MCP discovery and read-only bytes_help call succeeded. Host routing requires connection metadata refresh and client verification."
 }

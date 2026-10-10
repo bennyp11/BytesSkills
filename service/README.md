@@ -33,7 +33,7 @@ this repository. The core plugin includes portable `mcp.json` and a Claude overl
 
 ## MCP tools
 
-`bytes_workspace`, `bytes_library`, `bytes_get`, `bytes_query`, `bytes_history`,
+`bytes_help`, `bytes_workspace`, `bytes_library`, `bytes_get`, `bytes_query`, `bytes_history`,
 `bytes_related`, `bytes_save`. Workflow definitions are bundled into the Worker;
 read them with bytes_library before generating. The AI performs creative work.
 There are no server-side model calls or rendering jobs.
@@ -138,3 +138,12 @@ first, so a failed save can leave an unreferenced blob. No automatic blob deleti
 implemented. Database growth, auth endpoints and operational quotas need monitoring
 before opening this to more users. The integration tests exercise correctness, not
 production load capacity. D1 read replication is disabled for simple current reads.
+
+### Command discovery in ChatGPT
+
+Connecting MCP supplies tools, not a native slash-command registration or automatic
+installation of the local skill package. Refresh the custom connection after tool
+metadata changes, start a new chat, select @BytesSkills, then send `/bytes help`.
+The read-only `bytes_help` tool returns the deployed command contract and cloud
+workflow instructions; the assistant interprets subsequent `/bytes` requests.
+ChatGPT tool selection must still be verified in the client.
