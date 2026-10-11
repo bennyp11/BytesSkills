@@ -7,8 +7,8 @@ Historical numeric pointers in examples are fictional.
 ## Purpose
 
 Make content workflows easy to invoke while preserving creative context, editable
-formats, nested ideas, stable references and all generated candidates. Start with
-local files, backed up to the private GitHub repository alongside definitions.
+formats, nested ideas, stable references and all generated candidates. Use the shared
+Cloudflare workspace for creative data; GitHub stores core code and reusable definitions only.
 
 ## Vocabulary
 

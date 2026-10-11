@@ -1,8 +1,8 @@
 # BytesSkills
 
 A CLI-like content workflow system: reusable definitions, skills, and persistent
-creative artifacts with stable pointers. GitHub backs up both the system and its
-local workspace.
+creative artifacts with stable pointers. GitHub stores the system; Cloudflare stores
+the shared workspace, including records, blobs, revisions and skill preferences.
 
 **MVP branch:** a deployed shared workspace is available at [bytesskills.com](https://bytesskills.com).
 Connect via `https://api.bytesskills.com/mcp` using OAuth. See [service setup and architecture](service/README.md).
@@ -27,7 +27,7 @@ still requires appropriate tools.
 - [System specification](docs/system-spec.md): ontology, relationships and behavior.
 - [Command reference](docs/commands.md): proposed grammar and command contracts.
 - [Worked example](examples/reductions/README.md): illustrative end-to-end flow.
-- [Workspace](workspace/README.md): local records, revisions and GitHub backups.
+- [Workspace storage](docs/workspace-storage.md): cloud ownership and private recovery exports.
 - [Plugin packaging](docs/architecture.md): platform boundaries.
 
 ## Repository
@@ -37,25 +37,23 @@ catalog.yaml                  Library taxonomy (our convention)
 definitions/                  Formats, treatments and workflows
 plugins/                      Installable packaging and skill scaffolds
 templates/                    Authoring templates
-workspace/                    Tracked local creative work and run records
+service/                      Cloudflare Worker, database migrations and tests
 examples/                     Fictional examples, outside the live pointer namespace
 docs/                         System and command contracts
 ```
 
 The Video Editing plugin still contains unfinished pacing and captions scaffolds.
 Its portable and Claude Code manifests share the same skill folders. Installation
-is separate per host. No storage service, database or MCP server is required for
-the current design. The first draft format, [Reductions](docs/reductions.md), is now defined from the user’s description.
+is separate per host. The shared workspace uses the Cloudflare MCP service; the
+optional local runtime requires an explicit private directory outside this repository. The first draft format, [Reductions](docs/reductions.md), is now defined from the user’s description.
 
 ## Working agreement
 
-Keep definitions and the workspace in this private repository. After each completed
-logical change or saved generation batch, commit and push the relevant files. Report
-backup failures; a local save is not a confirmed remote backup. Never commit secrets,
-credentials or temporary caches. Large binary media requires a verified Git LFS or
-other explicit backup arrangement; do not claim a path alone backs up its contents.
+Keep core source and reusable definitions in GitHub. Save creative work through the
+cloud runtime; Git is not part of a creative save. Commit and push reviewed source
+changes, excluding all private records, blobs, exports and credentials.
 
-See [workspace policy](workspace/README.md) for details.
+See [workspace policy](docs/workspace-storage.md) for recovery and migration details.
 
 ## Help
 
@@ -93,14 +91,12 @@ Missing inputs trigger clarifiers; missing rendering tools are reported explicit
 
 Read the [architecture](docs/pointer-architecture.md) and
 [runtime contract](plugins/bytesskills-core/skills/bytes/references/artifacts.md).
-Existing concepts now have real pointers:
+Pointers resolve against the connected workspace, independently of this checkout.
+Examples in documentation are illustrative, not live user records.
 
-- `@concept/8aa78d78` — Spent $857 to save $6
-- `@concept/c5a25d0d` — My first paying customer was me
-- `@concept/e559c411` — The silent AI bill monitor
-
-Run storage tests with `python3 -m unittest discover -s tests -v`.
-SQLite is an ignored, rebuildable query cache. Records and blobs are backed up to Git.
+Run local storage tests with `python3 -m unittest discover -s tests -v`.
+Cloud records and revision state live in D1; content blobs live in private R2.
+SQLite is only a rebuildable cache for explicitly local stores.
 
 ## Release 0.7.0: shared skill versions
 

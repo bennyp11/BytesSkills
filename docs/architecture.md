@@ -46,5 +46,6 @@ configured in this skeleton.
 ## Content model
 
 Plugin boundaries are packaging choices. The domain model and command behavior are
-defined in [system-spec.md](system-spec.md) and [commands.md](commands.md). The local
-workspace is tracked in Git alongside these definitions by explicit user request.
+defined in [system-spec.md](system-spec.md) and [commands.md](commands.md). The shared
+workspace lives in Cloudflare; Git contains reusable definitions and implementation
+only. See [workspace storage](workspace-storage.md).

@@ -15,3 +15,9 @@ workspace/.index/
 .wrangler/
 .secrets/
 .dev.vars
+
+# Private workspace state belongs in Cloudflare, never in source control.
+/workspace/
+/backups/
+/exports/
+/service/*verification.json

@@ -28,7 +28,7 @@ flowchart TD
     I -.-> B
 ```
 
-**Cloudflare is the live source of truth.** GitHub stores core code, schemas, packaged skills and release sources. It is not required for everyday work or personal skill publication. The repo retains a historical workspace snapshot; new cloud writes are not automatically committed there.
+**Cloudflare is the live source of truth.** GitHub stores core code, schemas, packaged skills and release sources. It is not required for everyday work or personal skill publication. The current source tree excludes workspace snapshots. Older Git commits still retain previously committed data; this change does not rewrite history.
 
 D1 stores structured records and relationships. R2 stores their actual content. A pointer such as `@concept/<UUID>:v2` resolves through D1 to a precise, immutable artifact revision and its content hash. Unversioned pointers resolve to the latest revision. Revisions and alternative candidates stay separate.
 

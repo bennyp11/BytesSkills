@@ -27,6 +27,6 @@ try{
  const help=await call(a,'bytes_begin',{request_id:randomUUID(),command:'/bytes help'});
  assert.equal(help.skill,'help');assert.equal(help.status,'ready');
  const receipt={verified_at:new Date().toISOString(),release:'0.7.0',checks:['shared adoption across two MCP clients','all skills selected with ask policy','begin returns pinned definitions','save stamps skill provenance','idempotent save','cross-client pointer lookup','help begins correct workflow'],test_artifact:saved.pointer,chatgpt_host_refresh_verified:false};
- await writeFile('release-verification.json',JSON.stringify(receipt,null,2)+'\n');
+ await writeFile('.secrets/release-verification.json',JSON.stringify(receipt,null,2)+'\n');
  console.log(JSON.stringify(receipt,null,2));
 }finally{await a.close();await b.close();}

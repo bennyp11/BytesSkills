@@ -148,14 +148,15 @@ this contract. The core package now includes the local artifact runtime; see [po
 
 ## Sync
 
-`/bytes sync [--repo="/absolute/path"]` reconciles the selected checkout and its tracked
-workspace with the configured upstream, then rereads relevant source instructions.
-`/bytes sync --check` fetches and reports drift without changing working files, committing
-or pushing. `/bytes sync --help` has no sync side effects. The
-[bytes sync reference](../plugins/bytesskills-core/skills/bytes/references/sync/instructions.md) contains
-the complete assistant procedure. Conflicts stop rather than overwrite artifact
-identities or immutable revisions. No native CLI parser is implemented. Source sync
-and installed-plugin refresh are reported separately.
+`/bytes sync --check` previews cloud skill releases; `/bytes sync --latest` adopts
+latest releases across the shared workspace. Neither command changes Git.
+`/bytes sync --git [--repo="/absolute/path"]` reconciles source with its configured
+upstream and rereads relevant source instructions. `--git --check` fetches and
+reports source drift without changing working files, committing or pushing.
+`/bytes sync --help` has no sync side effects. The
+[bytes sync reference](../plugins/bytesskills-core/skills/bytes/references/sync/instructions.md)
+contains the source-only procedure. Workspace records, blobs and exports must never
+be staged. Source synchronization and installed-plugin refresh are separate.
 
 ## Engagement parameters
 

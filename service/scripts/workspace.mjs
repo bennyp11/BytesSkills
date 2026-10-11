@@ -2,8 +2,11 @@
 import { readFile, writeFile, mkdir, readdir } from "node:fs/promises";
 import { resolve, dirname } from "node:path";
 import { createHash } from "node:crypto";
-const [mode, dirArg] = process.argv.slice(2),
-  dir = resolve(dirArg ?? "../workspace");
+import { privatePath } from "./private-path.mjs";
+const [mode, dirArg] = process.argv.slice(2);
+if (!["import", "export"].includes(mode))
+  throw Error("Usage: node scripts/workspace.mjs import|export /private/path/outside-git");
+const dir = await privatePath(dirArg);
 const base = process.env.BYTES_URL ?? "https://api.bytesskills.com";
 const key = (
   await readFile(process.env.BYTES_KEY_FILE ?? ".secrets/owner-key.txt", "utf8")
@@ -31,14 +34,14 @@ async function files(d) {
 if (mode === "import") {
   const records = await Promise.all(
     (await files(resolve(dir, "records"))).map(async (p) =>
-      JSON.parse(await readFile(p, "utf8")),
+      JSON.parse(await readFile(await privatePath(p, dir), "utf8")),
     ),
   );
   const uploaded = new Set(),
     done = new Set();
   for (const r of records) {
     if (uploaded.has(r.content.key)) continue;
-    const bytes = await readFile(resolve(dir, r.content.key));
+    const bytes = await readFile(await privatePath(resolve(dir, r.content.key), dir));
     if (hash(bytes) !== r.content.sha256)
       throw Error("Local checksum mismatch");
     const response = await fetch(base + "/v1/blobs/" + r.content.sha256, {
@@ -68,7 +71,7 @@ if (mode === "import") {
     `Imported ${done.size} immutable revisions and ${uploaded.size} blobs, preserving IDs.`,
   );
 } else if (mode === "export") {
-  await mkdir(dir, { recursive: true });
+  await mkdir(dir, { recursive: true, mode: 0o700 });
   let after = "",
     snapshot;
   let count = 0;
@@ -79,9 +82,9 @@ if (mode === "import") {
     const page = await api("/v1/export?" + q);
     snapshot = page.snapshot;
     for (const r of page.records) {
-      const path = resolve(dir, r.record_key);
+      const path = await privatePath(resolve(dir, r.record_key), dir);
       if (!path.startsWith(dir + "/")) throw Error("Invalid record key");
-      await mkdir(dirname(path), { recursive: true });
+      await mkdir(dirname(path), { recursive: true, mode: 0o700 });
       let old;
       try {
         old = JSON.parse(await readFile(path, "utf8"));
@@ -101,9 +104,9 @@ if (mode === "import") {
         const data = Buffer.from(await response.arrayBuffer());
         if (hash(data) !== r.content.sha256)
           throw Error("Downloaded checksum mismatch");
-        const p = resolve(dir, r.content.key);
+        const p = await privatePath(resolve(dir, r.content.key), dir);
         if (!p.startsWith(dir + "/")) throw Error("Invalid blob key");
-        await mkdir(dirname(p), { recursive: true });
+        await mkdir(dirname(p), { recursive: true, mode: 0o700 });
         await writeFile(p, data);
         blobs.add(r.content.key);
       }
@@ -111,7 +114,7 @@ if (mode === "import") {
     let metadata = {};
     try {
       metadata = JSON.parse(
-        await readFile(resolve(dir, "workspace.json"), "utf8"),
+        await readFile(await privatePath(resolve(dir, "workspace.json"), dir), "utf8"),
       );
     } catch (e) {
       if (e.code !== "ENOENT") throw e;
@@ -119,7 +122,7 @@ if (mode === "import") {
     if (metadata.id && metadata.id !== page.workspace_id)
       throw Error("Destination workspace identity mismatch");
     await writeFile(
-      resolve(dir, "workspace.json"),
+      await privatePath(resolve(dir, "workspace.json"), dir),
       JSON.stringify(
         {
           ...metadata,
@@ -135,7 +138,7 @@ if (mode === "import") {
     after = page.next_cursor;
   } while (after);
   await writeFile(
-    resolve(dir, "export-receipt.json"),
+    await privatePath(resolve(dir, "export-receipt.json"), dir),
     JSON.stringify(
       {
         source: base,
@@ -153,5 +156,5 @@ if (mode === "import") {
   );
 } else
   throw Error(
-    "Usage: node scripts/workspace.mjs import|export [workspace path]",
+    "Usage: node scripts/workspace.mjs import|export /private/path/outside-git",
   );

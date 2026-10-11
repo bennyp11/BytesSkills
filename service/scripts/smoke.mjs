@@ -32,12 +32,6 @@ const call = async (name, args) => {
   assert.ok(!r.isError, JSON.stringify(r));
   return JSON.parse(r.content[0].text);
 };
-const existing = await call("bytes_get", {
-  pointer: "@concept/8aa78d78",
-  include_content: true,
-});
-assert.equal(existing.revision, 2);
-assert.ok(existing.text.includes("857"));
 const workflow = await call("bytes_begin", {
   request_id: randomUUID(),
   command: "/bytes brainstorm --concepts",
@@ -63,6 +57,8 @@ const revised = await call("bytes_save", {
   status: "succeeded",
 });
 assert.equal(revised.revision, 2);
+const existing = await call("bytes_get", {pointer: revised.pointer, include_content: true});
+assert.equal(existing.text, args.text);
 const conflict = await client.callTool({
   name: "bytes_save",
   arguments: {
@@ -184,8 +180,8 @@ const receipt = {
     "health",
     "private-access",
     "SDK-initialize",
-    "seven-tools",
-    "existing-pointer",
+    "twelve-tools",
+    "created-pointer",
     "create",
     "idempotent-retry",
     "revision",
@@ -196,10 +192,9 @@ const receipt = {
     "refresh-token",
   ],
   test_run: created.pointer,
-  existing_pointer: existing.pointer,
 };
 await writeFile(
-  "live-verification.json",
+  ".secrets/live-verification.json",
   JSON.stringify(receipt, null, 2) + "\n",
 );
 console.log(JSON.stringify(receipt, null, 2));

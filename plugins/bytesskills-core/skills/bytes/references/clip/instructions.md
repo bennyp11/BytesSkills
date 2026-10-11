@@ -120,14 +120,11 @@ Mark run pending, succeeded, partial or failed; each variant records planned,
 rendered, verified or blocked stages as applicable. Plan-only success is scoped to
 the plan deliverable; rendered files with unperformed checks remain unverified.
 
-In the user's BytesSkills checkout, follow its GitHub backup instructions after a
-completed batch or partial save. Preserve local results if upload fails and report
-backup pending. For large binaries use verified configured LFS or request a backup
-choice; never silently omit media and claim the entire batch backed up. Source paths
-and checksums identify inputs but do not imply the source media is remotely backed up.
-A packaged skill in an unrelated repository must not commit/push there without user
-scope or repository authorization. Sync is a separate reference, not an automatic
-conflict override.
+Save plans and supported media through the connected cloud workspace. Keep temporary
+rendered files outside the source checkout. Preserve local results if upload fails
+and report which files remain local-only. The MVP upload limit is 10 MB; large media
+needs a supported upload path before it can be claimed as remotely saved. Never put
+workspace media in Git or Git LFS. A source path alone is not a cloud backup.
 
 ## Return
 

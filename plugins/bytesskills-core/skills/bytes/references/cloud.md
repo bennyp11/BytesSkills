@@ -35,9 +35,8 @@ The service enforces storage invariants, not creative format semantics. The assi
 still performs intake, resolves inherited settings and surfaces incompatible inputs.
 
 The remote D1 database is authoritative. Local workspace files marked storage.mode
-remote are read-only backup mirrors. Use the repository's service export script
-before Git backup; never pretend cloud saves automatically push GitHub. Without
-local tools, report cloud save confirmed and Git backup pending. `/bytes sync --latest` adopts published skill releases; it does not deploy source or merge artifact state. `/bytes sync --git` updates a local checkout only.
+remote are read-only private recovery mirrors kept outside Git. A confirmed cloud save
+is the persistence result; there is no Git backup step or Git backup pending state. `/bytes sync --latest` adopts published skill releases; it does not deploy source or merge artifact state. `/bytes sync --git` updates a local checkout only.
 
 Connection: https://api.bytesskills.com/mcp, Streamable HTTP, OAuth. Keys belong in
 the login/credential flow, never in skill text, artifact content, or plugin manifests.

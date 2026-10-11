@@ -25,7 +25,7 @@ namespace. Artifacts receive UUIDs to avoid the distributed counter problem. A
 human can paste an unambiguous eight-character prefix; persisted references contain
 full UUIDs and exact revision numbers. No title or folder is part of identity.
 
-## Authoritative files
+## Explicitly local files (outside Git)
 
 ```text
 workspace/
@@ -40,7 +40,7 @@ Records contain schema version, identity, revision, title, lifecycle status, tag
 resolved settings, relations, provenance and content keys. Content blobs are immutable
 and deduplicate by checksum. Records checksum their own envelope and link the prior
 revision checksum. This detects accidental corruption, not malicious rewriting of
-all hashes; Git history provides a separate audit trail.
+all hashes. Git is not part of workspace revision history.
 
 `parent` organizes concepts and stays an identity reference. `inputs`, `derived_from`,
 `links` and `outputs` pin exact revisions. Every update requires expected_revision,
@@ -57,9 +57,9 @@ pagination during concurrent writes. Binary media contents are not searchable te
 
 The index is local and intentionally absent from Git. Save updates it transactionally.
 Reindex builds from authoritative records, verifies content and relations, and detects
-cycles and broken revision chains. Run it after Git sync or external writes. The
+cycles and broken revision chains. Run it after external local writes. The
 runtime does not watch filesystem changes automatically. A stale cache can miss a
-new externally-written revision until reindex; the sync procedure must enforce this.
+new externally-written revision until reindex; callers must enforce this after external changes.
 
 ## Structured skill growth
 
@@ -79,7 +79,7 @@ The registry is declarative guidance, not a full creative-schema validation engi
 This is a working single-writer local foundation, not a distributed database. Saves
 are individually atomic; multi-output runs can be partial. Local locks prevent two
 writers in one checkout. Two computers can still create conflicting revisions of
-one artifact; Git conflict resolution and reindex are required. Do not auto-merge
+one artifact; explicit conflict resolution and reindex are required. Do not auto-merge
 revision files with “ours/theirs” or resolve conflict by last-modified timestamp.
 
 Reads use an index plus authoritative content. Local content ingestion currently
