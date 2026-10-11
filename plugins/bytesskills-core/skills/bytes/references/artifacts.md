@@ -6,7 +6,7 @@ below apply to explicitly local workspaces; remote mirrors are read-only.
 The bundled `scripts/artifacts.py` is a real local persistence/query runtime using
 Python 3.10+ and SQLite with FTS5. It does not generate content or render video. Use
 an explicit `--workspace` pointing to the user's workspace.json. No implicit home
-folder or remote storage. Run `reindex` after Git sync or external record changes
+folder or remote storage. Keep local workspaces outside Git. Run `reindex` after external record changes
 before resolving pointers. Do not assume a cached index reflects another writer.
 
 ## Interface
@@ -86,10 +86,10 @@ search covers current title/body; binary contents are not transcribed or indexed
    runtime, with inputs/derivation pinned, settings, tags, and run pointer in provenance.
 4. Complete the run via a new revision with outputs and succeeded/partial/failed.
    Preserve completed candidates on partial failure. A retry is a new run.
-5. Return actual runtime pointers and file links. Commit/push the authoritative
-   records and blobs under the repository's backup policy; the SQLite cache is ignored.
+5. Return actual runtime pointers and file links. Shared records and blobs belong in
+   Cloudflare; explicitly local stores and recovery exports stay outside Git.
 
-Saving has no automatic Git push. Never claim remote backup until it succeeds.
+Report confirmed cloud persistence or local-only storage accurately. No Git step is required.
 One save is atomic; an entire multi-output run is not. Record partial progress.
 
 ## Shared operations
@@ -118,7 +118,7 @@ and reads fail closed. The writer lock is local and exclusive, not a distributed
 After a crashed writer, confirm no process owns the lock before removing only that
 lock and running reindex. Do not remove immutable records to hide corruption.
 
-After a Git merge, run reindex and resolve conflicts before further writes. Two
+After external local record changes, run reindex and resolve conflicts before further writes. Two
 machines editing the same artifact revision concurrently still need explicit merge
 resolution. UUIDs reduce independently-created object collisions, not competing
 edits to one object. No automatic last-writer-wins or distributed transaction claim.

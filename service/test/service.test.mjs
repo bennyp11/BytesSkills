@@ -471,28 +471,16 @@ test("OAuth registration, PKCE consent, read scope and refresh", async () => {
   });
   assert.equal(refresh.status, 200, await refresh.clone().text());
 });
-test("import real local records preserves checksums and export snapshot is stable", async () => {
-  const { readdir } = await import("node:fs/promises");
-  async function files(dir) {
-    let result = [];
-    for (const f of await readdir(dir, { withFileTypes: true })) {
-      const p = dir + "/" + f.name;
-      if (f.isDirectory()) result.push(...(await files(p)));
-      else result.push(p);
-    }
-    return result;
-  }
-  const records = await Promise.all(
-    (await files("../workspace/records")).map(async (p) =>
-      JSON.parse(await readFile(p, "utf8")),
-    ),
-  );
-  for (const r of records) {
-    const bytes = await readFile("../workspace/" + r.content.key);
+test("synthetic local revisions import without a repository workspace and export snapshots stay stable", async () => {
+  const { execFileSync } = await import("node:child_process");
+  const fixtures = JSON.parse(execFileSync("python3", ["../tests/make_import_fixture.py"], {encoding: "utf8"}));
+  const records = fixtures.map(f => f.record);
+  for (const fixture of fixtures) {
+    const r = fixture.record;
     const res = await mf.dispatchFetch(base + "/v1/blobs/" + r.content.sha256, {
       method: "PUT",
       headers: { Authorization: "Bearer " + key },
-      body: bytes,
+      body: Buffer.from(fixture.content, "base64"),
     });
     assert.equal(res.status, 200);
   }

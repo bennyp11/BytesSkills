@@ -13,10 +13,10 @@ an honest error and the supported list, not invented syntax.
 
 Help takes precedence over execution and intake: never ask the creative questionnaire,
 generate content, allocate pointers or change workspace files for a help request.
-Use example pointers only as examples. The shared local artifact runtime is now
-implemented: the assistant generates/refines content and saves it through Python.
-There is no native slash parser or automatic model service. Explain required local
-filesystem/Python access. Clip execution still depends on media tools and its large
-files use the existing batch flow. Sync must rebuild the artifact index after Git.
+Use example pointers only as examples. Connected workspaces save through MCP into
+Cloudflare. Python is only needed for explicitly local private stores outside Git.
+There is no native slash parser or automatic model service. Clip execution depends
+on media tools; report local-only media accurately when cloud upload is unsupported.
+Git sync affects source only and must not export, stage or reindex workspace data.
 Installing this package and reading its instructions is separate from executing a
 native CLI. Do not claim installation has occurred merely because files exist.

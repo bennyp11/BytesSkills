@@ -9,7 +9,8 @@ user explicitly supplies `--git`. Bare sync must not initiate Git changes.
 Follow [the synchronization procedure](references/procedure.md). `/bytes sync --git` is an
 assistant-interpreted request, not a native host command. An invocation authorizes
 ordinary inspection, fetch, a reviewed local checkpoint commit, safe integration
-and non-force push for the selected BytesSkills repository, including workspace/.
+and non-force push for reviewed source files in the selected BytesSkills repository.
+Workspace records, blobs and exports must never be staged or synchronized through Git.
 It does not authorize destructive resets, deletion, overwriting conflicting
 artifacts, executing fetched code, or installing/replacing plugins in another host.
 

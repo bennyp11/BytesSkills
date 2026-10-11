@@ -7,11 +7,11 @@ Preserve stable artifact identities, immutable revisions, exact input provenance
 and separation of parent, extends and derived_from relationships. Do not invent
 production format rules from a format's name. Examples are not live artifacts.
 
-The user wants GitHub backups as work proceeds, including workspace/. After each
-completed logical change or generation batch, inspect, commit and push its files.
-Preserve unrelated edits. Report failures honestly; do not claim remote backup before
-push succeeds. Exclude credentials and caches, but do not silently exclude requested
-workspace artifacts or media. Read workspace/README.md for large-file handling.
+GitHub stores core code, schemas, reusable definitions and packaged skills only.
+After each completed logical source change, inspect, commit and push relevant files.
+Never stage workspace records, blobs, exports, local caches or credentials, even
+with force-add. Cloudflare D1 and R2 are authoritative for shared workspace data.
+Preserve existing ignored local copies. See docs/workspace-storage.md.
 
 Generation and refinement use clarification-first intake. Ask about each unresolved
 applicable creative input before generating; accept “idk” as delegation for that
@@ -26,6 +26,6 @@ for semantic conflicts even when Git can merge the text. /bytes sync --help is r
 All new pointer-backed saves and queries use the shared runtime and operation
 contracts: connected MCP service for remote workspaces, artifacts.py for explicitly
 local workspaces. Never save locally to a workspace marked storage.mode=remote.
-Export cloud revisions/blobs before committing workspace backups; see service/README.md. Reindex after Git sync or external
-record changes. Never allocate IDs by guessing or write immutable records manually.
+Keep any explicitly requested recovery exports outside Git checkouts; see service/README.md. Reindex explicitly local stores after external
+record changes, not ordinary code sync. Never allocate IDs by guessing or write immutable records manually.
 Return actual saved pointers. The ignored SQLite cache is not a backup artifact.

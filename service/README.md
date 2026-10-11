@@ -9,7 +9,7 @@ One private workspace, served at https://api.bytesskills.com. MCP endpoint:
 - D1: immutable record envelopes, current heads, relationships, tags, FTS5 search and idempotency receipts.
 - R2: private content blobs at `<workspace UUID>/blobs/sha256/<prefix>/<hash>`.
 - Workers KV: OAuth client registrations, grants and token state managed by Cloudflare's OAuth library. It does not hold artifact state.
-- GitHub: definitions, skills, source, migrations and explicit workspace backup exports.
+- GitHub: definitions, skills, source, migrations only; workspace records and exports are excluded.
 
 Cloud records are authoritative in D1. Heads, tags and search are derived, updated in
 one transaction alongside a revision. Original local records import unchanged,
@@ -101,8 +101,8 @@ versions in artifact provenance. No automated GitHub deployment workflow is enab
 ## Import, backup, restore
 
 ```sh
-node scripts/workspace.mjs import ../workspace
-node scripts/workspace.mjs export ../workspace
+node scripts/workspace.mjs import /absolute/private/bytes-recovery
+node scripts/workspace.mjs export /absolute/private/bytes-recovery
 node scripts/smoke.mjs
 ```
 
@@ -112,8 +112,10 @@ Import uploads/checksums blobs, then imports revisions in dependency order and c
 resume safely. Export captures an insertion watermark, downloads exact revisions
 and verifies every blob checksum. It refuses conflicting local revisions. Exports
 mark the workspace as a read-only mirror of the remote authority. Reindex the local
-mirror after export to inspect it offline. Commit/push exports after creative work;
-cloud saves do not automatically create GitHub commits.
+mirror after export to inspect it offline. An explicit destination outside any Git
+checkout is required; there is no in-repository default. Exports are private recovery
+copies, never Git commits. Normal creative work requires no export or Git operation.
+See [workspace policy](../docs/workspace-storage.md).
 
 Restore into an empty deployment with the same workspace ID: apply migrations,
 configure resources/auth, then import a complete verified export. Retain the source

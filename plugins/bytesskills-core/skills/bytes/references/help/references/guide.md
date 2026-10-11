@@ -14,7 +14,7 @@ explain the interface now when loaded by an assistant.
 /bytes brainstorm --help              Brainstorm parameters and examples
 /bytes refine --help                  Revision help
 /bytes show --help                   Pointers, history, settings and trees
-/bytes sync --help                   GitHub/local synchronization and refresh
+/bytes sync --help                   Cloud skill adoption and optional source sync
 ```
 
 Help is read-only and never starts the creative questionnaire. A complete command
@@ -127,36 +127,19 @@ styles and actual sound recordings remain to be selected.
 
 ## Storage and status
 
-The planned runtime uses local files in a workspace tracked in the private GitHub
-repository. Every candidate is saved; refinement preserves history. A local save and
-a successful remote backup are separate states. A Python pointer store now ships with the skill. It does not include a model
-service or automatic backup runner; the assistant performs generation and Git steps.
+The connected shared workspace stores metadata and immutable revisions in D1,
+content in private R2, and skill selections in D1. GitHub stores core source only.
+Every candidate is saved; refinement preserves history. Report actual cloud save
+results. Local-only work and recovery exports stay outside Git and are not cloud
+saves. No automatic backup scheduler is included.
 
 ## Sync and refresh
 
-```text
-/bytes sync --check
-/bytes sync
-/bytes sync --repo="/absolute/path/to/BytesSkills"
-/bytes sync --help
-```
-
-`--check` fetches the configured upstream and reports local changes and ahead/behind
-state; it changes remote-tracking metadata, not working files or commits. Full sync
-checkpoints reviewed local changes including workspace artifacts, fast-forwards or
-merges compatible updates, validates and pushes without force. It then rereads the
-updated source instructions. If the checkout cannot be identified, it asks for the
-path. An explicit repo path selects the checkout, not a remote destination.
-
-Conflicts stop the workflow for resolution. Different artifacts with the same ID,
-competing revisions, or broken references cannot be solved by blindly picking the
-newest file. Local saves remain intact if network access or pushing fails.
-
-The sync reference provides an assistant procedure using ordinary Git; it is not
-a terminal parser or automatic background process. Source checkout, GitHub and the
-installed/loaded plugin are separate states. Sync cannot promise to refresh every
-chat or a cached plugin installation. Its report states which source commit it read
-and whether the installed plugin still needs a supported update or reload.
+`/bytes sync --check` previews published skill updates. `/bytes sync --latest`
+adopts the latest library across the shared workspace. Neither command moves
+workspace files or changes Git. `/bytes sync --git` explicitly synchronizes a source
+checkout; it never stages private workspace data or deploys the service. Installed
+plugin caches require their supported update flow separately.
 
 ## Troll and engagement tactics
 
@@ -233,7 +216,7 @@ The five unexpected-cost concepts have been imported. In this workspace:
 ```
 
 These three commands use the bundled helper through the assistant. Pointer support
-requires local workspace access. After Git updates, sync rebuilds the query index.
+uses the connected cloud service or an explicitly selected private local store.
 See [runtime guidance](../../artifacts.md) for storage and limitations.
 
 ## Shared workspace
