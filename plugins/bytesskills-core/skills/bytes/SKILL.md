@@ -1,6 +1,6 @@
 ---
 name: bytes
-description: Entry point for the BytesSkills content workflow library. Interpret /bytes commands and explicit requests to use BytesSkills, including progressive clipping, help and Git synchronization. Do not intercept unrelated plugins or generic help/sync requests outside BytesSkills.
+description: Entry point for the BytesSkills content workflow library. Interpret /bytes commands and explicit requests to use BytesSkills, including CapCut computer-controlled editing, progressive clipping, help and Git synchronization. Do not intercept unrelated plugins or generic help/sync requests outside BytesSkills.
 ---
 
 # BytesSkills
@@ -34,6 +34,7 @@ content or mutate artifacts. Unknown commands get help rather than another plugi
 /bytes help
 /bytes brainstorm --concepts --format=reductions
 /bytes refine --hook=@hook/<UUID> --req="Make it more personal"
+/bytes edit --app=capcut --source="/path/to/video.mp4" --req="Tighten this edit"
 /bytes sync --check
 /bytes sync --latest
 /bytes sync --git --check
@@ -68,3 +69,8 @@ not install those tools or grant access to another platform.
 
 After sync, distinguish the updated source checkout, reread instructions in this
 chat and any installed or cached plugin. Do not equate source updates with a reload.
+
+For `/bytes edit --app=capcut`, use the pinned edit handler (or
+[CapCut editing](references/edit/instructions.md) for an explicitly local workflow).
+It requires host computer control; the remote MCP connection alone cannot operate
+CapCut. Natural-language requests use the same intake and artifact contracts.

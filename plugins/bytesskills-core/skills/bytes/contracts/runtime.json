@@ -79,6 +79,14 @@
       "can_save": false,
       "handler": "references/versions.md",
       "include_definitions": false
+    },
+    "edit": {
+      "commands": [
+        "edit"
+      ],
+      "can_save": true,
+      "handler": "references/edit/instructions.md",
+      "include_definitions": true
     }
   }
 }

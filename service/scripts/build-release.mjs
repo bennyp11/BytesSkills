@@ -42,6 +42,7 @@ const releases = skills.map((skill) => ({
     Object.entries(library.entries).filter(
       ([path]) =>
         path === "docs/commands.md" ||
+        (skill === "edit" && path.endsWith("references/clip/instructions.md")) ||
         path.includes("/contracts/") ||
         path.endsWith("references/routing.md") ||
         (skill === "help" && path.endsWith("references/help/references/guide.md")) ||

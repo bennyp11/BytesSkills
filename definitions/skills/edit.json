@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "id": "edit",
+  "version": "0.1.0",
+  "status": "draft",
+  "purpose": "Operate CapCut through available host computer control to edit a supplied video and deliver a verified export.",
+  "command": "edit",
+  "natural_language": {
+    "positive": [
+      "Using BytesSkills, edit this video in CapCut for me.",
+      "Take over CapCut and tighten this talking-head video using the brief."
+    ],
+    "negative": [
+      "How do I edit videos in CapCut?",
+      "Make a skill for editing in CapCut.",
+      "Critique this video without changing it."
+    ],
+    "ambiguity_question": "Which footage or project should I edit, and what outcome do you want?"
+  },
+  "parameters": {
+    "app": {
+      "type": "string",
+      "required": true,
+      "question": "Use CapCut desktop or an available CapCut web surface?",
+      "allow_delegation": false
+    },
+    "source": {
+      "type": "string",
+      "required": true,
+      "question": "Which source footage or existing CapCut project should I edit?",
+      "allow_delegation": false
+    },
+    "req": {
+      "type": "string",
+      "required": true,
+      "question": "What should the finished edit accomplish?",
+      "allow_delegation": true
+    },
+    "project": {
+      "type": "string",
+      "required": false,
+      "question": "Which existing project should I continue?",
+      "allow_delegation": false
+    },
+    "format": {
+      "type": "string",
+      "required": false,
+      "question": "Which content format should this follow, if any?",
+      "allow_delegation": true
+    },
+    "duration": {
+      "type": "string",
+      "required": true,
+      "question": "What target duration should I use, or should I preserve the source length?",
+      "allow_delegation": true
+    },
+    "aspect": {
+      "type": "string",
+      "required": true,
+      "question": "Which aspect ratio should I use, or should I preserve the source aspect?",
+      "allow_delegation": true
+    },
+    "captions": {
+      "type": "string",
+      "required": true,
+      "question": "Should I create captions, preserve them or use none?",
+      "allow_delegation": true
+    },
+    "music": {
+      "type": "string",
+      "required": true,
+      "question": "Should I preserve the audio, use no music or use an approved asset?",
+      "allow_delegation": true
+    },
+    "output": {
+      "type": "string",
+      "required": true,
+      "question": "Where should the exported video be saved?",
+      "allow_delegation": true
+    }
+  },
+  "outputs": [
+    "plan",
+    "video"
+  ],
+  "persistence": "new-artifacts-or-revisions",
+  "capabilities": [
+    "host-computer-control",
+    "capcut-ui",
+    "source-file-access",
+    "export-file-access"
+  ],
+  "quality_checks": [
+    "Edits follow the supplied brief and pinned format.",
+    "Source and editable project are preserved.",
+    "Export exists and duration/dimensions are verified.",
+    "Caption/audio review claims match the tools actually available.",
+    "Local-only exports are not represented as uploaded video artifacts."
+  ],
+  "handler": "references/edit/instructions.md"
+}

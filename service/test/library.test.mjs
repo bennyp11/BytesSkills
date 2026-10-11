@@ -54,3 +54,21 @@ test("release builder includes pinned routing/handler, fits server limits and re
     assert.equal(await readFile(output, "utf8"), text);
   } finally { await rm(dir, {recursive: true, force: true}); }
 });
+
+test("CapCut release pins its handler, authoring contract and progressive-clip dependency", async () => {
+  const { mkdtemp, rm } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { execFileSync } = await import("node:child_process");
+  const dir = await mkdtemp(join(tmpdir(), "bytes-edit-"));
+  try {
+    const output = join(dir, "edit.json");
+    execFileSync(process.execPath, ["scripts/build-release.mjs", "0.9.0", output, "edit"], {stdio: "pipe"});
+    const release = JSON.parse(await readFile(output, "utf8")).releases[0];
+    assert.equal(release.skill, "edit");
+    assert.deepEqual(release.required_scopes, ["bytes:read", "bytes:write"]);
+    assert.ok(release.instructions.includes("Edit video in CapCut through computer control"));
+    assert.equal(JSON.parse(release.resources["definitions/skills/edit.json"]).command, "edit");
+    assert.ok(release.resources["plugins/bytesskills-core/skills/bytes/references/clip/instructions.md"]);
+  } finally { await rm(dir, {recursive: true, force: true}); }
+});

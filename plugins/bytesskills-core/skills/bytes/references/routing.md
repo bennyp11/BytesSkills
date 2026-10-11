@@ -30,6 +30,7 @@ Do not claim unrelated requests or another plugin's namespace.
 | “Show the old version of this script” | Read-only show/history; clarify the version if unclear |
 | “Update my whole BytesSkills library” | `/bytes sync --latest`; use the shared adoption preview |
 | “How would I update my library?” | Read-only help, not adoption |
+| “Using BytesSkills, edit this video in CapCut for me” | `/bytes edit --app=capcut`; clarify source and brief as needed |
 | “Make this better,” with several possible artifacts | Clarify target and requested change first |
 
 Authoring and execution are different intents. “Add a format named interview” is

@@ -36,7 +36,7 @@ const authoringBase = {schema_version: z.literal(1), id: slug, version,
 export const skillContractSchema = z.object({...authoringBase, command: slug,
   natural_language: z.object({positive: strings.min(1), negative: strings.min(1), ambiguity_question: z.string().min(1)}).strict(),
   parameters: z.record(slug, fieldSchema), outputs: z.array(slug).min(1),
-  persistence: z.enum(["new-artifacts", "append-revision", "read-only"]),
+  persistence: z.enum(["new-artifacts", "append-revision", "new-artifacts-or-revisions", "read-only"]),
   capabilities: strings, handler: z.string().regex(/^references\/[a-z0-9/.-]+\.md$/),
 }).strict();
 export const profileSchema = z.object({...authoringBase, base_type: slug,

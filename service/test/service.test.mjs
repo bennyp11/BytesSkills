@@ -41,6 +41,7 @@ before(async () => {
     "inspect",
     "organize",
     "clip",
+    "edit",
     "sync",
   ].map((skill) => ({
     skill,
@@ -519,6 +520,21 @@ test("every registered command routes to its declared skill and help stays read-
       assert.equal(help.skill, "help");
     }
   }
+});
+
+test("edit workflow can persist a plan with release provenance and edit help cannot write", async () => {
+  const begun = await tool("bytes_begin", {request_id: randomUUID(), command: '/bytes edit --app=capcut --source="/private/example.mp4" --req="Tighten pacing"'});
+  assert.equal(begun.skill, "edit");
+  const saved = await tool("bytes_save", {request_id: randomUUID(), workflow_id: begun.workflow_id, type: "plan", title: "Fictional edit plan", text: "Test only: no application was controlled."});
+  assert.equal(saved.provenance.skill_release.skill, "edit");
+  const help = await tool("bytes_begin", {request_id: randomUUID(), command: "/bytes edit --help"});
+  assert.equal(help.skill, "help");
+  const result = await rpc("tools/call", {name: "bytes_save", arguments: {
+    request_id: randomUUID(), workflow_id: help.workflow_id,
+    type: "plan", title: "Must fail", text: "Help must not mutate",
+  }});
+  assert.equal(result.body.result.isError, true);
+  assert.ok(result.body.result.content[0].text.includes("cannot save artifacts"));
 });
 
 test("skill releases are immutable; adoption is shared and each run pins its resources", async () => {

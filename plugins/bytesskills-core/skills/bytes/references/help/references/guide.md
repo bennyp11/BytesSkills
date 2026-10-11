@@ -12,6 +12,7 @@ explain the interface now when loaded by an assistant.
 /bytes --help                  General help
 /bytes                         Same overview
 /bytes brainstorm --help              Brainstorm parameters and examples
+/bytes edit --help                    CapCut computer-controlled editing
 /bytes refine --help                  Revision help
 /bytes show --help                   Pointers, history, settings and trees
 /bytes sync --help                   Cloud skill adoption and optional source sync
@@ -225,3 +226,12 @@ When the BytesSkills MCP connection is available, pointers resolve in the shared
 workspace. Same commands, shared state across connected clients. Verify identity with
 bytes_workspace; read [cloud guidance](../../cloud.md). Local mirrors are read-only.
 Syncing Git does not deploy the Worker or refresh its bundled definitions.
+
+## CapCut editing
+
+Use `/bytes edit --app=capcut --source="/path/to/video.mp4" --req="Remove dead air"`
+or ask “Using BytesSkills, edit this video in CapCut for me.” The assistant checks
+computer-control access, clarifies the brief, edits a preserved project, exports
+and verifies the video. CapCut control must be supplied by the host; a remote MCP
+connection does not provide it. Saves distinguish cloud artifacts from local-only
+media. Use `--help` to inspect all flags without opening or editing a project.
