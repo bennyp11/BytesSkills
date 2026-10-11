@@ -24,6 +24,8 @@ still requires appropriate tools.
 
 ## Start here
 
+- [Add skills, formats and object profiles](docs/extending-bytes.md): contracts, natural-language routing and release process.
+
 - [System specification](docs/system-spec.md): ontology, relationships and behavior.
 - [Command reference](docs/commands.md): proposed grammar and command contracts.
 - [Worked example](examples/reductions/README.md): illustrative end-to-end flow.

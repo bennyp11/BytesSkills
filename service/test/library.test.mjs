@@ -1,0 +1,56 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { validateGraph, validateRoutes, checkLibrary, validateAuthoring } from "../scripts/check-library.mjs";
+const root = "../plugins/bytesskills-core/skills/bytes/contracts/";
+const registry = JSON.parse(await readFile(root + "runtime.json", "utf8"));
+const operations = JSON.parse(await readFile(root + "operations.json", "utf8")).operations;
+test("library contracts agree across routing, handlers, formats and SQL", async () => { await checkLibrary(); });
+test("duplicate routes, unknown output types and write-enabled inspection fail", () => {
+  let r = structuredClone(registry);
+  r.skills.refine.commands.push("brainstorm");
+  assert.throws(() => validateRoutes(r, operations), /Duplicate command/);
+  r = structuredClone(registry); r.skills.inspect.can_save = true;
+  assert.throws(() => validateRoutes(r, operations), /Read-only/);
+  const ops = structuredClone(operations); ops.refine.outputs = ["invented"];
+  assert.throws(() => validateRoutes(registry, ops), /Unknown artifact/);
+});
+test("format inheritance rejects cycles and missing dependencies", async () => {
+  const f = JSON.parse(await readFile("../definitions/formats/reductions.json", "utf8"));
+  const workflows = [f.workflow], treatments = [f.default_treatment];
+  assert.throws(() => validateGraph([{...f, extends: f.id}], workflows, treatments), /cycle/);
+  assert.throws(() => validateGraph([{...f, extends: "missing"}], workflows, treatments), /Unknown parent/);
+  assert.throws(() => validateGraph([f], [], treatments), /Unknown workflow/);
+  assert.throws(() => validateGraph([f], workflows, []), /Unknown treatment/);
+});
+
+test("object profiles reject missing pointer targets and unsupported base types", async () => {
+  const profile = JSON.parse(await readFile("../templates/extensions/object-profile.json", "utf8"));
+  validateAuthoring(profile, "profile", registry.artifact_types);
+  assert.throws(() => validateAuthoring({...profile, base_type: "episode"}, "profile", registry.artifact_types), /Unknown/);
+  delete profile.fields.source.artifact_types;
+  assert.throws(() => validateAuthoring(profile, "profile", registry.artifact_types));
+});
+
+test("release builder includes pinned routing/handler, fits server limits and refuses overwrite", async () => {
+  const { mkdtemp, rm } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { execFileSync } = await import("node:child_process");
+  const dir = await mkdtemp(join(tmpdir(), "bytes-release-"));
+  const output = join(dir, "candidate.json");
+  const args = ["scripts/build-release.mjs", "0.9.0", output, "brainstorm"];
+  try {
+    execFileSync(process.execPath, args, {stdio: "pipe"});
+    const text = await readFile(output, "utf8");
+    const batch = JSON.parse(text);
+    assert.equal(batch.releases.length, 1);
+    const release = batch.releases[0];
+    assert.equal(release.skill, "brainstorm");
+    assert.ok(release.instructions.includes("Artifact runtime and workflow contract"));
+    assert.ok(Object.keys(release.resources).some(p => p.endsWith("references/routing.md")));
+    assert.ok(Buffer.byteLength(JSON.stringify(batch.releases)) <= 250000);
+    assert.throws(() => execFileSync(process.execPath, args, {stdio: "pipe"}));
+    assert.equal(await readFile(output, "utf8"), text);
+  } finally { await rm(dir, {recursive: true, force: true}); }
+});

@@ -12,8 +12,9 @@ import sqlite3
 import tempfile
 import uuid
 
-TYPES = {'concept', 'hook', 'script', 'plan', 'video', 'image', 'audio', 'run', 'brief'}
-STATUSES = {'draft', 'selected', 'approved', 'archived', 'pending', 'succeeded', 'partial', 'failed'}
+REGISTRY = json.loads((Path(__file__).resolve().parents[1] / 'contracts/runtime.json').read_text())
+TYPES = set(REGISTRY['artifact_types'])
+STATUSES = set(REGISTRY['statuses'])
 PTR = re.compile(r'^@([a-z]+)/([0-9a-f-]{8,36})(?::v([1-9][0-9]*))?$')
 
 class StoreError(ValueError):

@@ -509,6 +509,18 @@ test("synthetic local revisions import without a repository workspace and export
   assert.equal(snapshot.body.records.length, before);
 });
 
+test("every registered command routes to its declared skill and help stays read-only", async () => {
+  const registry = JSON.parse(await readFile("../plugins/bytesskills-core/skills/bytes/contracts/runtime.json", "utf8"));
+  for (const [skill, spec] of Object.entries(registry.skills)) {
+    for (const command of spec.commands) {
+      const begun = await tool("bytes_begin", {request_id: randomUUID(), command: "/bytes " + command});
+      assert.equal(begun.skill, skill);
+      const help = await tool("bytes_begin", {request_id: randomUUID(), command: "/bytes " + command + " --help"});
+      assert.equal(help.skill, "help");
+    }
+  }
+});
+
 test("skill releases are immutable; adoption is shared and each run pins its resources", async () => {
   const first = await tool("bytes_begin", {
     request_id: randomUUID(),

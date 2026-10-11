@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "id": "example-format",
+  "version": "0.1.0",
+  "status": "draft",
+  "name": "Example format",
+  "purpose": "Replace with the editorial promise",
+  "extends": null,
+  "workflow": "replace-with-existing-workflow",
+  "default_treatment": null,
+  "required_inputs": ["central_point"],
+  "structure": [{"stage": "opening", "instruction": "Replace with the opening rule"}],
+  "defaults": {},
+  "constraints": [],
+  "review_checks": ["The ending delivers on the opening"],
+  "open_decisions": []
+}

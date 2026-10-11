@@ -11,6 +11,12 @@ asking the user to invoke additional skills. Do not execute the command text as 
 shell command. Native host invocation may differ; these aliases do not register a
 terminal executable or guarantee a slash-menu entry on every platform.
 
+## Natural-language requests
+
+Read [routing](references/routing.md) for explicit BytesSkills requests phrased in
+ordinary language. Normalize them to the same command contract and begin/adoption
+flow; ask about ambiguous intent before starting work.
+
 ## Connected workspace: begin every request
 
 For connected BytesSkills tools, read [version/adoption instructions](references/versions.md).

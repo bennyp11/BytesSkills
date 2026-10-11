@@ -1,30 +1,32 @@
+import { checkLibrary } from "./check-library.mjs";
+await checkLibrary();
+await import("./bundle-library.mjs");
 // Build self-contained skill snapshots. Publication does not require Git.
+import { dirname } from "node:path";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
-const version = process.argv[2] ?? "0.7.0";
+const version = process.argv[2];
+if (!version) throw Error("Supply a NEW release version explicitly");
 if (!/^\d+\.\d+\.\d+$/.test(version)) throw Error("Use a semantic version");
 const library = JSON.parse(await readFile("src/library.json", "utf8"));
 const root = "../plugins/bytesskills-core/skills/bytes/";
 const versions = await readFile(root + "references/versions.md", "utf8");
 const cloud = await readFile(root + "references/cloud.md", "utf8");
-const clip = await readFile(root + "references/clip/instructions.md", "utf8");
-const skills = [
-  "help",
-  "brainstorm",
-  "refine",
-  "inspect",
-  "organize",
-  "clip",
-  "sync",
-];
+const registry = JSON.parse(await readFile(root + "contracts/runtime.json", "utf8"));
+const requestedSkill = process.argv[4];
+if (requestedSkill && !Object.hasOwn(registry.skills, requestedSkill)) throw Error("Unknown skill");
+const skills = requestedSkill ? [requestedSkill] : Object.keys(registry.skills);
+const handlers = Object.fromEntries(await Promise.all(skills.map(async skill =>
+  [skill, await readFile(root + registry.skills[skill].handler, "utf8")],
+)));
 const releases = skills.map((skill) => ({
   skill,
   version,
   protocol: 1,
   summary:
-    "Adds shared version adoption, update/stay/automatic preferences, pinned workflow provenance, and one-step library sync.",
+    "Uses unified extension contracts, natural-language routing, and cloud-only workspace persistence.",
   required_scopes: [
     "bytes:read",
-    ...(["brainstorm", "refine", "organize", "clip"].includes(skill)
+    ...(registry.skills[skill].can_save
       ? ["bytes:write"]
       : []),
   ],
@@ -32,7 +34,7 @@ const releases = skills.map((skill) => ({
     versions +
     "\n" +
     cloud +
-    (skill === "clip" ? "\n" + clip : "") +
+    "\n" + handlers[skill] +
     "\nOnly perform the requested " +
     skill +
     " operation. Use the bundled command contract. Help is read-only and must not start creative intake.",
@@ -40,16 +42,22 @@ const releases = skills.map((skill) => ({
     Object.entries(library.entries).filter(
       ([path]) =>
         path === "docs/commands.md" ||
-        path.endsWith("operations.json") ||
-        (["brainstorm", "refine", "clip"].includes(skill) &&
+        path.includes("/contracts/") ||
+        path.endsWith("references/routing.md") ||
+        (skill === "help" && path.endsWith("references/help/references/guide.md")) ||
+        (registry.skills[skill].include_definitions &&
           path.startsWith("definitions/")),
     ),
   ),
 }));
-await mkdir("releases", { recursive: true });
+if (Buffer.byteLength(JSON.stringify(releases)) > 250000)
+  throw Error("Batch exceeds server limit; build one skill at a time: build-release.mjs VERSION OUTPUT SKILL. Publish all required candidates before bulk adoption.");
+const output = process.argv[3] ?? `releases/${version}.json`;
+await mkdir(dirname(output), { recursive: true });
 await writeFile(
-  `releases/${version}.json`,
+  output,
   JSON.stringify({ releases }, null, 2) + "\n",
+  { flag: "wx" },
 );
 console.log(
   "Built immutable publication candidate: " +

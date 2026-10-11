@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "example-profile",
+  "version": "0.1.0",
+  "status": "draft",
+  "base_type": "plan",
+  "purpose": "Replace with the distinct purpose of this structured object",
+  "fields": {
+    "objective": {"type": "string", "required": true, "question": "What should this accomplish?", "allow_delegation": true},
+    "source": {"type": "pointer", "artifact_types": ["concept"], "required": true, "question": "Which concept is this based on?", "allow_delegation": false}
+  },
+  "quality_checks": ["Source points to a real, pinned concept revision"],
+  "migration_notes": "Initial draft; do not rewrite existing artifacts"
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "example-skill",
+  "version": "0.1.0",
+  "status": "draft",
+  "purpose": "Replace with the concrete task this skill performs",
+  "command": "example-skill",
+  "natural_language": {
+    "positive": ["Using BytesSkills, perform this specific task"],
+    "negative": ["Explain what this task means without performing it"],
+    "ambiguity_question": "Which saved artifact should this operate on?"
+  },
+  "parameters": {
+    "source": {"type": "pointer", "artifact_types": ["concept"], "required": true, "question": "Which concept should I use?", "allow_delegation": false},
+    "direction": {"type": "string", "required": true, "question": "What direction should I take?", "allow_delegation": true}
+  },
+  "outputs": ["plan"],
+  "persistence": "new-artifacts",
+  "capabilities": [],
+  "quality_checks": ["Output addresses the supplied source and direction"],
+  "handler": "references/example-skill/instructions.md"
+}
