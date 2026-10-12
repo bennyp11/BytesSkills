@@ -1,0 +1,60 @@
+name: Website
+on:
+  pull_request:
+    branches: [mvp]
+    paths: ['website/**', '.github/workflows/deploy-website.yml']
+  push:
+    branches: [mvp]
+    paths: ['website/**', '.github/workflows/deploy-website.yml']
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: website
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+      - run: npm ci
+      - run: npm run check
+      - run: npm test
+      - run: npm run build
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/mvp'
+    needs: check
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: bytes-website-production
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: website
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+      - run: npm ci
+      - name: Check deployment credentials
+        run: test -n "$CLOUDFLARE_API_TOKEN"
+      - name: Ensure the waitlist table exists
+        run: npm run db:remote
+      - name: Deploy website and attach its custom domain
+        run: npx wrangler deploy --var "WEBSITE_COMMIT:${{ github.sha }}"
+      - name: Verify website revision and API availability
+        run: node scripts/smoke.mjs
+        env:
+          WEBSITE_COMMIT: ${{ github.sha }}

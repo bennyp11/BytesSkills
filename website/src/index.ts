@@ -1,4 +1,4 @@
-import type { Env } from './common';
+interface Env { DB: D1Database; WEBSITE_COMMIT?: string; }
 export function page(message: string = '', failed: boolean = false) {
 return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -42,3 +42,15 @@ export async function website(request: Request, env: Pick<Env, "DB">) {
   return success();
  }catch{return html(page("We couldn't save your email just now. Please try again in a moment.",true),503);}
 }
+
+export default {
+ async fetch(request: Request, env: Env): Promise<Response> {
+  const url = new URL(request.url);
+  const response = ["/", "/waitlist", "/thanks", "/privacy"].includes(url.pathname)
+   ? await website(request, env)
+   : Response.redirect("https://api.bytesskills.com" + url.pathname + url.search, 308);
+  const result = new Response(response.body, response);
+  result.headers.set("X-Bytes-Website-Commit", env.WEBSITE_COMMIT || "local");
+  return result;
+ }
+};

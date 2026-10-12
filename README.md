@@ -24,6 +24,8 @@ still requires appropriate tools.
 
 ## Start here
 
+- [Website deployments](WEBSITE.md): independent deploys of bytesskills.com from this repo.
+
 - [GitHub release automation](docs/releases.md): prepare, publish, verify and recover releases.
 
 - [Add skills, formats and object profiles](docs/extending-bytes.md): contracts, natural-language routing and release process.
@@ -41,7 +43,8 @@ catalog.yaml                  Library taxonomy (our convention)
 definitions/                  Formats, treatments and workflows
 plugins/                      Installable packaging and skill scaffolds
 templates/                    Authoring templates
-service/                      Cloudflare Worker, database migrations and tests
+service/                      Core API Worker, database migrations and tests
+website/                      Website Worker, waitlist and independent deployments
 examples/                     Fictional examples, outside the live pointer namespace
 docs/                         System and command contracts
 ```
