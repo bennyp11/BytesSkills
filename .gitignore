@@ -21,3 +21,4 @@ workspace/.index/
 /backups/
 /exports/
 /service/*verification.json
+/release-dist/
