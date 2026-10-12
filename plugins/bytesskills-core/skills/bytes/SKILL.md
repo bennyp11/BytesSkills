@@ -79,3 +79,10 @@ For `/bytes captions --app=capcut`, use the pinned captions handler (or
 [captioning](references/captions/instructions.md) for an explicitly local workflow).
 This focused operation adds captions to an exported video; it does not imply a
 broader recut or standalone transcription.
+
+## Result presentation
+
+Follow [standard responses](references/responses.md) for saves, revisions, lists
+and authoring results: recognizable title/preview, actual ID, and a separately
+copyable follow-up command with known inputs filled in. Never fabricate pointers
+or advertise unpublished commands as available.

@@ -75,21 +75,15 @@ The handler saves plans/runs and ingests verified media where supported; exports
 the MVP upload limit remain explicitly local-only. Progressive clip durations are a
 separate choice, never an assumption attached to every edit.
 
-## Useful output convention
+## Standard result structure
 
-```text
-Saved 3 hooks: @hook/005, @hook/006, @hook/007
-Run: @run/012
-Source: @concept/002:v1
-Format: reductions (version 1)
-
-Next:
-/bytes brainstorm --script --concept=@concept/002 --hook=@hook/005
-```
-
-Return copyable pointers, a short result preview and one sensible next command.
-Show meaningful conflicts and limitations; keep routine metadata available through
-`/bytes show`. Explicit overrides and inherited choices must be inspectable.
+All skills follow the [shared response contract](../plugins/bytesskills-core/skills/bytes/references/responses.md):
+truthful outcome, then title/preview, exact returned ID, and one independently
+copyable follow-up command per result. Commands have known pointers/parameters
+already substituted. Display numbers are selection aids, not IDs. Lists use the
+same structure without claiming a save; failures never receive invented IDs.
+Follow-up commands are suggestions, not automatic execution. The shared contract
+is embedded in every newly built skill release and inherited by new skills.
 
 ## Definition editing
 

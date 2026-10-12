@@ -10,6 +10,7 @@ if (!/^\d+\.\d+\.\d+$/.test(version)) throw Error("Use a semantic version");
 const library = JSON.parse(await readFile("src/library.json", "utf8"));
 const root = "../plugins/bytesskills-core/skills/bytes/";
 const versions = await readFile(root + "references/versions.md", "utf8");
+const responses = await readFile(root + "references/responses.md", "utf8");
 const cloud = await readFile(root + "references/cloud.md", "utf8");
 const registry = JSON.parse(await readFile(root + "contracts/runtime.json", "utf8"));
 const requestedSkill = process.argv[4];
@@ -35,6 +36,7 @@ const releases = skills.map((skill) => ({
     "\n" +
     cloud +
     "\n" + handlers[skill] +
+    "\n" + responses +
     "\nOnly perform the requested " +
     skill +
     " operation. Use the bundled command contract. Help is read-only and must not start creative intake.",

@@ -16,6 +16,9 @@ Describe the procedure, capability checks, and missing-input handling.
 
 ## Output
 Define the deliverable and how to report unperformed operations.
+For BytesSkills, inherit references/responses.md: title/preview, actual returned ID,
+and a separately copyable follow-up with real inputs filled in. Do not invent IDs
+or present a draft skill command as deployed.
 
 ## Quality checks
 Define observable success criteria.

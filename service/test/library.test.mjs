@@ -48,6 +48,8 @@ test("release builder includes pinned routing/handler, fits server limits and re
     const release = batch.releases[0];
     assert.equal(release.skill, "brainstorm");
     assert.ok(release.instructions.includes("Artifact runtime and workflow contract"));
+    const responseContract = await readFile("../plugins/bytesskills-core/skills/bytes/references/responses.md", "utf8");
+    assert.ok(release.instructions.includes(responseContract));
     assert.ok(Object.keys(release.resources).some(p => p.endsWith("references/routing.md")));
     assert.ok(Buffer.byteLength(JSON.stringify(batch.releases)) <= 250000);
     assert.throws(() => execFileSync(process.execPath, args, {stdio: "pipe"}));
@@ -84,9 +86,28 @@ test("caption release contains its contract and shared CapCut execution instruct
     execFileSync(process.execPath, ["scripts/build-release.mjs", "0.9.0", output, "captions"], {stdio: "pipe"});
     const release = JSON.parse(await readFile(output, "utf8")).releases[0];
     assert.equal(release.skill, "captions");
+    assert.ok(release.instructions.includes(await readFile("../plugins/bytesskills-core/skills/bytes/references/responses.md", "utf8")));
     assert.deepEqual(release.required_scopes, ["bytes:read", "bytes:write"]);
     assert.ok(release.instructions.includes("Add captions in CapCut"));
     assert.equal(JSON.parse(release.resources["definitions/skills/captions.json"]).command, "captions");
     assert.ok(release.resources["plugins/bytesskills-core/skills/bytes/references/edit/instructions.md"]);
+  } finally { await rm(dir, {recursive: true, force: true}); }
+});
+
+test("every skill release inherits the same response contract without optional opt-in", async () => {
+  const { mkdtemp, rm } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { execFileSync } = await import("node:child_process");
+  const dir = await mkdtemp(join(tmpdir(), "bytes-responses-"));
+  const contract = await readFile("../plugins/bytesskills-core/skills/bytes/references/responses.md", "utf8");
+  try {
+    for (const skill of Object.keys(registry.skills)) {
+      const output = join(dir, skill + ".json");
+      execFileSync(process.execPath, ["scripts/build-release.mjs", "0.9.0", output, skill], {stdio: "pipe"});
+      const release = JSON.parse(await readFile(output, "utf8")).releases[0];
+      assert.ok(release.instructions.includes(contract), skill);
+      assert.ok(release.instructions.length <= 50000, skill + " instruction limit");
+    }
   } finally { await rm(dir, {recursive: true, force: true}); }
 });
