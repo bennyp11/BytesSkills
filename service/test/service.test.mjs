@@ -34,7 +34,7 @@ before(async () => {
       .replace(/--[^\n]*/g, "")
       .replace(/\n/g, " "),
   );
-  for (const migration of ['0003_website_waitlist.sql', '0004_accounts.sql']) {
+  for (const migration of ['0003_website_waitlist.sql', '0004_accounts.sql', '0005_workspace_isolation.sql']) {
     await db.exec((await readFile('migrations/' + migration, 'utf8'))
       .replace(/--[^\n]*/g, '').replace(/\n/g, ' '));
   }
@@ -761,8 +761,9 @@ test("auto adoption never escalates scopes; revoked and expired workflows cannot
   assert.equal(blocked.body.result.isError, true);
   const id = randomUUID();
   await db
-    .prepare("INSERT INTO workflow_sessions VALUES(?,?,?,?,?,?,?)")
+    .prepare("INSERT INTO workflow_sessions VALUES(?,?,?,?,?,?,?,?)")
     .bind(
+      "acc3351e-d092-433c-a7e1-8fc3e807ebd4",
       id,
       "test",
       "refine",

@@ -73,10 +73,12 @@ Core skills stay centrally published; users independently adopt versions.
 
 - [x] Audit existing single-workspace assumptions.
 - [x] Add account/identity/membership schema and reserved legacy owner.
-- [ ] Scope all storage operations and enforce authorization.
+- [x] Scope storage operations and enforce workspace authorization (implemented on review branch; not deployed).
 - [ ] Configure identity provider and implement login/consent.
 - [ ] Implement authenticated dashboard.
 - [ ] Complete isolation tests and two-device pilot.
 
-The foundation migration is additive and does not expose signup or grant new
-access. It must not be presented as completed multi-user support.
+Migration 0004 is additive; migration 0005 rebuilds workspace tables and requires
+a coordinated cutover. See [the isolation review](workspace-isolation-review.md)
+for guarantees, tests, credential setup and rollout limits. No signup is exposed;
+this must not be presented as completed end-to-end multi-user support.

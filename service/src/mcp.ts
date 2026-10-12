@@ -1,3 +1,4 @@
+import { type WorkspaceAccess } from "./access";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { z } from "zod";
@@ -13,14 +14,14 @@ export function libraryResult(path?: string) {
   if (content === undefined) throw new ApiError(404, "Library path not found");
   return { path, version: library.version, content };
 }
-export async function mcp(request: Request, env: Env, scopes: string[]) {
+export async function mcp(request: Request, env: Env, scopes: string[], access: WorkspaceAccess) {
   const canWrite = scopes.includes("bytes:write"),
-    releases = new Releases(env);
+    releases = new Releases(env, access);
   const server = new McpServer(
     { name: "BytesSkills", version: "0.2.0" },
     { instructions: workflowInstructions },
   );
-  const store = new Store(env);
+  const store = new Store(env, access);
   const wrap =
     (fn: (a: any) => Promise<unknown> | unknown) => async (a: any) => {
       try {
@@ -88,7 +89,7 @@ export async function mcp(request: Request, env: Env, scopes: string[]) {
     "bytes_publish",
     {
       description:
-        "Publish immutable versioned skill instruction releases, without Git. Requires bytes:manage permission and an explicit user request to publish. Ordinary saved content is not skill source. Versions cannot be overwritten; publishing does not change other users' selected versions. Instructions are text, never executed by this service.",
+        "Publish immutable versioned skill instruction releases, without Git. Requires an operator credential plus bytes:manage permission and an explicit user request to publish. Ordinary saved content is not skill source. Versions cannot be overwritten; publishing does not change other users' selected versions. Instructions are text, never executed by this service.",
       inputSchema: publishSchema,
       annotations: { ...read, readOnlyHint: false },
     },
@@ -127,7 +128,7 @@ export async function mcp(request: Request, env: Env, scopes: string[]) {
       annotations: read,
     },
     wrap(() => ({
-      workspace_id: env.WORKSPACE_ID,
+      workspace_id: access.workspaceId,
       service_version: "0.2.0",
       library_version: library.version,
       write_access: canWrite,

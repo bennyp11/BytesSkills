@@ -1,9 +1,10 @@
+import { WorkspaceAccess } from "./access";
 import OAuthProvider, {
   AuthorizationError,
   CimdFetchError,
 } from "@cloudflare/workers-oauth-provider";
 import { z } from "zod";
-import { ApiError, json, ownerKey, readBody, type Env } from "./common";
+import { ApiError, json, ownerKey, releaseKey, readBody, type Env } from "./common";
 import { Store } from "./store";
 import { Releases } from "./releases";
 import { mcp, libraryResult } from "./mcp";
@@ -79,28 +80,29 @@ async function authorize(req: Request, env: Env) {
   return new Response(null, { status: 303, headers: approved.headers });
 }
 async function api(req: Request, env: Env) {
-  if (
-    !(await ownerKey(
-      req.headers.get("Authorization")?.replace(/^Bearer /, "") ?? "",
-      env,
-    ))
-  )
-    return json({ error: "Owner bearer key required" }, 401);
+  const token = req.headers.get("Authorization")?.replace(/^Bearer /, "") ?? "";
+  const isReleaseRoute = ["/v1/releases", "/v1/releases/revoke"].includes(new URL(req.url).pathname);
+  const isOwner = await ownerKey(token, env);
+  // Compatibility fallback only until the operator provisions a dedicated release key.
+  const canPublish = env.RELEASE_KEY_SHA256 ? await releaseKey(token, env) : isOwner;
+  if (isReleaseRoute ? !canPublish : !isOwner)
+    return json({ error: isReleaseRoute ? "Release bearer key required" : "Owner bearer key required" }, 401);
+  const access = await WorkspaceAccess.authorize(env, "legacy-owner", env.WORKSPACE_ID, true, isReleaseRoute && canPublish);
   if (
     req.method === "POST" &&
     new URL(req.url).pathname === "/v1/releases/revoke"
   )
     return json(
-      await new Releases(env).revoke(JSON.parse(await readBody(req))),
+      await new Releases(env, access).revoke(JSON.parse(await readBody(req))),
     );
   if (req.method === "POST" && new URL(req.url).pathname === "/v1/releases")
     return json(
-      await new Releases(env).publish(JSON.parse(await readBody(req))),
+      await new Releases(env, access).publish(JSON.parse(await readBody(req))),
     );
   if (req.method === "GET" && new URL(req.url).pathname === "/v1/releases")
-    return json({ releases: (await new Releases(env).rows()).map(r => ({skill: r.skill, version: r.version, checksum: r.checksum, revoked: r.revoked})) });
+    return json({ releases: (await new Releases(env, access).rows()).map(r => ({skill: r.skill, version: r.version, checksum: r.checksum, revoked: r.revoked})) });
   const url = new URL(req.url),
-    s = new Store(env),
+    s = new Store(env, access),
     p = url.pathname;
   if (req.method === "GET") {
     const ptr = url.searchParams.get("pointer") ?? "";
@@ -209,16 +211,20 @@ const provider = new OAuthProvider<Env>({
         workspace_id?: string;
         scopes?: string[];
         owner?: boolean;
+        account_id?: string;
       };
-      if (props.workspace_id !== env.WORKSPACE_ID)
-        return json({ error: "Workspace access denied" }, 403);
+      // Existing signed grants without account_id remain confined to the original workspace.
+      const legacy = props.account_id === undefined && props.workspace_id === env.WORKSPACE_ID;
+      const access = await WorkspaceAccess.authorize(env,
+        legacy ? "legacy-owner" : (props.account_id ?? ""), props.workspace_id ?? "",
+        legacy, legacy && props.owner === true && !env.RELEASE_KEY_SHA256);
       const auth = (ctx as unknown as { auth: { scope?: string[] } }).auth;
-      const scopes = props.owner
+      const scopes = legacy && props.owner
         ? ["bytes:read", "bytes:write", "bytes:manage"]
         : (auth?.scope ?? []);
       if (!scopes.includes("bytes:read"))
         return json({ error: "Read permission required" }, 403);
-      return mcp(req, env, scopes);
+      return mcp(req, env, scopes, access);
     },
   },
   defaultHandler: {
@@ -227,7 +233,7 @@ const provider = new OAuthProvider<Env>({
       if (url.pathname === "/authorize") return authorize(req, env);
       if (url.pathname.startsWith("/v1/")) return api(req, env);
       if (url.pathname === "/health")
-        return json({ service: "BytesSkills", version: "0.2.0", status: "ok", release: env.RELEASE_VERSION ?? null, commit: env.RELEASE_COMMIT ?? null });
+        return json({ service: "BytesSkills", version: "0.2.0", status: "ok", storage_contract: "workspace-v1", release: env.RELEASE_VERSION ?? null, commit: env.RELEASE_COMMIT ?? null });
       if (url.pathname === "/")
         return html(
           `<p class="muted">BYTESSKILLS · MVP</p><h1>Your creative workspace,<br>across AI tools.</h1><p>Persistent concepts, hooks, scripts, and their history. Connect an AI client to your private workspace.</p><p>MCP endpoint</p><code>${escape(env.BASE_URL)}/mcp</code><p>Choose OAuth when connecting. Approve access with your workspace key.</p><p class="muted">Your content requires authentication. This service provides storage and workflow definitions; your AI supplies the creative work.</p>`,

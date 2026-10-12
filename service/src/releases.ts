@@ -1,3 +1,4 @@
+import { requireAccess, type WorkspaceAccess } from "./access";
 import { z } from "zod";
 import { ApiError, canonical, sha, type Env } from "./common";
 import registry from "../../plugins/bytesskills-core/skills/bytes/contracts/runtime.json";
@@ -65,8 +66,9 @@ export function commandSkill(command: string): (typeof skills)[number] {
   return map[verb];
 }
 export class Releases {
-  constructor(private env: Env) {}
+  constructor(private env: Env, private access: WorkspaceAccess) { requireAccess(access); }
   async revoke(raw: unknown) {
+    if (!this.access.canPublishCore) throw new ApiError(403, "Core publication access denied");
     const r = z
       .object({
         skill: skillSchema,
@@ -87,8 +89,9 @@ export class Releases {
   }
   async state(): Promise<State> {
     const r = await this.env.DB.prepare(
-      "SELECT * FROM library_state WHERE id=1",
-    ).first<any>();
+      "SELECT * FROM library_state WHERE workspace_id=?",
+    ).bind(this.access.workspaceId).first<any>();
+    if (!r) throw new ApiError(403, "Workspace state unavailable");
     return {
       revision: r.revision,
       selections: JSON.parse(r.selections),
@@ -144,6 +147,7 @@ export class Releases {
     };
   }
   async publish(raw: unknown) {
+    if (!this.access.canPublishCore) throw new ApiError(403, "Core publication access denied");
     const { releases } = publishSchema.parse(raw);
     if (new TextEncoder().encode(canonical(releases)).length > 250000)
       throw new ApiError(413, "Release batch too large");
@@ -192,16 +196,15 @@ export class Releases {
     if (statements.length) await this.env.DB.batch(statements);
     return {
       published: releases.map((r) => ({ skill: r.skill, version: r.version })),
-      ...(await this.updates()),
     };
   }
   async adopt(raw: unknown, scopes: string[]) {
     const a = adoptSchema.parse(raw),
       fingerprint = await sha(canonical(a));
     const receipt = await this.env.DB.prepare(
-      "SELECT fingerprint,result FROM library_decisions WHERE request_id=?",
+      "SELECT fingerprint,result FROM library_decisions WHERE workspace_id=? AND request_id=?",
     )
-      .bind(a.request_id)
+      .bind(this.access.workspaceId, a.request_id)
       .first<any>();
     if (receipt) {
       if (receipt.fingerprint !== fingerprint)
@@ -258,16 +261,18 @@ export class Releases {
     try {
       await this.env.DB.batch([
         this.env.DB.prepare(
-          "UPDATE library_state SET revision=?,selections=?,policies=?,dismissed=? WHERE id=1",
+          "UPDATE library_state SET revision=?,selections=?,policies=?,dismissed=? WHERE workspace_id=?",
         ).bind(
           state.revision + 1,
           canonical(state.selections),
           canonical(state.policies),
           canonical(state.dismissed),
+          this.access.workspaceId,
         ),
         this.env.DB.prepare(
-          "INSERT INTO library_decisions VALUES(?,?,?,?)",
+          "INSERT INTO library_decisions VALUES(?,?,?,?,?)",
         ).bind(
+          this.access.workspaceId,
           a.request_id,
           fingerprint,
           canonical(result),
@@ -276,9 +281,9 @@ export class Releases {
       ]);
     } catch (e) {
       const retry = await this.env.DB.prepare(
-        "SELECT fingerprint,result FROM library_decisions WHERE request_id=?",
+        "SELECT fingerprint,result FROM library_decisions WHERE workspace_id=? AND request_id=?",
       )
-        .bind(a.request_id)
+        .bind(this.access.workspaceId, a.request_id)
         .first<any>();
       if (retry?.fingerprint === fingerprint) return JSON.parse(retry.result);
       throw new ApiError(
@@ -293,9 +298,9 @@ export class Releases {
       skill = commandSkill(a.command),
       fingerprint = await sha(canonical(a));
     const old = await this.env.DB.prepare(
-      "SELECT * FROM workflow_sessions WHERE id=?",
+      "SELECT * FROM workflow_sessions WHERE workspace_id=? AND id=?",
     )
-      .bind(a.request_id)
+      .bind(this.access.workspaceId, a.request_id)
       .first<any>();
     if (old) {
       if (old.fingerprint !== fingerprint)
@@ -371,9 +376,10 @@ export class Releases {
     const response = await this.session(session, scopes);
     try {
       await this.env.DB.prepare(
-        "INSERT INTO workflow_sessions VALUES(?,?,?,?,?,?,?)",
+        "INSERT INTO workflow_sessions VALUES(?,?,?,?,?,?,?,?)",
       )
         .bind(
+          this.access.workspaceId,
           session.id,
           fingerprint,
           skill,
@@ -385,9 +391,9 @@ export class Releases {
         .run();
     } catch (e) {
       const retry = await this.env.DB.prepare(
-        "SELECT * FROM workflow_sessions WHERE id=?",
+        "SELECT * FROM workflow_sessions WHERE workspace_id=? AND id=?",
       )
-        .bind(session.id)
+        .bind(this.access.workspaceId, session.id)
         .first<any>();
       if (retry?.fingerprint === fingerprint)
         return this.session(retry, scopes);
@@ -422,9 +428,9 @@ export class Releases {
   }
   async provenance(id: string, scopes: string[]) {
     const session = await this.env.DB.prepare(
-      "SELECT * FROM workflow_sessions WHERE id=?",
+      "SELECT * FROM workflow_sessions WHERE workspace_id=? AND id=?",
     )
-      .bind(id)
+      .bind(this.access.workspaceId, id)
       .first<any>();
     if (!session)
       throw new ApiError(409, "Unknown workflow; call bytes_begin first");

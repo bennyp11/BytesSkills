@@ -1,3 +1,4 @@
+import { requireAccess, type WorkspaceAccess } from "./access";
 import { z } from "zod";
 import { ApiError, canonical, sha, type Env } from "./common";
 import registry from "../../plugins/bytesskills-core/skills/bytes/contracts/runtime.json";
@@ -79,17 +80,19 @@ export const querySchema = z
   })
   .strict();
 export class Store {
-  constructor(public env: Env) {}
+  constructor(private env: Env, private access: WorkspaceAccess) { requireAccess(access); }
   objectKey(key: string) {
-    return `${this.env.WORKSPACE_ID}/${key}`;
+    if (!/^blobs\/sha256\/[a-f0-9]{2}\/[a-f0-9]{64}$/.test(key))
+      throw new ApiError(400, "Invalid object key");
+    return `${this.access.workspaceId}/${key}`;
   }
   async resolve(input: string): Promise<RecordData> {
     pointer.parse(input);
     const m = /^@([^/]+)\/([^:]+)(?::v(\d+))?$/.exec(input)!;
     const ids = await this.env.DB.prepare(
-      "SELECT id FROM heads WHERE type=? AND id LIKE ? LIMIT 2",
+      "SELECT id FROM heads WHERE workspace_id=? AND type=? AND id LIKE ? LIMIT 2",
     )
-      .bind(m[1], m[2] + "%")
+      .bind(this.access.workspaceId, m[1], m[2] + "%")
       .all<{ id: string }>();
     if (ids.results.length !== 1)
       throw new ApiError(
@@ -99,11 +102,11 @@ export class Store {
     const row = await (
       m[3]
         ? this.env.DB.prepare(
-            "SELECT record FROM revisions WHERE id=? AND revision=?",
-          ).bind(ids.results[0].id, Number(m[3]))
+            "SELECT record FROM revisions WHERE workspace_id=? AND id=? AND revision=?",
+          ).bind(this.access.workspaceId, ids.results[0].id, Number(m[3]))
         : this.env.DB.prepare(
-            "SELECT r.record FROM heads h JOIN revisions r ON r.pointer=h.pointer WHERE h.id=?",
-          ).bind(ids.results[0].id)
+            "SELECT r.record FROM heads h JOIN revisions r ON r.workspace_id=h.workspace_id AND r.pointer=h.pointer WHERE h.workspace_id=? AND h.id=?",
+          ).bind(this.access.workspaceId, ids.results[0].id)
     ).first<{ record: string }>();
     if (!row) throw new ApiError(404, "Revision not found");
     return JSON.parse(row.record);
@@ -166,9 +169,9 @@ export class Store {
   }
   async replay(id: string, fingerprint: string) {
     const row = await this.env.DB.prepare(
-      "SELECT fingerprint,pointer FROM requests WHERE request_id=?",
+      "SELECT fingerprint,pointer FROM requests WHERE workspace_id=? AND request_id=?",
     )
-      .bind(id)
+      .bind(this.access.workspaceId, id)
       .first<{ fingerprint: string; pointer: string }>();
     if (!row) return null;
     if (row.fingerprint !== fingerprint)
@@ -236,7 +239,7 @@ export class Store {
       throw new ApiError(400, "settings.format must be a string");
     const record = {
       schema_version: 1 as const,
-      workspace_id: this.env.WORKSPACE_ID,
+      workspace_id: this.access.workspaceId,
       type,
       id,
       revision,
@@ -279,14 +282,15 @@ export class Store {
     fingerprint?: string,
     workflowId?: string,
   ) {
+    if (r.workspace_id !== this.access.workspaceId) throw new ApiError(403, "Workspace access denied");
     const db = this.env.DB;
     const p = (sql: string, ...args: (string | number | null)[]) =>
-      db.prepare(sql).bind(...args);
+      db.prepare(sql).bind(this.access.workspaceId, ...args);
     const batch: D1PreparedStatement[] = [];
     if (requestId)
       batch.push(
         p(
-          "INSERT INTO requests VALUES (?,?,?,?)",
+          "INSERT INTO requests VALUES (?,?,?,?,?)",
           requestId,
           fingerprint!,
           r.pointer,
@@ -296,20 +300,21 @@ export class Store {
     batch.push(
       p(
         workflowId
-          ? "INSERT INTO revisions SELECT ?,?,?,?,?,? WHERE EXISTS (SELECT 1 FROM workflow_sessions s LEFT JOIN skill_revocations v ON v.skill=s.skill AND v.version=s.version WHERE s.id=? AND s.expires_at>? AND v.skill IS NULL)"
-          : "INSERT INTO revisions VALUES (?,?,?,?,?,?)",
+          ? "INSERT INTO revisions SELECT ?,?,?,?,?,?,? WHERE EXISTS (SELECT 1 FROM workflow_sessions s LEFT JOIN skill_revocations v ON v.skill=s.skill AND v.version=s.version WHERE s.workspace_id=? AND s.id=? AND s.expires_at>? AND v.skill IS NULL)"
+          : "INSERT INTO revisions VALUES (?,?,?,?,?,?,?)",
         r.pointer,
         r.id,
         r.type,
         r.revision,
         r.record_checksum,
         canonical(r),
-        ...(workflowId ? [workflowId, new Date().toISOString()] : []),
+        ...(workflowId ? [this.access.workspaceId, workflowId, new Date().toISOString()] : []),
       ),
     );
+    if (workflowId) batch.push(p("INSERT INTO revision_workflows VALUES(?,?,?)", r.pointer, workflowId));
     batch.push(
       p(
-        `INSERT INTO heads (id,pointer,type,revision,title,status,format,parent,updated) VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET pointer=excluded.pointer,revision=excluded.revision,title=excluded.title,status=excluded.status,format=excluded.format,parent=excluded.parent,updated=excluded.updated`,
+        `INSERT INTO heads (workspace_id,id,pointer,type,revision,title,status,format,parent,updated) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(workspace_id,id) DO UPDATE SET pointer=excluded.pointer,revision=excluded.revision,title=excluded.title,status=excluded.status,format=excluded.format,parent=excluded.parent,updated=excluded.updated`,
         r.id,
         r.pointer,
         r.type,
@@ -322,21 +327,21 @@ export class Store {
       ),
     );
     batch.push(
-      p("DELETE FROM tags WHERE id=?", r.id),
-      p("DELETE FROM search WHERE id=?", r.id),
+      p("DELETE FROM tags WHERE workspace_id=? AND id=?", r.id),
+      p("DELETE FROM search_documents WHERE workspace_id=? AND id=?", r.id),
       p(
-        "INSERT INTO search (id,title,body) VALUES (?,?,?)",
+        "INSERT INTO search_documents (workspace_id,id,title,body) VALUES (?,?,?,?)",
         r.id,
         r.title,
         body,
       ),
     );
     for (const tag of r.tags)
-      batch.push(p("INSERT INTO tags VALUES (?,?)", r.id, tag));
+      batch.push(p("INSERT INTO tags VALUES (?,?,?)", r.id, tag));
     for (const [kind, refs] of Object.entries(r.relations))
       for (const target of refs ?? [])
         batch.push(
-          p("INSERT INTO edges VALUES (?,?,?)", r.pointer, kind, target),
+          p("INSERT INTO edges VALUES (?,?,?,?)", r.pointer, kind, target),
         );
     try {
       await db.batch(batch);
@@ -353,7 +358,7 @@ export class Store {
     const r = recordSchema.parse(raw);
     const { record_checksum, ...rest } = r;
     if (
-      r.workspace_id !== this.env.WORKSPACE_ID ||
+      r.workspace_id !== this.access.workspaceId ||
       (await sha(canonical(rest))) !== record_checksum
     )
       throw new ApiError(400, "Workspace or checksum mismatch");
@@ -364,9 +369,9 @@ export class Store {
     )
       throw new ApiError(400, "Identity mismatch");
     const exists = await this.env.DB.prepare(
-      "SELECT checksum FROM revisions WHERE pointer=?",
+      "SELECT checksum FROM revisions WHERE workspace_id=? AND pointer=?",
     )
-      .bind(r.pointer)
+      .bind(this.access.workspaceId, r.pointer)
       .first<{ checksum: string }>();
     if (exists) {
       if (exists.checksum !== r.record_checksum)
@@ -389,8 +394,8 @@ export class Store {
   }
   async query(raw: unknown) {
     const q = querySchema.parse(raw),
-      terms: string[] = [],
-      args: (string | number)[] = [];
+      terms: string[] = ["h.workspace_id=?"],
+      args: (string | number)[] = [this.access.workspaceId];
     for (const col of ["type", "status", "format"] as const)
       if (q[col]) {
         terms.push(`h.${col}=?`);
@@ -398,7 +403,7 @@ export class Store {
       }
     if (!q.status) terms.push("h.status!='archived'");
     if (q.tag) {
-      terms.push("h.id IN (SELECT id FROM tags WHERE tag=?)");
+      terms.push("h.id IN (SELECT id FROM tags WHERE workspace_id=h.workspace_id AND tag=?)");
       args.push(q.tag);
     }
     if (q.parent) {
@@ -408,7 +413,7 @@ export class Store {
     if (q.text) {
       const words = q.text.match(/[\p{L}\p{N}_]+/gu);
       if (!words?.length) throw new ApiError(400, "Search needs words");
-      terms.push("h.id IN (SELECT id FROM search WHERE search MATCH ?)");
+      terms.push("h.id IN (SELECT id FROM search WHERE workspace_id=h.workspace_id AND search MATCH ?)");
       args.push(words.map((w) => '"' + w + '"').join(" AND "));
     }
     if (q.after) {
@@ -437,9 +442,9 @@ export class Store {
       throw new ApiError(400, "Invalid pagination");
     const r = await this.resolve(input);
     const rows = await this.env.DB.prepare(
-      "SELECT record FROM revisions WHERE id=? AND revision>? ORDER BY revision LIMIT ?",
+      "SELECT record FROM revisions WHERE workspace_id=? AND id=? AND revision>? ORDER BY revision LIMIT ?",
     )
-      .bind(r.id, after, limit + 1)
+      .bind(this.access.workspaceId, r.id, after, limit + 1)
       .all<{ record: string }>();
     const all = rows.results.map((x) => JSON.parse(x.record));
     return {
@@ -452,9 +457,9 @@ export class Store {
       throw new ApiError(400, "Invalid limit");
     const r = await this.resolve(input);
     const rows = await this.env.DB.prepare(
-      "SELECT source,kind,target,source||'|'||kind AS cursor FROM edges WHERE target=? AND source||'|'||kind>? ORDER BY source,kind LIMIT ?",
+      "SELECT source,kind,target,source||'|'||kind AS cursor FROM edges WHERE workspace_id=? AND target=? AND source||'|'||kind>? ORDER BY source,kind LIMIT ?",
     )
-      .bind(r.pointer, after, limit + 1)
+      .bind(this.access.workspaceId, r.pointer, after, limit + 1)
       .all<{ cursor: string }>();
     return {
       items: rows.results.slice(0, limit),
@@ -467,17 +472,17 @@ export class Store {
       throw new ApiError(400, "Invalid limit");
     if (snapshot === undefined)
       snapshot = (await this.env.DB.prepare(
-        "SELECT COALESCE(MAX(rowid),0) AS n FROM revisions",
-      ).first<{ n: number }>())!.n;
+        "SELECT COALESCE(MAX(rowid),0) AS n FROM revisions WHERE workspace_id=?",
+      ).bind(this.access.workspaceId).first<{ n: number }>())!.n;
     if (!Number.isSafeInteger(snapshot) || snapshot < 0)
       throw new ApiError(400, "Invalid snapshot");
     const rows = await this.env.DB.prepare(
-      "SELECT pointer,record FROM revisions WHERE pointer>? AND rowid<=? ORDER BY pointer LIMIT ?",
+      "SELECT pointer,record FROM revisions WHERE workspace_id=? AND pointer>? AND rowid<=? ORDER BY pointer LIMIT ?",
     )
-      .bind(after, snapshot, limit + 1)
+      .bind(this.access.workspaceId, after, snapshot, limit + 1)
       .all<{ pointer: string; record: string }>();
     return {
-      workspace_id: this.env.WORKSPACE_ID,
+      workspace_id: this.access.workspaceId,
       snapshot,
       records: rows.results.slice(0, limit).map((x) => JSON.parse(x.record)),
       next_cursor:
