@@ -81,6 +81,10 @@ merely supplying a release with a write scope. Add help, examples and tests. Thi
 requires a Worker deployment before publishing the new family's first skill release.
 A procedure update within an existing family only needs a new compatible release.
 
+All skill results inherit the shared `references/responses.md` contract; the release
+builder embeds it automatically. Include real IDs and individually copyable next
+commands in save/list responses, and distinguish draft definition IDs from artifacts.
+
 Every parameter declares type, requiredness, clarification question and delegation
 policy. A pointer field declares allowed artifact types. Unknown flags are errors;
 a natural-language phrase must never create a new flag or silently broaden scope.
