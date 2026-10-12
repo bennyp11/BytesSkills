@@ -27,5 +27,5 @@ export default {async fetch(req:any,env:any) {
       provenance:()=>releases.provenance(args[0],scopes),publish:()=>releases.publish(args[0]),revoke:()=>releases.revoke(args[0]),
       forged:()=>new Store(env,{} as any).query({})};
     return Response.json(await operations[op]());
-  }catch(e:any){return Response.json({error:e instanceof ApiError?e.message:'Operation failed'}, {status:e instanceof ApiError?e.status:400});}
+  }catch(e:any){return Response.json({error:e instanceof Error?e.message:'Operation failed'}, {status:e instanceof ApiError?e.status:400});}
 }};

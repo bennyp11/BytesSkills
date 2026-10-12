@@ -205,12 +205,12 @@ pgTest('Cloudflare Worker uses Hyperdrive bindings for PostgreSQL storage and MC
  try{
   const provision=async subject=>{
    const r=await mf.dispatchFetch('https://test/provision',{method:'POST',body:JSON.stringify({issuer:'https://worker.example',subject})});
-   assert.equal(r.status,200);return r.json();
+   const body=await r.json();assert.equal(r.status,200,JSON.stringify(body));return body;
   };
   const a=await provision('worker-a'),b=await provision('worker-b');
   const headers=who=>({'x-test-account':who.account_id,'x-test-workspace':who.workspace_id,'Content-Type':'application/json',Accept:'application/json, text/event-stream'});
   const saved=await mf.dispatchFetch('https://test/op',{method:'POST',headers:headers(a),body:JSON.stringify({op:'save',args:[{request_id:crypto.randomUUID(),type:'concept',title:'worker-private',text:'Worker transport verified'}]})});
-  assert.equal(saved.status,200);const record=await saved.json();
+  const record=await saved.json();assert.equal(saved.status,200,JSON.stringify(record));
   const get=async who=>{
    const response=await mf.dispatchFetch('https://test/mcp',{method:'POST',headers:headers(who),body:JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/call',params:{name:'bytes_get',arguments:{pointer:record.pointer,include_content:true}}})});
    return response.json();
