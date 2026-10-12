@@ -1,3 +1,4 @@
+import { database, type Database, type Statement } from './database';
 import { requireAccess, type WorkspaceAccess } from "./access";
 import { z } from "zod";
 import { ApiError, canonical, sha, type Env } from "./common";
@@ -66,7 +67,11 @@ export function commandSkill(command: string): (typeof skills)[number] {
   return map[verb];
 }
 export class Releases {
-  constructor(private env: Env, private access: WorkspaceAccess) { requireAccess(access); }
+  private db: Database;
+  constructor(private env: Env, private access: WorkspaceAccess) {
+    requireAccess(access);
+    this.db = database(env, access);
+  }
   async revoke(raw: unknown) {
     if (!this.access.canPublishCore) throw new ApiError(403, "Core publication access denied");
     const r = z
@@ -82,13 +87,13 @@ export class Releases {
     );
     if (!exists) throw new ApiError(404, "Release not found");
     if (exists.revoked) return { revoked: true };
-    await this.env.DB.prepare("INSERT INTO skill_revocations VALUES(?,?,?)")
+    await database(this.env, undefined, 'publisher').prepare("INSERT INTO skill_revocations VALUES(?,?,?)")
       .bind(r.skill, r.version, r.reason)
       .run();
     return { revoked: true };
   }
   async state(): Promise<State> {
-    const r = await this.env.DB.prepare(
+    const r = await this.db.prepare(
       "SELECT * FROM library_state WHERE workspace_id=?",
     ).bind(this.access.workspaceId).first<any>();
     if (!r) throw new ApiError(403, "Workspace state unavailable");
@@ -101,7 +106,7 @@ export class Releases {
   }
   async rows() {
     return (
-      await this.env.DB.prepare(
+      await this.db.prepare(
         "SELECT r.*,v.reason AS revoked FROM skill_releases r LEFT JOIN skill_revocations v ON v.skill=r.skill AND v.version=r.version ORDER BY r.skill,r.sequence",
       ).all<Row>()
     ).results;
@@ -148,6 +153,7 @@ export class Releases {
   }
   async publish(raw: unknown) {
     if (!this.access.canPublishCore) throw new ApiError(403, "Core publication access denied");
+    const db = database(this.env, undefined, 'publisher');
     const { releases } = publishSchema.parse(raw);
     if (new TextEncoder().encode(canonical(releases)).length > 250000)
       throw new ApiError(413, "Release batch too large");
@@ -181,7 +187,7 @@ export class Releases {
           ...rows.filter((x) => x.skill === r.skill).map((x) => x.sequence),
         ) + 1;
       statements.push(
-        this.env.DB.prepare(
+        db.prepare(
           "INSERT INTO skill_releases(skill,version,sequence,checksum,payload,published_at) VALUES(?,?,?,?,?,?)",
         ).bind(
           r.skill,
@@ -193,7 +199,7 @@ export class Releases {
         ),
       );
     }
-    if (statements.length) await this.env.DB.batch(statements);
+    if (statements.length) await db.batch(statements);
     return {
       published: releases.map((r) => ({ skill: r.skill, version: r.version })),
     };
@@ -201,7 +207,7 @@ export class Releases {
   async adopt(raw: unknown, scopes: string[]) {
     const a = adoptSchema.parse(raw),
       fingerprint = await sha(canonical(a));
-    const receipt = await this.env.DB.prepare(
+    const receipt = await this.db.prepare(
       "SELECT fingerprint,result FROM library_decisions WHERE workspace_id=? AND request_id=?",
     )
       .bind(this.access.workspaceId, a.request_id)
@@ -259,8 +265,8 @@ export class Releases {
     };
     // Trigger checks expected revision inside this atomic transaction. No lost updates.
     try {
-      await this.env.DB.batch([
-        this.env.DB.prepare(
+      await this.db.batch([
+        this.db.prepare(
           "UPDATE library_state SET revision=?,selections=?,policies=?,dismissed=? WHERE workspace_id=?",
         ).bind(
           state.revision + 1,
@@ -269,7 +275,7 @@ export class Releases {
           canonical(state.dismissed),
           this.access.workspaceId,
         ),
-        this.env.DB.prepare(
+        this.db.prepare(
           "INSERT INTO library_decisions VALUES(?,?,?,?,?)",
         ).bind(
           this.access.workspaceId,
@@ -280,7 +286,7 @@ export class Releases {
         ),
       ]);
     } catch (e) {
-      const retry = await this.env.DB.prepare(
+      const retry = await this.db.prepare(
         "SELECT fingerprint,result FROM library_decisions WHERE workspace_id=? AND request_id=?",
       )
         .bind(this.access.workspaceId, a.request_id)
@@ -297,7 +303,7 @@ export class Releases {
     const a = beginSchema.parse(raw),
       skill = commandSkill(a.command),
       fingerprint = await sha(canonical(a));
-    const old = await this.env.DB.prepare(
+    const old = await this.db.prepare(
       "SELECT * FROM workflow_sessions WHERE workspace_id=? AND id=?",
     )
       .bind(this.access.workspaceId, a.request_id)
@@ -375,7 +381,7 @@ export class Releases {
       };
     const response = await this.session(session, scopes);
     try {
-      await this.env.DB.prepare(
+      await this.db.prepare(
         "INSERT INTO workflow_sessions VALUES(?,?,?,?,?,?,?,?)",
       )
         .bind(
@@ -390,7 +396,7 @@ export class Releases {
         )
         .run();
     } catch (e) {
-      const retry = await this.env.DB.prepare(
+      const retry = await this.db.prepare(
         "SELECT * FROM workflow_sessions WHERE workspace_id=? AND id=?",
       )
         .bind(this.access.workspaceId, session.id)
@@ -427,7 +433,7 @@ export class Releases {
     };
   }
   async provenance(id: string, scopes: string[]) {
-    const session = await this.env.DB.prepare(
+    const session = await this.db.prepare(
       "SELECT * FROM workflow_sessions WHERE workspace_id=? AND id=?",
     )
       .bind(this.access.workspaceId, id)

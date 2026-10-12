@@ -1,3 +1,4 @@
+import { database } from './database';
 import { ApiError, type Env } from './common';
 
 /** Internal identity adapter entry point. Caller MUST verify provider issuer/subject.
@@ -7,6 +8,13 @@ import { ApiError, type Env } from './common';
 export async function provisionVerifiedIdentity(env: Env, issuer: string, subject: string) {
   if (!issuer.startsWith('https://') || issuer.length > 2048 || !subject || subject.length > 512)
     throw new ApiError(400, 'Invalid verified identity');
+  if (env.STORAGE_BACKEND === 'postgres') {
+    const row = await database(env, undefined, 'identity').prepare(
+      'SELECT * FROM provision_identity(?,?,?,?)').bind(issuer,subject,crypto.randomUUID(),crypto.randomUUID())
+      .first<{account_id:string;workspace_id:string}>();
+    if (!row) throw new ApiError(403,'Account unavailable');
+    return row;
+  }
   const accountId = crypto.randomUUID(), workspaceId = crypto.randomUUID();
   await env.DB.batch([
     env.DB.prepare(`INSERT INTO accounts(id,status) SELECT ?,'active'

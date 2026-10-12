@@ -1,6 +1,10 @@
 import type { OAuthHelpers } from "@cloudflare/workers-oauth-provider";
 export interface Env {
-  DB: D1Database;
+  DB: D1Database; // Legacy binding retained only until verified PostgreSQL cutover.
+  STORAGE_BACKEND?: "d1" | "postgres";
+  POSTGRES?: Hyperdrive;
+  PUBLISHER_DB?: Hyperdrive;
+  IDENTITY_DB?: Hyperdrive;
   BLOBS: R2Bucket;
   OAUTH_KV: KVNamespace;
   OAUTH_PROVIDER: OAuthHelpers;

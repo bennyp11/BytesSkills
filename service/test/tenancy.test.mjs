@@ -9,7 +9,7 @@ const legacy='acc3351e-d092-433c-a7e1-8fc3e807ebd4';
 let mf,db,bucket,alice,bob;
 const operator={account_id:'legacy-owner',workspace_id:legacy,operator:true};
 before(async()=>{
-  const bundle=await build({entryPoints:['test/fixtures/tenancy-worker.ts'],bundle:true,write:false,format:'esm',platform:'browser',target:'es2022'});
+  const bundle=await build({entryPoints:['test/fixtures/tenancy-worker.ts'],bundle:true,write:false,format:'esm',platform:'node',target:'es2022',banner:{js:'import {createRequire} from "node:module"; const require=createRequire("/test-worker.js");'}});
   mf=new Miniflare(convertV4MiniflareOptions({modules:true,script:bundle.outputFiles[0].text,
     compatibilityDate:'2026-10-01',compatibilityFlags:['nodejs_compat'],d1Databases:['DB'],r2Buckets:['BLOBS'],
     bindings:{WORKSPACE_ID:legacy}}));
