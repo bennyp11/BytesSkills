@@ -1,13 +1,12 @@
 # Parts 1–2: isolation review
 
-**Architecture update:** PostgreSQL/PlanetScale with FORCE RLS is now being implemented
-on this review branch. Production remains on D1; database provisioning/cutover have
-not completed. See [PostgreSQL cutover](postgres-cutover.md) for current roles,
-verification, migration and recovery requirements. The D1 details below describe the
-pre-cutover compatibility implementation.
+**Architecture update:** Production moved to PlanetScale PostgreSQL with FORCE RLS
+on 2026-10-12. See [PostgreSQL cutover](postgres-cutover.md) for deployed roles,
+verification and recovery requirements. The D1 implementation details below are
+historical compatibility references; they are not the production storage backend.
 
 This branch implements the account/storage foundation. It does not enable signup,
-magic links, user-facing consent or a dashboard. Production has not been migrated.
+magic links, user-facing consent or a dashboard. The database is migrated; external second-user onboarding remains pending.
 
 ## Review entry points
 

@@ -152,7 +152,12 @@ const workspace = await oauthClient.callTool({
 });
 assert.equal(JSON.parse(workspace.content[0].text).write_access, true);
 await oauthClient.close();
-const refreshed = await fetch(base + "/oauth/token", {
+// A freshly issued grant can still be stale in KV at another edge location.
+// Retry only propagation-shaped failures for this newly issued test token.
+const refreshDeadline = Date.now() + 75000;
+let refreshed;
+while (true) {
+refreshed = await fetch(base + "/oauth/token", {
   method: "POST",
   headers: { "Content-Type": "application/x-www-form-urlencoded" },
   body: new URLSearchParams({
@@ -162,6 +167,12 @@ const refreshed = await fetch(base + "/oauth/token", {
     resource: base + "/mcp",
   }).toString(),
 });
+if (refreshed.status === 200) break;
+const failure = await refreshed.clone().json();
+if (Date.now() >= refreshDeadline || failure.error !== "invalid_grant" ||
+    !["Invalid refresh token", "Grant not found"].includes(failure.error_description)) break;
+await new Promise(resolve => setTimeout(resolve, 5000));
+}
 assert.equal(refreshed.status, 200, await refreshed.clone().text());
 const grants = await (await fetch(base + "/v1/grants", { headers })).json();
 for (const grant of grants.items ?? [])

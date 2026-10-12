@@ -1,9 +1,34 @@
 # PostgreSQL / PlanetScale migration
 
-Status: implementation on `codex/multi-user-foundation`; provisioning and production
-cutover are pending. D1 remains authoritative until the procedure below completes.
-The PostgreSQL integration tests run against a disposable PostgreSQL 17 server in
-GitHub Actions. No database credentials or workspace snapshots belong in Git.
+Status: production cutover completed on 2026-10-12 from commit `14a565d`.
+PlanetScale PostgreSQL is authoritative for workspace records and library state;
+private Cloudflare R2 remains authoritative for blobs. Original D1 is retained as
+an offline recovery source, and a verified private snapshot is stored outside Git.
+Do not restore the D1 Worker after PostgreSQL writes.
+
+The pilot runs PostgreSQL 17 on PS-5 ARM, single node in AWS Oregon ($5/month
+compute tier; no HA replicas). Runtime and publisher Hyperdrives disable caching
+and cap origin connections at five each. The identity role remains NOLOGIN and is
+not bound to the Worker until a trusted login adapter is implemented.
+
+Verified during cutover: 41 artifacts / 58 revisions, 16 published skill releases,
+all snapshot tables compared field-for-field, and 51 R2 objects checked against
+stored hashes. Synthetic two-account isolation passed through a deployed Cloudflare
+Worker and the actual Hyperdrive connections; the temporary test data and Worker
+were removed. CI also passes the PostgreSQL isolation suite. Live smoke tests create
+additional archived test artifacts, so post-cutover counts will be higher.
+
+Live MCP save/get/revision/idempotency checks and OAuth consent/access/refresh passed.
+Immediate refresh of a newly issued token initially failed; it passed after a
+65-second wait for KV propagation. The smoke test now bounds retries for only those
+fresh-grant failures. This is an existing KV consistency limitation, not a change to
+authentication acceptance rules; resolve it before promising immediate cross-edge
+refresh consistency for multi-user onboarding.
+
+Migration credentials are separate from application credentials and stored in the
+protected GitHub production environment for future migrations. PR #8 still requires
+review/merge into `mvp` before ordinary releases resume: old D1 release artifacts
+must not be deployed over this cutover.
 
 ## Architecture and isolation
 
@@ -56,7 +81,7 @@ still relies on the trusted Worker and workspace-prefixed keys; PostgreSQL RLS
 cannot enforce object-store access. R2 stays private with no public bucket or
 user-facing bucket credential.
 
-## Provisioning (not completed)
+## Provisioning procedure (completed for this deployment)
 
 1. Link PlanetScale through Cloudflare Hyperdrive or authenticate the PlanetScale
    CLI. Choose PostgreSQL, not Vitess, and the smallest suitable single-node tier;

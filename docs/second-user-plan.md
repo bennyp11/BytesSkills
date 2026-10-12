@@ -1,10 +1,9 @@
 # First independent user milestone
 
-**Architecture update:** PostgreSQL/PlanetScale with FORCE RLS is now being implemented
-on this review branch. Production remains on D1; database provisioning/cutover have
-not completed. See [PostgreSQL cutover](postgres-cutover.md) for current roles,
-verification, migration and recovery requirements. The D1 details below describe the
-pre-cutover compatibility implementation.
+**Architecture update:** Production moved to PlanetScale PostgreSQL with FORCE RLS
+on 2026-10-12. See [PostgreSQL cutover](postgres-cutover.md) for deployed roles,
+verification and recovery requirements. The D1 implementation details below are
+historical compatibility references; they are not the production storage backend.
 
 Success: a second person signs in, authorizes an AI connection, saves an artifact,
 and finds it in their dashboard. They cannot access the existing owner's workspace
