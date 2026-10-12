@@ -97,7 +97,10 @@ For the final cutover:
 
 1. Record the exact previous Worker deployment/version, bindings and secrets.
    Deploy `src/maintenance.ts` with the **old D1 configuration** and existing
-   routes/KV/R2. It denies all application routes with 503 and Retry-After, and
+   routes/KV/R2: from service/, run
+   `npx wrangler deploy --config wrangler.d1-recovery.jsonc`.
+   This separate configuration retains the original D1 binding for export even
+   after the main config switches to PostgreSQL. It denies all application routes with 503 and Retry-After, and
    `/health` reports `status=maintenance,writes_paused=true`. Wait for old in-flight
    requests to finish before taking the final snapshot; verify the gate from
    multiple connections. Do not leave another writer running against D1.

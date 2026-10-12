@@ -51,10 +51,12 @@ export class PostgresDatabase implements Database {
       await client.query("SET LOCAL search_path = bytes, pg_catalog");
       await client.query("SET LOCAL statement_timeout = '15s'");
       await client.query("SET LOCAL lock_timeout = '5s'");
-      const check = await client.query(`SELECT current_user AS name,rolsuper,rolbypassrls,rolcreaterole
+      const check = await client.query(`SELECT current_user AS name,rolsuper,rolbypassrls,rolcreaterole,
+        EXISTS(SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+          WHERE n.nspname='bytes' AND pg_has_role(current_user,c.relowner,'MEMBER')) AS owns_data
         FROM pg_roles WHERE rolname=current_user`);
       const r = check.rows[0];
-      if (r?.name !== `bytes_${this.role}` || r.rolsuper || r.rolbypassrls || r.rolcreaterole)
+      if (r?.name !== `bytes_${this.role}` || r.rolsuper || r.rolbypassrls || r.rolcreaterole || r.owns_data)
         throw new Error('Unsafe database runtime role');
       await client.query(`SELECT set_config('bytes.account_id',$1,true),
         set_config('bytes.workspace_id',$2,true),set_config('bytes.legacy_owner',$3,true)`,

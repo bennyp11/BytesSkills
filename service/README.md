@@ -1,5 +1,9 @@
 # BytesSkills cloud MVP
 
+PostgreSQL migration implementation and the production cutover procedure are in
+[postgres-cutover.md](../docs/postgres-cutover.md). Production still uses D1 until
+that verified procedure completes; do not treat schema/code availability as deployment.
+
 One private workspace, served at https://api.bytesskills.com. MCP endpoint:
 `https://api.bytesskills.com/mcp`. The apex https://bytesskills.com is a landing page.
 

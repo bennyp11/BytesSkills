@@ -13,7 +13,7 @@ const url=process.env.BYTES_POSTGRES_TEST_URL;
 const enabled=Boolean(url);
 let admin,control,env,api,dir,dbName,rolesCreated=false;
 const connect=async connectionString=>{const c=new pg.Client({connectionString});await c.connect();return c;};
-const urlFor=(user,db=dbName)=>{const u=new URL(url);u.username=user;u.password='';u.pathname='/'+db;return u.toString();};
+const urlFor=(user,db=dbName)=>{const u=new URL(url);u.username=user;u.password='local-only-test';u.pathname='/'+db;return u.toString();};
 const blobMap=new Map();
 const BLOBS={
  async put(key,data,options){blobMap.set(key,{data:Uint8Array.from(data),customMetadata:options.customMetadata});},

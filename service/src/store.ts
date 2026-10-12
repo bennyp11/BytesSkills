@@ -199,8 +199,13 @@ export class Store {
       (req.expected_revision !== old.revision ||
         (await this.resolve(`@${old.type}/${old.id}`)).revision !==
           old.revision)
-    )
+    ) {
+      // An identical concurrent request may have committed after the first replay
+      // lookup but before these reads. Return its receipt, not a false conflict.
+      const duplicate = await this.replay(req.request_id, fingerprint);
+      if (duplicate) return duplicate;
       throw new ApiError(409, "Revision conflict: reread latest");
+    }
     if (!old && req.expected_revision !== undefined)
       throw new ApiError(400, "expected_revision requires pointer");
     if (req.text !== undefined && req.content)

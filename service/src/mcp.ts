@@ -134,7 +134,7 @@ export async function mcp(request: Request, env: Env, scopes: string[], access: 
       write_access: canWrite,
       instructions: workflowInstructions,
       limits: { text_characters: 100000, upload_bytes: 10000000 },
-      storage: "D1 records and R2 blobs",
+      storage: env.STORAGE_BACKEND === "postgres" ? "PostgreSQL records with RLS and R2 blobs" : "D1 records and R2 blobs",
     })),
   );
   server.registerTool(

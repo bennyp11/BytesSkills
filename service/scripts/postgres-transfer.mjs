@@ -103,7 +103,7 @@ async function requireFreeze() {
 async function exportD1(path) {
  await requireFreeze();
  const query=sql=>{
-  const out=execFileSync('npx',['wrangler','d1','execute','DB','--remote','--json','--command',sql],{encoding:'utf8',maxBuffer:64*1024*1024});
+  const out=execFileSync('npx',['wrangler','--config','wrangler.d1-recovery.jsonc','d1','execute','DB','--remote','--json','--command',sql],{encoding:'utf8',maxBuffer:64*1024*1024});
   const result=JSON.parse(out);if(!result.every(x=>x.success))throw Error('D1 query failed');return result[0].results;
  };
  const names=new Set(query("SELECT name FROM sqlite_master WHERE type='table'").map(r=>r.name));
