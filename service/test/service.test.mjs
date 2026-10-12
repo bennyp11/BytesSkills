@@ -34,6 +34,10 @@ before(async () => {
       .replace(/--[^\n]*/g, "")
       .replace(/\n/g, " "),
   );
+  for (const migration of ['0003_website_waitlist.sql', '0004_accounts.sql']) {
+    await db.exec((await readFile('migrations/' + migration, 'utf8'))
+      .replace(/--[^\n]*/g, '').replace(/\n/g, ' '));
+  }
   const fixture = [
     "help",
     "brainstorm",
