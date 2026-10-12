@@ -3,35 +3,51 @@
   "name": "bytesskills-mvp",
   "main": "src/index.ts",
   "compatibility_date": "2026-10-01",
-  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "compatibility_flags": [
+    "nodejs_compat",
+    "global_fetch_strictly_public"
+  ],
   "account_id": "f6c273ea7837c6c7b5cdab3cdaa905c7",
   "workers_dev": false,
   "preview_urls": false,
   "routes": [
-    { "pattern": "api.bytesskills.com", "custom_domain": true },
-    { "pattern": "bytesskills.com", "custom_domain": true },
+    {
+      "pattern": "api.bytesskills.com",
+      "custom_domain": true
+    }
   ],
   "vars": {
     "BASE_URL": "https://api.bytesskills.com",
-    "WORKSPACE_ID": "acc3351e-d092-433c-a7e1-8fc3e807ebd4",
+    "WORKSPACE_ID": "acc3351e-d092-433c-a7e1-8fc3e807ebd4"
   },
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "bytesskills-mvp",
       "database_id": "952f6010-c5de-4c0a-8485-cb0ae30f6f1a",
-      "migrations_dir": "migrations",
-    },
+      "migrations_dir": "migrations"
+    }
   ],
   "r2_buckets": [
-    { "binding": "BLOBS", "bucket_name": "bytesskills-mvp-blobs" },
+    {
+      "binding": "BLOBS",
+      "bucket_name": "bytesskills-mvp-blobs"
+    }
   ],
   "kv_namespaces": [
-    { "binding": "OAUTH_KV", "id": "4716622bf06e4b4080adb6f78d251757" },
+    {
+      "binding": "OAUTH_KV",
+      "id": "4716622bf06e4b4080adb6f78d251757"
+    }
   ],
   "observability": {
     "enabled": true,
-    "logs": { "enabled": true, "invocation_logs": false },
+    "logs": {
+      "enabled": true,
+      "invocation_logs": false
+    }
   },
-  "limits": { "cpu_ms": 10000 },
+  "limits": {
+    "cpu_ms": 10000
+  }
 }

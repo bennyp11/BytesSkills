@@ -1,4 +1,3 @@
-import { website } from "./website";
 import OAuthProvider, {
   AuthorizationError,
   CimdFetchError,
@@ -266,8 +265,6 @@ export default {
     try {
       const url = new URL(req.url);
       if (url.hostname === "bytesskills.com") {
-        if (["/", "/waitlist", "/thanks", "/privacy"].includes(url.pathname))
-          return website(req, env);
         return Response.redirect(env.BASE_URL + url.pathname + url.search, 308);
       }
       const origin = req.headers.get("Origin");
