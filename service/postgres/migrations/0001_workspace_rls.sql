@@ -116,7 +116,7 @@ CREATE POLICY own_account ON accounts FOR SELECT TO bytes_runtime
 CREATE POLICY own_memberships ON workspace_memberships FOR SELECT TO bytes_runtime
  USING(account_id=current_setting('bytes.account_id',true));
 CREATE FUNCTION can_access_workspace(w text) RETURNS boolean LANGUAGE sql STABLE SECURITY INVOKER
- SET search_path=bytes,pg_catalog AS $$
+ SET search_path=bytes,pg_catalog,pg_temp AS $$
  SELECT w=current_setting('bytes.workspace_id',true) AND EXISTS (
   SELECT 1 FROM workspace_memberships m JOIN accounts a ON a.id=m.account_id
   WHERE m.workspace_id=w AND m.account_id=current_setting('bytes.account_id',true)
@@ -147,7 +147,7 @@ DO $$ DECLARE t text; BEGIN
   EXECUTE format('CREATE TRIGGER immutable BEFORE UPDATE OR DELETE ON bytes.%I FOR EACH ROW EXECUTE FUNCTION bytes.immutable()',t);
  END LOOP;
 END $$;
-CREATE FUNCTION check_revision() RETURNS trigger LANGUAGE plpgsql SET search_path=bytes,pg_catalog AS $$
+CREATE FUNCTION check_revision() RETURNS trigger LANGUAGE plpgsql SET search_path=bytes,pg_catalog,pg_temp AS $$
  DECLARE old heads; previous text;
  BEGIN
   PERFORM pg_advisory_xact_lock(hashtextextended(NEW.workspace_id,0));
@@ -159,7 +159,7 @@ CREATE FUNCTION check_revision() RETURNS trigger LANGUAGE plpgsql SET search_pat
   RETURN NEW;
  END $$;
 CREATE TRIGGER revision_sequence BEFORE INSERT ON revisions FOR EACH ROW EXECUTE FUNCTION check_revision();
-CREATE FUNCTION check_head() RETURNS trigger LANGUAGE plpgsql SET search_path=bytes,pg_catalog AS $$
+CREATE FUNCTION check_head() RETURNS trigger LANGUAGE plpgsql SET search_path=bytes,pg_catalog,pg_temp AS $$
  BEGIN
   PERFORM pg_advisory_xact_lock(hashtextextended(NEW.workspace_id,0));
   IF TG_OP='UPDATE' AND (NEW.workspace_id<>OLD.workspace_id OR NEW.id<>OLD.id) THEN RAISE EXCEPTION 'immutable_identity'; END IF;
@@ -181,15 +181,15 @@ CREATE FUNCTION check_state() RETURNS trigger LANGUAGE plpgsql AS $$
   RETURN NEW;
  END $$;
 CREATE TRIGGER state_cas BEFORE UPDATE ON library_state FOR EACH ROW EXECUTE FUNCTION check_state();
-CREATE FUNCTION initialize_library() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=bytes,pg_catalog AS $$
+CREATE FUNCTION initialize_library() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=bytes,pg_catalog,pg_temp AS $$
  BEGIN INSERT INTO library_state VALUES(NEW.id,0,'{}','{}','{}'); RETURN NEW; END $$;
 CREATE TRIGGER initialize_workspace AFTER INSERT ON workspace FOR EACH ROW EXECUTE FUNCTION initialize_library();
 -- Publisher can invalidate previews, but cannot read or write workspace content.
-CREATE FUNCTION invalidate_previews() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=bytes,pg_catalog AS $$
+CREATE FUNCTION invalidate_previews() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=bytes,pg_catalog,pg_temp AS $$
  BEGIN UPDATE library_state SET revision=revision+1; RETURN NEW; END $$;
 CREATE TRIGGER release_preview AFTER INSERT ON skill_releases FOR EACH ROW EXECUTE FUNCTION invalidate_previews();
 CREATE TRIGGER revocation_preview AFTER INSERT ON skill_revocations FOR EACH ROW EXECUTE FUNCTION invalidate_previews();
-CREATE FUNCTION check_release() RETURNS trigger LANGUAGE plpgsql SET search_path=bytes,pg_catalog AS $$
+CREATE FUNCTION check_release() RETURNS trigger LANGUAGE plpgsql SET search_path=bytes,pg_catalog,pg_temp AS $$
  BEGIN
   PERFORM pg_advisory_xact_lock(17491,1);
   IF NEW.sequence<>coalesce((SELECT max(sequence)+1 FROM skill_releases WHERE skill=NEW.skill),1) THEN RAISE EXCEPTION 'release_conflict'; END IF;
@@ -200,7 +200,7 @@ CREATE TRIGGER release_sequence BEFORE INSERT ON skill_releases FOR EACH ROW EXE
 -- Only the trusted identity adapter receives this separate credential. No email
 -- matching, arbitrary workspace claims, reassignment or legacy-owner auto-claim.
 CREATE FUNCTION provision_identity(iss text,sub text,new_account text,new_workspace text)
- RETURNS TABLE(account_id text,workspace_id text) LANGUAGE plpgsql SECURITY DEFINER SET search_path=bytes,pg_catalog AS $$
+ RETURNS TABLE(account_id text,workspace_id text) LANGUAGE plpgsql SECURITY DEFINER SET search_path=bytes,pg_catalog,pg_temp AS $$
  DECLARE found_account text; matches integer;
  BEGIN
   IF iss NOT LIKE 'https://%' OR length(iss)>2048 OR length(sub) NOT BETWEEN 1 AND 512 THEN RAISE EXCEPTION 'invalid_identity'; END IF;

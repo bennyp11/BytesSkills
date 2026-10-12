@@ -8,3 +8,9 @@ test('automatic release refuses incompatible live storage contract before migrat
   assert.doesNotThrow(()=>checkStorageCutover({storage_contract:'workspace-v1'},migrations));
   assert.doesNotThrow(()=>checkStorageCutover({},{}));
 });
+
+test('PostgreSQL cutover and rollback require explicit verified migration',()=>{
+ assert.throws(()=>checkStorageCutover({storage_contract:'workspace-v1'},{},'postgres'),/maintenance cutover/);
+ assert.doesNotThrow(()=>checkStorageCutover({storage_contract:'postgres-rls-v1'},{'0005_workspace_isolation.sql':'old'},'postgres'));
+ assert.throws(()=>checkStorageCutover({storage_contract:'postgres-rls-v1'},{},'d1'),/stale D1/);
+});

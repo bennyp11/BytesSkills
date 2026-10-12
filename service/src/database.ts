@@ -1,4 +1,4 @@
-import { Client } from 'pg';
+import pg from 'pg';
 import { ApiError, type Env } from './common';
 
 export interface Statement {
@@ -40,7 +40,7 @@ export class PostgresDatabase implements Database {
   async execute(statements: PostgresStatement[]) {
     // One client per operation; Hyperdrive provides the pool. Never retain a client
     // across Worker requests, and never set identity outside this transaction.
-    const client = new Client({connectionString: this.connectionString, connectionTimeoutMillis: 10000});
+    const client = new pg.Client({connectionString: this.connectionString, connectionTimeoutMillis: 10000});
     await client.connect();
     try {
       await client.query('BEGIN');

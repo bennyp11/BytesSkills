@@ -6,6 +6,9 @@ import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
 import pg from 'pg';
+import {migrate} from '../scripts/postgres-migrate.mjs';
+import {normalize,importSnapshot,verifyDatabase} from '../scripts/postgres-transfer.mjs';
+import {canonical,sha} from '../scripts/release-artifacts.mjs';
 const url=process.env.BYTES_POSTGRES_TEST_URL;
 const enabled=Boolean(url);
 let admin,control,env,api,dir,dbName,rolesCreated=false;
@@ -31,9 +34,8 @@ before(async()=>{
  assert.equal(existing.rowCount,0,'Use a fresh test PostgreSQL server');
  dbName='bytes_test_'+Date.now();await control.query(`CREATE DATABASE ${dbName}`);
  admin=await connect(urlFor(new URL(url).username));
- await admin.query('BEGIN');
- await admin.query(await readFile('postgres/migrations/0001_workspace_rls.sql','utf8'));rolesCreated=true;
- await admin.query('COMMIT');
+ await migrate(admin);rolesCreated=true;
+ await migrate(admin); // Applied migration checksums make retries idempotent.
  for(const r of ['runtime','identity','publisher'])await admin.query(`ALTER ROLE bytes_${r} LOGIN`);
  env={STORAGE_BACKEND:'postgres',POSTGRES:{connectionString:urlFor('bytes_runtime')},PUBLISHER_DB:{connectionString:urlFor('bytes_publisher')},IDENTITY_DB:{connectionString:urlFor('bytes_identity')},BLOBS,WORKSPACE_ID:'acc3351e-d092-433c-a7e1-8fc3e807ebd4'};
  dir=await mkdtemp(join(tmpdir(),'bytes-pg-test-'));
@@ -51,6 +53,39 @@ after(async()=>{
  if(dir)await rm(dir,{recursive:true,force:true});
 });
 const pgTest=(name,fn)=>test(name,{skip:!enabled},fn);
+pgTest('legacy D1 import preserves canonical records, indexes, receipts, releases and snapshot cursors',async()=>{
+ const workspace=env.WORKSPACE_ID,id=crypto.randomUUID(),pointer=`@concept/${id}:v1`,text='legacy body';
+ const hash=sha(text),key=`blobs/sha256/${hash.slice(0,2)}/${hash}`;
+ const time='2026-10-01T00:00:00.000Z',workflow=crypto.randomUUID();
+ const record={schema_version:1,workspace_id:workspace,type:'concept',id,revision:1,pointer,previous_checksum:null,
+  title:'legacy',status:'draft',tags:['legacy'],settings:{},provenance:{skill_release:{workflow_id:workflow}},
+  parent:null,relations:{links:[pointer]},created_at:time,record_key:`records/concept/${id}/v00000001.json`,
+  content:{key,sha256:hash,bytes:text.length,media_type:'text/markdown'}};
+ const complete={...record,record_checksum:sha(canonical(record))};
+ const payload=canonical({skill:'help',version:'1.0.0',summary:'legacy',protocol:1,required_scopes:['bytes:read'],instructions:'help',resources:{}});
+ const tables=normalize({workspace:[{id:workspace,name:'Content'}],
+  revisions:[{pointer,id,type:'concept',revision:1,checksum:complete.record_checksum,record:canonical(complete),rowid:7}],
+  heads:[{id,pointer,type:'concept',revision:1,title:'legacy',status:'draft',format:null,parent:null,updated:time}],
+  tags:[{id,tag:'legacy'}],edges:[{source:pointer,kind:'links',target:pointer}],
+  requests:[{request_id:crypto.randomUUID(),fingerprint:'fingerprint',pointer,created_at:time}],
+  library_state:[{id:1,revision:4,selections:'{"help":"1.0.0"}',policies:'{}',dismissed:'{}'}],
+  library_decisions:[{request_id:crypto.randomUUID(),fingerprint:'decision',result:'{"state_revision":4}',created_at:time}],
+  skill_releases:[{skill:'help',version:'1.0.0',sequence:1,checksum:sha(payload),payload,published_at:time}],
+  skill_revocations:[],workflow_sessions:[{id:workflow,fingerprint:'flow',skill:'help',version:'1.0.0',command:'/bytes help',created_at:time,expires_at:'2030-01-01T00:00:00.000Z'}],
+  search:[{id,title:'legacy',body:text}]});
+ const snapshot={schema_version:1,write_freeze_verified:true,tables,hashes:Object.fromEntries(Object.entries(tables).map(([n,rows])=>[n,sha(canonical(rows.map(canonical).sort()))]))};
+ await importSnapshot(admin,snapshot);await verifyDatabase(admin,snapshot);
+ await assert.rejects(importSnapshot(admin,snapshot),/empty/);
+ const bad=structuredClone(snapshot);bad.tables.revisions[0].record='{}';await assert.rejects(importSnapshot(admin,bad),/checksum/);
+ await BLOBS.put(workspace+'/'+key,new TextEncoder().encode(text),{customMetadata:{sha256:hash}});
+ const a=await api.WorkspaceAccess.authorize(env,'legacy-owner',workspace,true),s=new api.Store(env,a);
+ assert.equal((await s.export()).snapshot,7);assert.deepEqual(await s.resolve(pointer),complete);
+ assert.equal((await s.get(pointer,true)).text,text);assert.equal((await s.query({text:'legacy'})).items.length,1);
+ assert.equal((await new api.Releases(env,a).state()).revision,4);
+ const newer=await s.save({request_id:crypto.randomUUID(),pointer,expected_revision:1,text:'newer'});
+ assert.equal(newer.previous_checksum,complete.record_checksum);assert.ok((await s.export()).snapshot>7);
+ assert.equal((await s.export('',20,7)).records.length,1);
+});
 pgTest('RLS hides other tenants even when SELECT has no workspace filter; writes cannot cross tenants',async()=>{
  const a=await tenant('read-a'),b=await tenant('read-b');
  const sa=new api.Store(env,await access(a)),sb=new api.Store(env,await access(b));
@@ -129,9 +164,9 @@ pgTest('cycles and foreign-workspace relationships are rejected',async()=>{
  await assert.rejects(scoped(a).prepare('INSERT INTO edges VALUES(?,?,?,?)').bind(a.workspace_id,r.pointer,'inputs',other.pointer).run(),/foreign key/);
 });
 pgTest('publisher cannot read workspace data, release adoption and workflows remain tenant scoped',async()=>{
- await admin.query("INSERT INTO bytes.accounts(id,status) VALUES('legacy-owner','unclaimed')");
- await admin.query('INSERT INTO bytes.workspace VALUES($1,$2)',[env.WORKSPACE_ID,'Content']);
- await admin.query("INSERT INTO bytes.workspace_memberships(workspace_id,account_id,role,status) VALUES($1,'legacy-owner','owner','active')",[env.WORKSPACE_ID]);
+ 
+
+
  const pubAccess=await api.WorkspaceAccess.authorize(env,'legacy-owner',env.WORKSPACE_ID,true,true);
  const pub=new api.Releases(env,pubAccess);
  const release={skill:'brainstorm',version:'1.0.0',summary:'test',protocol:1,required_scopes:['bytes:read','bytes:write'],instructions:'test',resources:{}};

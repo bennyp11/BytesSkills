@@ -28,7 +28,10 @@ if (health.service !== 'BytesSkills' || health.status !== 'ok') throw Error('Une
 if (health.release && greater(version(health.release),target)) throw Error('Refusing to deploy an older release');
 if (health.release === target && health.commit !== commit) throw Error('Release already deployed from a different commit');
 if (mode === 'preflight') {
-  checkStorageCutover(health, manifest.migrations);
+  checkStorageCutover(health, manifest.migrations, manifest.storage_backend);
+  const pgNames = (await readdir('postgres/migrations')).filter(n=>n.endsWith('.sql')).sort();
+  if (JSON.stringify(pgNames)!==JSON.stringify(Object.keys(manifest.postgres_migrations ?? {}).sort())) throw Error('PostgreSQL migration set mismatch');
+  for (const name of pgNames) if (sha(await readFile('postgres/migrations/'+name))!==manifest.postgres_migrations[name]) throw Error('PostgreSQL migration checksum mismatch');
   if (sha(await readFile('wrangler.jsonc')) !== manifest.files['wrangler.jsonc'] || sha(await readFile('package-lock.json')) !== manifest.files['package-lock.json']) throw Error('Deployment config/dependency mismatch');
   const names = (await readdir('migrations')).filter(n=>n.endsWith('.sql')).sort();
   if (JSON.stringify(names) !== JSON.stringify(Object.keys(manifest.migrations).sort())) throw Error('Migration set mismatch');
