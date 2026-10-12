@@ -1,3 +1,4 @@
+import { website } from "./website";
 import OAuthProvider, {
   AuthorizationError,
   CimdFetchError,
@@ -265,10 +266,8 @@ export default {
     try {
       const url = new URL(req.url);
       if (url.hostname === "bytesskills.com") {
-        if (url.pathname === "/")
-          return html(
-            `<p class="muted">BYTESSKILLS</p><h1>A shared home for your creative work.</h1><p>The private workspace MVP is running.</p><p><a href="https://api.bytesskills.com">Connect your AI tools →</a></p>`,
-          );
+        if (["/", "/waitlist", "/thanks", "/privacy"].includes(url.pathname))
+          return website(req, env);
         return Response.redirect(env.BASE_URL + url.pathname + url.search, 308);
       }
       const origin = req.headers.get("Origin");
@@ -353,3 +352,4 @@ export default {
     }
   },
 };
+
