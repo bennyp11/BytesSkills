@@ -12,3 +12,7 @@ production workflow, and proposed sound palette. See [Reductions](../docs/reduct
 Definitions are design data; no resolver is implemented yet. Add IDs and versions
 explicitly; folders do not establish inheritance. Sound libraries describe reusable
 asset collections; their entries must point to real files before use.
+
+See [extension authoring](../docs/extending-bytes.md). Optional `skills/` and
+`object-profiles/` directories hold validated draft authoring contracts; files do
+not activate new runtime capabilities by themselves.

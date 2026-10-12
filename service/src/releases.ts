@@ -1,14 +1,7 @@
 import { z } from "zod";
 import { ApiError, canonical, sha, type Env } from "./common";
-export const skills = [
-  "help",
-  "brainstorm",
-  "refine",
-  "inspect",
-  "organize",
-  "clip",
-  "sync",
-] as const;
+import registry from "../../plugins/bytesskills-core/skills/bytes/contracts/runtime.json";
+export const skills = Object.keys(registry.skills) as [keyof typeof registry.skills, ...(keyof typeof registry.skills)[]];
 const skillSchema = z.enum(skills);
 export const releaseSchema = z
   .object({
@@ -64,17 +57,10 @@ export function commandSkill(command: string): (typeof skills)[number] {
   const verb = words[1] ?? "help";
   if (verb === "--help" || verb === "help" || words.includes("--help"))
     return "help";
-  const map: Record<string, (typeof skills)[number]> = {
-    brainstorm: "brainstorm",
-    refine: "refine",
-    show: "inspect",
-    list: "inspect",
-    move: "organize",
-    archive: "organize",
-    clip: "clip",
-    sync: "sync",
-  };
-  if (!map[verb])
+  const map = Object.fromEntries(Object.entries(registry.skills).flatMap(
+    ([skill, spec]) => spec.commands.map(command => [command, skill as (typeof skills)[number]]),
+  ));
+  if (!Object.hasOwn(map, verb))
     throw new ApiError(400, "Unknown /bytes command; use /bytes help");
   return map[verb];
 }
@@ -443,7 +429,7 @@ export class Releases {
     if (!session)
       throw new ApiError(409, "Unknown workflow; call bytes_begin first");
     const r = await this.session(session, scopes);
-    if (!["brainstorm", "refine", "organize", "clip"].includes(session.skill))
+    if (!registry.skills[session.skill as keyof typeof registry.skills]?.can_save)
       throw new ApiError(403, "This workflow cannot save artifacts");
     return {
       workflow_id: id,

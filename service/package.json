@@ -8,13 +8,14 @@
   },
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "node scripts/bundle-library.mjs && wrangler deploy",
+    "deploy": "node scripts/check-library.mjs && node scripts/bundle-library.mjs && wrangler deploy",
     "test": "node --test test/*.test.mjs",
-    "check": "tsc --noEmit",
-    "build": "node scripts/bundle-library.mjs && wrangler deploy --dry-run --outdir dist",
+    "check": "node scripts/check-library.mjs && tsc --noEmit",
+    "build": "node scripts/check-library.mjs && node scripts/bundle-library.mjs && wrangler deploy --dry-run --outdir dist",
     "db:local": "wrangler d1 migrations apply DB --local",
     "db:remote": "wrangler d1 migrations apply DB --remote",
-    "smoke": "node scripts/smoke.mjs"
+    "smoke": "node scripts/smoke.mjs",
+    "check:library": "node scripts/check-library.mjs"
   },
   "dependencies": {
     "@cloudflare/workers-oauth-provider": "^1.2.3",

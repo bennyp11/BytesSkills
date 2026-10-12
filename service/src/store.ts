@@ -1,31 +1,11 @@
 import { z } from "zod";
 import { ApiError, canonical, sha, type Env } from "./common";
-export const types = [
-  "concept",
-  "hook",
-  "script",
-  "plan",
-  "video",
-  "image",
-  "audio",
-  "run",
-  "brief",
-] as const;
-const statuses = [
-  "draft",
-  "selected",
-  "approved",
-  "archived",
-  "pending",
-  "succeeded",
-  "partial",
-  "failed",
-] as const;
-const pointer = z
-  .string()
-  .regex(
-    /^@(concept|hook|script|plan|video|image|audio|run|brief)\/[a-f0-9-]{8,36}(:v[1-9][0-9]*)?$/,
-  );
+import registry from "../../plugins/bytesskills-core/skills/bytes/contracts/runtime.json";
+export const types = registry.artifact_types as [string, ...string[]];
+const statuses = registry.statuses as [string, ...string[]];
+const pointer = z.string().regex(new RegExp(
+  "^@(" + types.join("|") + ")/[a-f0-9-]{8,36}(:v[1-9][0-9]*)?$",
+));
 const metadata = z.record(z.string().max(100), z.json());
 const relations = z
   .object({

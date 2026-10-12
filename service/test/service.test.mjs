@@ -41,6 +41,8 @@ before(async () => {
     "inspect",
     "organize",
     "clip",
+    "edit",
+    "captions",
     "sync",
   ].map((skill) => ({
     skill,
@@ -507,6 +509,33 @@ test("synthetic local revisions import without a repository workspace and export
     "/v1/export?limit=100&snapshot=" + ex.body.snapshot,
   );
   assert.equal(snapshot.body.records.length, before);
+});
+
+test("every registered command routes to its declared skill and help stays read-only", async () => {
+  const registry = JSON.parse(await readFile("../plugins/bytesskills-core/skills/bytes/contracts/runtime.json", "utf8"));
+  for (const [skill, spec] of Object.entries(registry.skills)) {
+    for (const command of spec.commands) {
+      const begun = await tool("bytes_begin", {request_id: randomUUID(), command: "/bytes " + command});
+      assert.equal(begun.skill, skill);
+      const help = await tool("bytes_begin", {request_id: randomUUID(), command: "/bytes " + command + " --help"});
+      assert.equal(help.skill, "help");
+    }
+  }
+});
+
+test("edit workflow can persist a plan with release provenance and edit help cannot write", async () => {
+  const begun = await tool("bytes_begin", {request_id: randomUUID(), command: '/bytes edit --app=capcut --source="/private/example.mp4" --req="Tighten pacing"'});
+  assert.equal(begun.skill, "edit");
+  const saved = await tool("bytes_save", {request_id: randomUUID(), workflow_id: begun.workflow_id, type: "plan", title: "Fictional edit plan", text: "Test only: no application was controlled."});
+  assert.equal(saved.provenance.skill_release.skill, "edit");
+  const help = await tool("bytes_begin", {request_id: randomUUID(), command: "/bytes edit --help"});
+  assert.equal(help.skill, "help");
+  const result = await rpc("tools/call", {name: "bytes_save", arguments: {
+    request_id: randomUUID(), workflow_id: help.workflow_id,
+    type: "plan", title: "Must fail", text: "Help must not mutate",
+  }});
+  assert.equal(result.body.result.isError, true);
+  assert.ok(result.body.result.content[0].text.includes("cannot save artifacts"));
 });
 
 test("skill releases are immutable; adoption is shared and each run pins its resources", async () => {

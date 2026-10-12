@@ -43,6 +43,38 @@ integer, with material generation costs surfaced before execution where applicab
 explicit decision if a newer revision exists; do not replace the current branch
 silently. Concurrent updates must be detected before committing a revision.
 
+## CapCut captions
+
+`/bytes captions --app=capcut --source="/path/to/video.mp4" --language=en --style="plain readable captions"`
+
+Other flags: `--project`, `--placement`, `--existing=preserve|replace|restyle`,
+`--output`. Missing applicable inputs are clarified one at a time; “idk” delegates
+creative choices. Source timing, framing and audio are preserved unless requested
+otherwise. The output is a video with visible captions, not just a transcript.
+Natural language: “Using BytesSkills, add captions to this video in CapCut.”
+`/bytes captions --help` explains the workflow without controlling CapCut.
+This requires host computer control, source access and usable captioning facilities.
+See the [caption handler](../plugins/bytesskills-core/skills/bytes/references/captions/instructions.md).
+
+## CapCut editing
+
+`/bytes edit --app=capcut --source="/path/to/video.mp4" --req="Tighten the pacing"`
+
+Other supported flags: `--project`, `--format`, `--duration`, `--aspect`, `--captions`,
+`--music`, `--output`. Sources may be accessible files, real video pointers or an
+unambiguous project selection; a brief may be text or a real plan pointer. Missing
+applicable inputs are clarified one at a time. `--help` is read-only. The initial
+editor implementation is CapCut through host-provided computer control; it is not
+an editing API exposed by the BytesSkills server.
+
+Equivalent request: “Using BytesSkills, edit this video in CapCut, cut the dead air
+and add captions.” Both forms use `bytes_begin`, the same intake and pinned handler.
+An edit request does not authorize social publishing or purchases. See the
+[editing workflow](../plugins/bytesskills-core/skills/bytes/references/edit/instructions.md).
+The handler saves plans/runs and ingests verified media where supported; exports over
+the MVP upload limit remain explicitly local-only. Progressive clip durations are a
+separate choice, never an assumption attached to every edit.
+
 ## Useful output convention
 
 ```text

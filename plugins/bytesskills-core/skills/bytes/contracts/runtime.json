@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "artifact_types": [
+    "concept",
+    "hook",
+    "script",
+    "plan",
+    "video",
+    "image",
+    "audio",
+    "run",
+    "brief"
+  ],
+  "statuses": [
+    "draft",
+    "selected",
+    "approved",
+    "archived",
+    "pending",
+    "succeeded",
+    "partial",
+    "failed"
+  ],
+  "skills": {
+    "help": {
+      "commands": [
+        "help"
+      ],
+      "can_save": false,
+      "handler": "references/help/instructions.md",
+      "include_definitions": false
+    },
+    "brainstorm": {
+      "commands": [
+        "brainstorm"
+      ],
+      "can_save": true,
+      "handler": "references/artifacts.md",
+      "include_definitions": true
+    },
+    "refine": {
+      "commands": [
+        "refine"
+      ],
+      "can_save": true,
+      "handler": "references/artifacts.md",
+      "include_definitions": true
+    },
+    "inspect": {
+      "commands": [
+        "show",
+        "list"
+      ],
+      "can_save": false,
+      "handler": "references/artifacts.md",
+      "include_definitions": false
+    },
+    "organize": {
+      "commands": [
+        "move",
+        "archive"
+      ],
+      "can_save": true,
+      "handler": "references/artifacts.md",
+      "include_definitions": false
+    },
+    "clip": {
+      "commands": [
+        "clip"
+      ],
+      "can_save": true,
+      "handler": "references/clip/instructions.md",
+      "include_definitions": true
+    },
+    "sync": {
+      "commands": [
+        "sync"
+      ],
+      "can_save": false,
+      "handler": "references/versions.md",
+      "include_definitions": false
+    },
+    "edit": {
+      "commands": [
+        "edit"
+      ],
+      "can_save": true,
+      "handler": "references/edit/instructions.md",
+      "include_definitions": true
+    },
+    "captions": {
+      "commands": [
+        "captions"
+      ],
+      "can_save": true,
+      "handler": "references/captions/instructions.md",
+      "include_definitions": true
+    }
+  }
+}
