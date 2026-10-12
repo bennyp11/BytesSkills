@@ -2,33 +2,42 @@ import { readFile, readdir } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { verify } from './release-artifacts.mjs';
+import { findRelease, verifyDraftTarget } from './draft-release-state.mjs';
 const dir = resolve('../release-dist');
 const commit = execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
 const {version} = JSON.parse(await readFile('../release.json','utf8'));
 const manifest = await verify(dir,commit,version);
 const tag = 'v'+version;
-const gh = args => execFileSync('gh',args,{encoding:'utf8'});
-let existing;
-try { existing = JSON.parse(gh(['api',`repos/${process.env.GITHUB_REPOSITORY}/releases/tags/${tag}`])); }
-catch(error) { if (!String(error.stderr).includes('HTTP 404')) throw error; }
-if (existing) {
-  if (!existing.draft) throw Error('Release already published; bump release.json for new work');
-  execFileSync('git',['fetch','origin',`refs/tags/${tag}:refs/tags/${tag}`]);
-  const tagged = execFileSync('git',['rev-parse',`${tag}^{commit}`],{encoding:'utf8'}).trim();
-  if (tagged !== commit) throw Error('Version already belongs to a different commit; bump release.json');
+const repo = process.env.GITHUB_REPOSITORY;
+if (!/^[\w.-]+\/[\w.-]+$/.test(repo ?? '')) throw Error('Missing valid GITHUB_REPOSITORY');
+const gh = (args, input) => execFileSync('gh',args,{encoding:'utf8',input});
+const api = `repos/${repo}`;
+let current = findRelease(JSON.parse(gh(['api','--paginate','--slurp',`${api}/releases?per_page=100`])), tag);
+const refs = JSON.parse(gh(['api',`${api}/git/matching-refs/tags/${tag}`]));
+const remoteTag = refs.find(r=>r.ref===`refs/tags/${tag}`);
+if (current) {
+  let taggedCommit;
+  if (remoteTag) {
+    execFileSync('git',['fetch','origin',`refs/tags/${tag}:refs/tags/${tag}`]);
+    taggedCommit = execFileSync('git',['rev-parse',`${tag}^{commit}`],{encoding:'utf8'}).trim();
+  }
+  verifyDraftTarget(current,commit,taggedCommit);
 } else {
-  // Reject an unrelated existing tag before creating a release around it.
-  const remote = gh(['api',`repos/${process.env.GITHUB_REPOSITORY}/git/matching-refs/tags/${tag}`]);
-  if (JSON.parse(remote).some(r=>r.ref===`refs/tags/${tag}`)) throw Error('Tag exists without prepared release; use a new version');
-  gh(['release','create',tag,'--draft','--target',commit,'--title',`BytesSkills ${version}`,'--notes',`${manifest.summary}\n\nPrepared from ${commit}. Publishing this release starts production deployment. Adoption preferences remain unchanged. See the Actions run for deployment status; publication alone is not deployment success.`]);
+  if (remoteTag) throw Error('Tag exists without prepared release; use a new version');
+  // The creation response supplies the draft ID directly; no tag lookup or race.
+  current = JSON.parse(gh(['api','--method','POST',`${api}/releases`,'--input','-'], JSON.stringify({
+    tag_name:tag,target_commitish:commit,draft:true,name:`BytesSkills ${version}`,
+    body:`${manifest.summary}\n\nPrepared from ${commit}. Publishing this release starts production deployment. Adoption preferences remain unchanged. See the Actions run for deployment status; publication alone is not deployment success.`,
+  })));
 }
-// Never clobber assets. A rerun may fill missing assets only if existing bytes match.
-const current = JSON.parse(gh(['api',`repos/${process.env.GITHUB_REPOSITORY}/releases/tags/${tag}`]));
+if (!Number.isSafeInteger(current.id)) throw Error('Invalid release ID');
+// Never clobber assets. Reruns fill only missing assets after verifying existing bytes.
+const assets = JSON.parse(gh(['api','--paginate','--slurp',`${api}/releases/${current.id}/assets?per_page=100`])).flat();
 for (const name of (await readdir(dir)).sort()) {
-  const asset = current.assets.find(a=>a.name===name);
+  const asset = assets.find(a=>a.name===name);
   if (asset) {
-    const bytes = execFileSync('gh',['api',`repos/${process.env.GITHUB_REPOSITORY}/releases/assets/${asset.id}`,'-H','Accept: application/octet-stream']);
+    const bytes = execFileSync('gh',['api',`${api}/releases/assets/${asset.id}`,'-H','Accept: application/octet-stream']);
     if (!bytes.equals(await readFile(resolve(dir,name)))) throw Error('Existing release asset differs: '+name);
-  } else gh(['release','upload',tag,resolve(dir,name)]);
+  } else gh(['api','--method','POST',`https://uploads.github.com/${api}/releases/${current.id}/assets?name=${encodeURIComponent(name)}`,'-H','Content-Type: application/octet-stream','--input',resolve(dir,name)]);
 }
 console.log(`Draft ${tag} ready: publish it in GitHub to deploy.`);
