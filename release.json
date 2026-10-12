@@ -1,4 +1,4 @@
 {
-  "version": "0.8.1",
-  "summary": "Core CapCut editing and captions, shared extension contracts, cloud-only workspace policy, and copyable artifact follow-ups. Fix draft release discovery and resumable asset uploads."
+  "version": "0.8.2",
+  "summary": "Add the minimal BytesSkills.com landing page and persistent email waitlist, with an additive D1 migration, privacy notice, input validation, and failure handling."
 }
