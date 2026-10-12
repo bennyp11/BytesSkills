@@ -113,6 +113,18 @@ test("private routes require auth; discovery is public", async () => {
   assert.equal(r.status, 200);
   assert.equal((await r.json()).resource, base + "/mcp");
 });
+test("release verification catalog requires owner auth and returns checksums without payloads", async () => {
+  assert.equal((await api("/v1/releases", null, "GET", "bad")).status, 401);
+  const response = await api("/v1/releases");
+  assert.equal(response.status, 200);
+  assert.ok(response.body.releases.length > 0);
+  for (const release of response.body.releases) {
+    assert.match(release.checksum, /^[a-f0-9]{64}$/);
+    assert.equal(release.payload, undefined);
+    assert.equal(release.instructions, undefined);
+  }
+});
+
 test("MCP initialization, list, and actual artifact save/get", async () => {
   const init = await rpc("initialize", {
     protocolVersion: "2025-11-25",

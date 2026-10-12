@@ -97,6 +97,8 @@ async function api(req: Request, env: Env) {
     return json(
       await new Releases(env).publish(JSON.parse(await readBody(req))),
     );
+  if (req.method === "GET" && new URL(req.url).pathname === "/v1/releases")
+    return json({ releases: (await new Releases(env).rows()).map(r => ({skill: r.skill, version: r.version, checksum: r.checksum, revoked: r.revoked})) });
   const url = new URL(req.url),
     s = new Store(env),
     p = url.pathname;
@@ -225,7 +227,7 @@ const provider = new OAuthProvider<Env>({
       if (url.pathname === "/authorize") return authorize(req, env);
       if (url.pathname.startsWith("/v1/")) return api(req, env);
       if (url.pathname === "/health")
-        return json({ service: "BytesSkills", version: "0.2.0", status: "ok" });
+        return json({ service: "BytesSkills", version: "0.2.0", status: "ok", release: env.RELEASE_VERSION ?? null, commit: env.RELEASE_COMMIT ?? null });
       if (url.pathname === "/")
         return html(
           `<p class="muted">BYTESSKILLS · MVP</p><h1>Your creative workspace,<br>across AI tools.</h1><p>Persistent concepts, hooks, scripts, and their history. Connect an AI client to your private workspace.</p><p>MCP endpoint</p><code>${escape(env.BASE_URL)}/mcp</code><p>Choose OAuth when connecting. Approve access with your workspace key.</p><p class="muted">Your content requires authentication. This service provides storage and workflow definitions; your AI supplies the creative work.</p>`,

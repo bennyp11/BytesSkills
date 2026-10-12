@@ -27,6 +27,6 @@ for (const p of [
   entries[p] = await readFile(resolve(root, p), "utf8");
 await writeFile(
   "src/library.json",
-  JSON.stringify({ version: "0.7.0", entries }, null, 2) + "\n",
+  JSON.stringify({ version: JSON.parse(await readFile(resolve(root, "release.json"), "utf8")).version, entries }, null, 2) + "\n",
 );
 console.log(`Bundled ${Object.keys(entries).length} library entries`);

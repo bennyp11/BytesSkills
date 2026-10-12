@@ -7,6 +7,8 @@ export interface Env {
   BASE_URL: string;
   WORKSPACE_ID: string;
   OWNER_KEY_SHA256: string;
+  RELEASE_VERSION?: string;
+  RELEASE_COMMIT?: string;
 }
 export class ApiError extends Error {
   constructor(

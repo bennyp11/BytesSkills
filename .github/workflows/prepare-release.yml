@@ -1,0 +1,38 @@
+name: Prepare release
+on:
+  push:
+    branches: [mvp]
+    paths: [release.json, .github/workflows/prepare-release.yml]
+permissions:
+  contents: read
+concurrency:
+  group: prepare-release
+  cancel-in-progress: false
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: service
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: service/package-lock.json
+      - run: npm ci
+      - run: python3 ../scripts/check-source-boundary.py
+      - run: npm run check
+      - run: npm run build
+      - run: npm test
+      - run: python3 -m unittest discover -s ../tests -q
+      - run: node scripts/release-artifacts.mjs build
+      - name: Create immutable draft and assets
+        run: node scripts/draft-release.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
