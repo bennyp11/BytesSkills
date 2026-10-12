@@ -16,7 +16,11 @@ export type DatabaseRole = 'runtime' | 'publisher' | 'identity';
 
 /** D1 is only the pre-cutover compatibility backend. Never fail over to it. */
 export function database(env: Env, principal?: Principal, role: DatabaseRole = 'runtime'): Database {
-  if (env.STORAGE_BACKEND !== 'postgres') return env.DB;
+  if (env.STORAGE_BACKEND === undefined || env.STORAGE_BACKEND === 'd1') {
+    if (!env.DB) throw new ApiError(503, 'Database binding unavailable');
+    return env.DB;
+  }
+  if (env.STORAGE_BACKEND !== 'postgres') throw new ApiError(503, 'Unsupported storage backend');
   const binding = role === 'publisher' ? env.PUBLISHER_DB : role === 'identity' ? env.IDENTITY_DB : env.POSTGRES;
   if (!binding) throw new ApiError(503, 'Database binding unavailable');
   return new PostgresDatabase(binding.connectionString, principal, role);

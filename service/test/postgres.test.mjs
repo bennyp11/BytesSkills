@@ -91,6 +91,10 @@ pgTest('RLS hides other tenants even when SELECT has no workspace filter; writes
  const sa=new api.Store(env,await access(a)),sb=new api.Store(env,await access(b));
  const ra=await save(sa,'A'),rb=await save(sb,'B');
  assert.equal((await scoped(a).prepare('SELECT * FROM revisions').all()).results.length,1);
+ for(const table of ['heads','tags','edges','requests','library_state','library_decisions','workflow_sessions','revision_workflows','search_documents']) {
+  const visible=(await scoped(a).prepare(`SELECT workspace_id FROM ${table}`).all()).results;
+  assert.ok(visible.every(r=>r.workspace_id===a.workspace_id),table);
+ }
  assert.equal(await row(scoped(a),'SELECT * FROM revisions WHERE pointer=?',rb.pointer),null);
  await assert.rejects(scoped(a).prepare('INSERT INTO search_documents(workspace_id,id,title,body) VALUES(?,?,?,?)').bind(b.workspace_id,rb.id,'steal','x').run(),/row-level security/);
  await assert.rejects(sa.get(rb.pointer),/missing/);
@@ -164,7 +168,7 @@ pgTest('cycles and foreign-workspace relationships are rejected',async()=>{
  await assert.rejects(scoped(a).prepare('INSERT INTO edges VALUES(?,?,?,?)').bind(a.workspace_id,r.pointer,'inputs',other.pointer).run(),/foreign key/);
 });
 pgTest('publisher cannot read workspace data, release adoption and workflows remain tenant scoped',async()=>{
- 
+
 
 
  const pubAccess=await api.WorkspaceAccess.authorize(env,'legacy-owner',env.WORKSPACE_ID,true,true);
@@ -184,4 +188,28 @@ pgTest('publisher cannot read workspace data, release adoption and workflows rem
  await pub.revoke({skill:'brainstorm',version:'1.0.0',reason:'test'});
  await assert.rejects(s.save({request_id:crypto.randomUUID(),type:'concept',title:'revoked',text:'body'},session.workflow_id),/relationship/);
  const stale={...decision,request_id:crypto.randomUUID()};await assert.rejects(ra.adopt(stale,['bytes:read','bytes:write']),/changed/);
+});
+pgTest('Cloudflare Worker uses Hyperdrive bindings for PostgreSQL storage and MCP tenant isolation',async()=>{
+ const {Miniflare,convertV4MiniflareOptions}=await import('miniflare');
+ const bundle=await build({entryPoints:['test/fixtures/tenancy-worker.ts'],bundle:true,write:false,format:'esm',platform:'node',target:'es2022',banner:{js:'import {createRequire} from "node:module"; const require=createRequire("/test-worker.js");'}});
+ const mf=new Miniflare(convertV4MiniflareOptions({modules:true,script:bundle.outputFiles[0].text,
+  compatibilityDate:'2026-10-01',compatibilityFlags:['nodejs_compat'],r2Buckets:['BLOBS'],
+  hyperdrives:{POSTGRES:env.POSTGRES.connectionString,PUBLISHER_DB:env.PUBLISHER_DB.connectionString,IDENTITY_DB:env.IDENTITY_DB.connectionString},
+  bindings:{STORAGE_BACKEND:'postgres',WORKSPACE_ID:env.WORKSPACE_ID}}));
+ try{
+  const provision=async subject=>{
+   const r=await mf.dispatchFetch('https://test/provision',{method:'POST',body:JSON.stringify({issuer:'https://worker.example',subject})});
+   assert.equal(r.status,200);return r.json();
+  };
+  const a=await provision('worker-a'),b=await provision('worker-b');
+  const headers=who=>({'x-test-account':who.account_id,'x-test-workspace':who.workspace_id,'Content-Type':'application/json',Accept:'application/json, text/event-stream'});
+  const saved=await mf.dispatchFetch('https://test/op',{method:'POST',headers:headers(a),body:JSON.stringify({op:'save',args:[{request_id:crypto.randomUUID(),type:'concept',title:'worker-private',text:'Worker transport verified'}]})});
+  assert.equal(saved.status,200);const record=await saved.json();
+  const get=async who=>{
+   const response=await mf.dispatchFetch('https://test/mcp',{method:'POST',headers:headers(who),body:JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/call',params:{name:'bytes_get',arguments:{pointer:record.pointer,include_content:true}}})});
+   return response.json();
+  };
+  const own=await get(a);assert.notEqual(own.result?.isError,true,JSON.stringify(own));assert.match(JSON.stringify(own),/worker-private/);
+  const foreign=await get(b);assert.equal(foreign.result.isError,true);assert.doesNotMatch(JSON.stringify(foreign),/worker-private/);
+ }finally{await mf.dispose();}
 });

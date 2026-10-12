@@ -81,6 +81,8 @@ export async function importSnapshot(client,snapshot) {
   await client.query('SET CONSTRAINTS ALL DEFERRED');
   for(const [table,keys] of Object.entries(columns))for(const r of snapshot.tables[table])
    await client.query(`INSERT INTO bytes.${table}(${keys.join(',')}) VALUES(${keys.map((_,i)=>'$'+(i+1)).join(',')})`,keys.map(k=>r[k]));
+  // Flush deferred FK events before PostgreSQL permits trigger DDL on those tables.
+  await client.query('SET CONSTRAINTS ALL IMMEDIATE');
   for(const table of Object.keys(columns))await client.query(`ALTER TABLE bytes.${table} ENABLE TRIGGER USER`);
   await client.query("SELECT setval('bytes.revisions_rowid_seq',greatest(coalesce((SELECT max(rowid) FROM bytes.revisions),0),1),(SELECT count(*)>0 FROM bytes.revisions))");
   const counts=await verifyDatabase(client,snapshot);
