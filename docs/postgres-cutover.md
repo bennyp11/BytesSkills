@@ -45,7 +45,9 @@ invalidates adoption previews without exposing workspace content to the publishe
 cannot query artifacts or directly change accounts. Do not bind IDENTITY_DB until
 the trusted login adapter is ready. The schema administrator owns migrations and
 narrow definer functions; it must never be a Worker binding. No runtime role is
-made a member of the administrator role. Definer functions fix search_path,
+made a member of the administrator role. The runtime checks role attributes, schema
+ownership and all required RLS/FORCE flags on each transaction and fails closed if
+they drift. Definer functions fix search_path,
 including pg_temp last, and PUBLIC execute is revoked.
 
 RLS protects against missed application filters. It does not make a compromised

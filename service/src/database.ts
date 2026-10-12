@@ -53,11 +53,16 @@ export class PostgresDatabase implements Database {
       await client.query("SET LOCAL lock_timeout = '5s'");
       const check = await client.query(`SELECT current_user AS name,rolsuper,rolbypassrls,rolcreaterole,
         EXISTS(SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
-          WHERE n.nspname='bytes' AND pg_has_role(current_user,c.relowner,'MEMBER')) AS owns_data
+          WHERE n.nspname='bytes' AND pg_has_role(current_user,c.relowner,'MEMBER')) AS owns_data,
+        (SELECT count(*)=14 AND bool_and(c.relrowsecurity AND c.relforcerowsecurity)
+          FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='bytes'
+          AND c.relname IN ('accounts','account_identities','workspace_memberships','workspace','revisions','heads',
+            'tags','edges','requests','library_state','library_decisions','workflow_sessions','revision_workflows','search_documents')) AS rls_ready
         FROM pg_roles WHERE rolname=current_user`);
       const r = check.rows[0];
       if (r?.name !== `bytes_${this.role}` || r.rolsuper || r.rolbypassrls || r.rolcreaterole || r.owns_data)
         throw new Error('Unsafe database runtime role');
+      if (!r.rls_ready) throw new Error('Workspace row security is unavailable');
       await client.query(`SELECT set_config('bytes.account_id',$1,true),
         set_config('bytes.workspace_id',$2,true),set_config('bytes.legacy_owner',$3,true)`,
         [this.principal?.accountId ?? '', this.principal?.workspaceId ?? '', this.principal?.legacyOwner ? 'true' : 'false']);

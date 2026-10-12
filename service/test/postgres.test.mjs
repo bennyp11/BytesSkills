@@ -119,6 +119,12 @@ pgTest('FORCE RLS covers every tenant table; role attributes and default privile
  const roles=await admin.query("SELECT rolsuper,rolbypassrls,rolcreaterole,rolcreatedb FROM pg_roles WHERE rolname LIKE 'bytes_%'");
  for(const r of roles.rows)assert.ok(Object.values(r).every(x=>x===false));
 });
+pgTest('runtime fails closed if an administrator disables RLS',async()=>{
+ const a=await tenant('rls-disabled');
+ await admin.query('ALTER TABLE bytes.revisions DISABLE ROW LEVEL SECURITY');
+ try {await assert.rejects(scoped(a).prepare('SELECT * FROM revisions').all(),/row security is unavailable/);}
+ finally {await admin.query('ALTER TABLE bytes.revisions ENABLE ROW LEVEL SECURITY');}
+});
 pgTest('transaction context is cleared on commit and rollback on a reused connection',async()=>{
  const a=await tenant('reuse-a'),b=await tenant('reuse-b');
  await save(new api.Store(env,await access(a)));
