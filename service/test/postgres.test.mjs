@@ -197,7 +197,7 @@ pgTest('publisher cannot read workspace data, release adoption and workflows rem
 });
 pgTest('Cloudflare Worker uses Hyperdrive bindings for PostgreSQL storage and MCP tenant isolation',async()=>{
  const {Miniflare,convertV4MiniflareOptions}=await import('miniflare');
- const bundle=await build({entryPoints:['test/fixtures/tenancy-worker.ts'],bundle:true,write:false,format:'esm',platform:'node',target:'es2022',banner:{js:'import {createRequire} from "node:module"; const require=createRequire("/test-worker.js");'}});
+ const bundle=await build({entryPoints:['test/fixtures/tenancy-worker.ts'],bundle:true,write:false,format:'esm',platform:'node',target:'es2022',conditions:['workerd'],external:['cloudflare:sockets'],banner:{js:'import {createRequire} from "node:module"; const require=createRequire("/test-worker.js");'}});
  const mf=new Miniflare(convertV4MiniflareOptions({modules:true,script:bundle.outputFiles[0].text,
   compatibilityDate:'2026-10-01',compatibilityFlags:['nodejs_compat'],r2Buckets:['BLOBS'],
   hyperdrives:{POSTGRES:env.POSTGRES.connectionString,PUBLISHER_DB:env.PUBLISHER_DB.connectionString,IDENTITY_DB:env.IDENTITY_DB.connectionString},
