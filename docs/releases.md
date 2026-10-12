@@ -84,6 +84,12 @@ so. Some auto-adopting users may see already-published skill versions during a p
 publication. Publishing all nine skills atomically needs a future staged-catalog
 activation feature; the current API limits release batches to 250 KB.
 
+After deployment, verification polls health every five seconds for up to one minute
+while an older Worker is still being served. Each request is limited to the remaining
+time budget. Unexpected service health, a newer release, a conflicting commit, and
+request errors still fail immediately. Skill publication starts only after the exact
+release and commit match. A timeout reports the last observed identity.
+
 Rerun the same release after fixing the cause. Unchanged version/checksum publication
 is idempotent, assets are verified again, and D1 tracks applied migrations. Do not
 edit a release asset to repair code: ship a new version. Preflight rejects older

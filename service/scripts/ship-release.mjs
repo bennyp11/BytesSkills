@@ -2,6 +2,7 @@ import { readFile, readdir, appendFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { verify, sha, version } from './release-artifacts.mjs';
+import { waitForDeployment } from './deployment-health.mjs';
 const [mode, dirArg] = process.argv.slice(2);
 if (!['preflight','publish'].includes(mode)) throw Error('Use ship-release.mjs preflight|publish DIR');
 const dir = resolve(dirArg);
@@ -13,13 +14,15 @@ if (JSON.stringify(manifest.skills.map(s=>s.skill).sort()) !== JSON.stringify(re
 const base = 'https://api.bytesskills.com'; // Never send a CI credential to an asset-supplied host.
 const key = process.env.BYTES_OWNER_KEY;
 if (!key) throw Error('Missing production BYTES_OWNER_KEY secret');
-async function request(path, body, auth = true) {
-  const response = await fetch(base+path,{method:body ? 'POST':'GET',redirect:'error',signal:AbortSignal.timeout(30000),headers:{...(auth ? {Authorization:'Bearer '+key}:{}),'Content-Type':'application/json',Accept:'application/json, text/event-stream'},body:body ? JSON.stringify(body):undefined});
+async function request(path, body, auth = true, timeoutMs = 30000) {
+  const response = await fetch(base+path,{method:body ? 'POST':'GET',redirect:'error',signal:AbortSignal.timeout(timeoutMs),headers:{...(auth ? {Authorization:'Bearer '+key}:{}),'Content-Type':'application/json',Accept:'application/json, text/event-stream'},body:body ? JSON.stringify(body):undefined});
   if (!response.ok) { const error = Error(`Service ${path} failed: HTTP ${response.status}`); error.status = response.status; throw error; }
   return response.json();
 }
 const greater = (a,b) => {const x=a.split('.').map(Number),y=b.split('.').map(Number);for(let i=0;i<3;i++){if(x[i]!==y[i])return x[i]>y[i];}return false;};
-const health = await request('/health',null,false);
+const health = mode === 'publish'
+  ? await waitForDeployment({readHealth: timeout => request('/health',null,false,timeout), target, commit})
+  : await request('/health',null,false);
 if (health.service !== 'BytesSkills' || health.status !== 'ok') throw Error('Unexpected service health');
 if (health.release && greater(version(health.release),target)) throw Error('Refusing to deploy an older release');
 if (health.release === target && health.commit !== commit) throw Error('Release already deployed from a different commit');
