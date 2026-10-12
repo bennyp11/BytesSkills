@@ -87,6 +87,14 @@
       "can_save": true,
       "handler": "references/edit/instructions.md",
       "include_definitions": true
+    },
+    "captions": {
+      "commands": [
+        "captions"
+      ],
+      "can_save": true,
+      "handler": "references/captions/instructions.md",
+      "include_definitions": true
     }
   }
 }

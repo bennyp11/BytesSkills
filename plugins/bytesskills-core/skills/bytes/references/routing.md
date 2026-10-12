@@ -30,6 +30,7 @@ Do not claim unrelated requests or another plugin's namespace.
 | “Show the old version of this script” | Read-only show/history; clarify the version if unclear |
 | “Update my whole BytesSkills library” | `/bytes sync --latest`; use the shared adoption preview |
 | “How would I update my library?” | Read-only help, not adoption |
+| “Using BytesSkills, add captions to this video in CapCut” | `/bytes captions --app=capcut`; clarify source, language and style |
 | “Using BytesSkills, edit this video in CapCut for me” | `/bytes edit --app=capcut`; clarify source and brief as needed |
 | “Make this better,” with several possible artifacts | Clarify target and requested change first |
 

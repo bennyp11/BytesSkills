@@ -84,6 +84,19 @@
       ],
       "persistence": "cloud-plan-and-verified-media-or-explicit-local-only-export",
       "handler": "references/edit/instructions.md"
+    },
+    "captions": {
+      "version": "1.0.0",
+      "inputs": [
+        "video",
+        "plan"
+      ],
+      "outputs": [
+        "plan",
+        "video"
+      ],
+      "persistence": "cloud-plan-and-verified-media-or-explicit-local-only-export",
+      "handler": "references/captions/instructions.md"
     }
   },
   "growth_rules": [

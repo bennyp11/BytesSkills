@@ -43,6 +43,19 @@ integer, with material generation costs surfaced before execution where applicab
 explicit decision if a newer revision exists; do not replace the current branch
 silently. Concurrent updates must be detected before committing a revision.
 
+## CapCut captions
+
+`/bytes captions --app=capcut --source="/path/to/video.mp4" --language=en --style="plain readable captions"`
+
+Other flags: `--project`, `--placement`, `--existing=preserve|replace|restyle`,
+`--output`. Missing applicable inputs are clarified one at a time; “idk” delegates
+creative choices. Source timing, framing and audio are preserved unless requested
+otherwise. The output is a video with visible captions, not just a transcript.
+Natural language: “Using BytesSkills, add captions to this video in CapCut.”
+`/bytes captions --help` explains the workflow without controlling CapCut.
+This requires host computer control, source access and usable captioning facilities.
+See the [caption handler](../plugins/bytesskills-core/skills/bytes/references/captions/instructions.md).
+
 ## CapCut editing
 
 `/bytes edit --app=capcut --source="/path/to/video.mp4" --req="Tighten the pacing"`

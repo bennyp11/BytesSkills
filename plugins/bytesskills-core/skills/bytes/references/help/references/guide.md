@@ -12,6 +12,7 @@ explain the interface now when loaded by an assistant.
 /bytes --help                  General help
 /bytes                         Same overview
 /bytes brainstorm --help              Brainstorm parameters and examples
+/bytes captions --help                Add captions through CapCut
 /bytes edit --help                    CapCut computer-controlled editing
 /bytes refine --help                  Revision help
 /bytes show --help                   Pointers, history, settings and trees
@@ -235,3 +236,11 @@ computer-control access, clarifies the brief, edits a preserved project, exports
 and verifies the video. CapCut control must be supplied by the host; a remote MCP
 connection does not provide it. Saves distinguish cloud artifacts from local-only
 media. Use `--help` to inspect all flags without opening or editing a project.
+
+## CapCut captions
+
+`/bytes captions --app=capcut --source="video.mp4"` adds visible speech captions to
+a separate exported video. You can also ask “Using BytesSkills, add captions to this
+video in CapCut.” It clarifies language, style, placement and existing-caption handling,
+checks transcription/timing where tools permit, and verifies captions in the actual
+export. Computer control must be available on the host; video upload limits still apply.

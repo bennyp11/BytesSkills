@@ -42,6 +42,7 @@ before(async () => {
     "organize",
     "clip",
     "edit",
+    "captions",
     "sync",
   ].map((skill) => ({
     skill,

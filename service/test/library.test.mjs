@@ -72,3 +72,21 @@ test("CapCut release pins its handler, authoring contract and progressive-clip d
     assert.ok(release.resources["plugins/bytesskills-core/skills/bytes/references/clip/instructions.md"]);
   } finally { await rm(dir, {recursive: true, force: true}); }
 });
+
+test("caption release contains its contract and shared CapCut execution instructions", async () => {
+  const { mkdtemp, rm } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { execFileSync } = await import("node:child_process");
+  const dir = await mkdtemp(join(tmpdir(), "bytes-captions-"));
+  try {
+    const output = join(dir, "captions.json");
+    execFileSync(process.execPath, ["scripts/build-release.mjs", "0.9.0", output, "captions"], {stdio: "pipe"});
+    const release = JSON.parse(await readFile(output, "utf8")).releases[0];
+    assert.equal(release.skill, "captions");
+    assert.deepEqual(release.required_scopes, ["bytes:read", "bytes:write"]);
+    assert.ok(release.instructions.includes("Add captions in CapCut"));
+    assert.equal(JSON.parse(release.resources["definitions/skills/captions.json"]).command, "captions");
+    assert.ok(release.resources["plugins/bytesskills-core/skills/bytes/references/edit/instructions.md"]);
+  } finally { await rm(dir, {recursive: true, force: true}); }
+});
