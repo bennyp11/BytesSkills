@@ -27,9 +27,9 @@ adoption state, or OAuth grants. The same account sees its data on a second devi
    same-workspace relationships and workflow provenance in database constraints.
    Keep R2 keys under the existing workspace prefix; never accept a raw object key
    as authorization. Remove public-user access to administrative imports/exports.
-3. **Login and OAuth.** Select a managed identity provider supporting email login
-   and standards-based identity verification. Use validated issuer + subject as
-   identity, never client-supplied account IDs or an email-only lookup. Implement
+3. **Login and OAuth.** Use Cloudflare Email Service with a Worker and PostgreSQL login-token/session
+   functions. Verify mailbox ownership with a browser-bound, single-use link; use
+   a stable internal account ID, never a client-supplied workspace. Implement
    secure server sessions, CSRF protection, fixed callback allowlists, rate limits,
    logout, and session expiration. Verify tokens server-side. Provision account,
    workspace and membership atomically and idempotently. Explicitly claim the legacy
@@ -78,12 +78,14 @@ Core skills stay centrally published; users independently adopt versions.
 
 - [x] Audit existing single-workspace assumptions.
 - [x] Add account/identity/membership schema and reserved legacy owner.
-- [x] Scope storage operations and enforce workspace authorization (implemented on review branch; not deployed).
-- [ ] Configure identity provider and implement login/consent.
-- [ ] Implement authenticated dashboard.
+- [x] Scope storage operations and enforce workspace authorization (deployed with PostgreSQL RLS).
+- [x] Implement Cloudflare magic-link login and account consent (review branch; rollout pending).
+- [x] Implement minimal authenticated artifact/skills/connections views (review branch).
 - [ ] Complete isolation tests and two-device pilot.
 
 Migration 0004 is additive; migration 0005 rebuilds workspace tables and requires
 a coordinated cutover. See [the isolation review](workspace-isolation-review.md)
 for guarantees, tests, credential setup and rollout limits. No signup is exposed;
 this must not be presented as completed end-to-end multi-user support.
+
+Current login design, configuration and CI coverage: [magic-link login](magic-link-login.md).

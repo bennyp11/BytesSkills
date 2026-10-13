@@ -1,4 +1,4 @@
 {
-  "version": "0.8.2",
-  "summary": "Add the minimal BytesSkills.com landing page and persistent email waitlist, with an additive D1 migration, privacy notice, input validation, and failure handling."
+  "version": "0.9.0",
+  "summary": "Add invite-only Cloudflare magic-link login, private account dashboards, account-bound AI consent, and PostgreSQL authentication tests in CI."
 }

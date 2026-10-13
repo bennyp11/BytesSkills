@@ -58,3 +58,28 @@ jobs:
           cache-dependency-path: service/package-lock.json
       - run: npm ci
       - run: node --test test/postgres.test.mjs
+
+  email-results:
+    needs: [check, library, postgres]
+    if: ${{ always() && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) }}
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      # No checkout or untrusted code; this key can only send fixed-recipient reports.
+      - name: Send CI result through Cloudflare
+        env:
+          NOTIFY_KEY: ${{ secrets.BYTES_CI_NOTIFY_KEY }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          node --input-type=module <<'JS'
+          const {NOTIFY_KEY,RUN_ID,RUN_ATTEMPT,RESULTS}=process.env;
+          if(!NOTIFY_KEY)throw Error('CI notification key is missing');
+          const jobs=JSON.parse(RESULTS);
+          const r=await fetch('https://bytesskills-ci-email.maxxer.workers.dev/notify',{
+            method:'POST',headers:{Authorization:`Bearer ${NOTIFY_KEY}`,'Content-Type':'application/json'},
+            body:JSON.stringify({run_id:RUN_ID,attempt:RUN_ATTEMPT,results:Object.fromEntries(Object.entries(jobs).map(([n,j])=>[n,j.result]))})});
+          if(r.status!==202)throw Error(`Notification failed (${r.status})`);
+          console.log('CI email accepted by Cloudflare');
+          JS

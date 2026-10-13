@@ -8,45 +8,18 @@ import { ApiError, json, ownerKey, releaseKey, readBody, type Env } from "./comm
 import { Store } from "./store";
 import { Releases } from "./releases";
 import { mcp, libraryResult } from "./mcp";
-const escape = (s: string) =>
-  s.replace(/[&<>"']/g, (c) => "&#" + c.charCodeAt(0) + ";");
-const styles = `body{font:17px/1.6 system-ui;background:#f4f3ef;color:#222;margin:0;padding:8vh 24px}main{max-width:620px;margin:auto}h1{font-size:40px;letter-spacing:-1.4px}code{background:#e6e5e0;padding:4px 7px;border-radius:5px;overflow-wrap:anywhere}input[type=password]{box-sizing:border-box;width:100%;padding:14px;border:1px solid #aaa;border-radius:8px;font:inherit}button{padding:12px 20px;border:0;border-radius:8px;font:inherit;cursor:pointer;background:#202a23;color:white;margin:18px 8px 0 0}p{margin:18px 0}.muted{color:#666}label{display:block}`;
-function html(
-  body: string,
-  headers = new Headers(),
-  validatedRedirectUri?: string,
-) {
-  // Chrome applies form-action to the OAuth redirect as well as the form POST.
-  // Only accept a redirect already validated by the OAuth provider.
-  const callbackOrigin = validatedRedirectUri
-    ? new URL(validatedRedirectUri).origin
-    : undefined;
-  const formAction =
-    callbackOrigin && callbackOrigin !== "null"
-      ? `'self' ${callbackOrigin}`
-      : "'self'";
-  headers.set("Content-Type", "text/html; charset=utf-8");
-  headers.set("Cache-Control", "no-store");
-  headers.set(
-    "Content-Security-Policy",
-    `default-src 'none'; style-src 'unsafe-inline'; form-action ${formAction}; frame-ancestors 'none'; base-uri 'none'`,
-  );
-  // Preserve Origin on same-origin form POSTs; suppress cross-origin referrers.
-  headers.set("Referrer-Policy", "same-origin");
-  headers.set("X-Content-Type-Options", "nosniff");
-  return new Response(
-    `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>BytesSkills</title><style>${styles}</style><main>${body}</main></html>`,
-    { headers },
-  );
-}
+import {escape,html} from "./html";
+import {loginRoutes, browserSession, sessionCsrf, loginRedirect} from "./login";
 async function authorize(req: Request, env: Env) {
   const oauth = env.OAUTH_PROVIDER;
   if (req.method === "GET") {
     const auth = await oauth.parseAuthRequest(req);
+    const session = await browserSession(req, env);
+    if (env.LOGIN_ENABLED === "true" && !session) return loginRedirect(new URL(req.url).pathname + new URL(req.url).search);
     const details = await oauth.describeConsent(auth);
     const consent = await oauth.beginConsent(auth);
     return html(
-      `<p class="muted">BYTESSKILLS · PRIVATE WORKSPACE</p><h1>Connect ${escape(details.clientName)}</h1><p>${details.clientDomain ? "Client domain: <strong>" + escape(details.clientDomain) + "</strong>" : "This client registered itself; its name is not verified."}</p><p>Access returns to <strong>${escape(details.redirectHost)}</strong>.</p>${details.redirectIsLoopback ? "<p>This sends access to an app on your computer. Continue only if you started this connection.</p>" : ""}<form method="post"><input type="hidden" name="handle" value="${escape(consent.handle)}"><p>Enter your workspace access key to approve this connection.</p><input type="password" name="key" required autocomplete="current-password" aria-label="Workspace access key"><p>Permissions:</p><label><input type="checkbox" name="scope" value="bytes:read" checked> Read and search workspace content</label><label><input type="checkbox" name="scope" value="bytes:write" ${details.scope.includes("bytes:write") ? "checked" : ""}> Create artifacts and save revisions</label><label><input type="checkbox" name="scope" value="bytes:manage"> Publish skill instructions for this workspace</label><label><input type="checkbox" name="scope" value="offline_access" checked> Stay connected using refresh tokens</label><button name="decision" value="approve">Connect</button><button name="decision" value="deny" formnovalidate>Cancel</button></form>`,
+      `<p class="muted">BYTESSKILLS · PRIVATE WORKSPACE</p><h1>Connect ${escape(details.clientName)}</h1><p>${details.clientDomain ? "Client domain: <strong>" + escape(details.clientDomain) + "</strong>" : "This client registered itself; its name is not verified."}</p><p>Access returns to <strong>${escape(details.redirectHost)}</strong>.</p>${details.redirectIsLoopback ? "<p>This sends access to an app on your computer. Continue only if you started this connection.</p>" : ""}<form method="post"><input type="hidden" name="handle" value="${escape(consent.handle)}">${session ? `<input type="hidden" name="csrf" value="${session.csrf}"><p>Connect to your signed-in private workspace.</p>` : `<p>Enter your workspace access key to approve this connection.</p><input type="password" name="key" required autocomplete="current-password" aria-label="Workspace access key">`}<p>Permissions:</p><label><input type="checkbox" name="scope" value="bytes:read" checked> Read and search workspace content</label><label><input type="checkbox" name="scope" value="bytes:write" ${details.scope.includes("bytes:write") ? "checked" : ""}> Create artifacts and save revisions</label>${session ? "" : `<label><input type="checkbox" name="scope" value="bytes:manage"> Publish skill instructions for this workspace</label>`}<label><input type="checkbox" name="scope" value="offline_access" checked> Stay connected using refresh tokens</label><button name="decision" value="approve">Connect</button><button name="decision" value="deny" formnovalidate>Cancel</button></form>`,
       consent.headers,
       auth.redirectUri,
     );
@@ -56,25 +29,32 @@ async function authorize(req: Request, env: Env) {
     throw new ApiError(403, "Invalid form origin");
   const form = new URLSearchParams(await readBody(req, 16000)),
     handle = form.get("handle") ?? "";
+  const session = await browserSession(req, env);
+  if (env.LOGIN_ENABLED === "true") {
+    if (!session) throw new ApiError(401, "Sign in again");
+    sessionCsrf(req, env, form, session);
+  }
   if (form.get("decision") !== "approve") {
     const denied = await oauth.denyConsent(req, handle);
     return new Response(null, { status: 303, headers: denied.headers });
   }
-  if (!(await ownerKey(form.get("key") ?? "", env)))
+  if (!session && !(await ownerKey(form.get("key") ?? "", env)))
     throw new ApiError(
       401,
       "Invalid workspace access key. Go back and try again.",
     );
   const scopes = form.getAll("scope");
+  if (session && scopes.some(s=>!["bytes:read","bytes:write","offline_access"].includes(s)))
+    throw new ApiError(403, "Scope not allowed");
   if (!scopes.includes("bytes:read"))
     throw new ApiError(400, "Read permission is required");
   const approved = await oauth.approveConsent(req, handle, { scope: scopes });
   const { redirectTo } = await oauth.completeAuthorization({
     request: approved.request,
-    userId: "owner",
-    metadata: { workspace_id: env.WORKSPACE_ID },
+    userId: session?.account_id ?? "owner",
+    metadata: { workspace_id: session?.workspace_id ?? env.WORKSPACE_ID },
     scope: approved.request.scope,
-    props: { workspace_id: env.WORKSPACE_ID, scopes: approved.request.scope },
+    props: { workspace_id: session?.workspace_id ?? env.WORKSPACE_ID, ...(session ? {account_id:session.account_id} : {}), scopes: approved.request.scope },
   });
   approved.headers.set("Location", redirectTo);
   return new Response(null, { status: 303, headers: approved.headers });
@@ -230,10 +210,12 @@ const provider = new OAuthProvider<Env>({
   defaultHandler: {
     async fetch(req, env) {
       const url = new URL(req.url);
+      const login = await loginRoutes(req, env);
+      if (login) return login;
       if (url.pathname === "/authorize") return authorize(req, env);
       if (url.pathname.startsWith("/v1/")) return api(req, env);
       if (url.pathname === "/health")
-        return json({ service: "BytesSkills", version: "0.2.0", status: "ok", storage_contract: env.STORAGE_BACKEND === "postgres" ? "postgres-rls-v1" : "workspace-v1", release: env.RELEASE_VERSION ?? null, commit: env.RELEASE_COMMIT ?? null });
+        return json({ service: "BytesSkills", version: "0.2.0", status: "ok", login_mode: env.LOGIN_ENABLED === "true" ? "magic-link" : "owner-key", storage_contract: env.STORAGE_BACKEND === "postgres" ? "postgres-rls-v1" : "workspace-v1", release: env.RELEASE_VERSION ?? null, commit: env.RELEASE_COMMIT ?? null });
       if (url.pathname === "/")
         return html(
           `<p class="muted">BYTESSKILLS · MVP</p><h1>Your creative workspace,<br>across AI tools.</h1><p>Persistent concepts, hooks, scripts, and their history. Connect an AI client to your private workspace.</p><p>MCP endpoint</p><code>${escape(env.BASE_URL)}/mcp</code><p>Choose OAuth when connecting. Approve access with your workspace key.</p><p class="muted">Your content requires authentication. This service provides storage and workflow definitions; your AI supplies the creative work.</p>`,
@@ -270,6 +252,8 @@ export default {
   async fetch(req: Request, env: Env, ctx: ExecutionContext) {
     try {
       const url = new URL(req.url);
+      if (env.APP_URL && url.origin === env.APP_URL && url.pathname === "/") return new Response(null,{status:303,headers:{Location:"/app"}});
+      if (env.APP_URL && url.origin === env.APP_URL && !["/login","/app"].includes(url.pathname) && !url.pathname.startsWith("/auth/") && !url.pathname.startsWith("/app/")) return json({error:"Not found"},404);
       if (url.hostname === "bytesskills.com") {
         return Response.redirect(env.BASE_URL + url.pathname + url.search, 308);
       }

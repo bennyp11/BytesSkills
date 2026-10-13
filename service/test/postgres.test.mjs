@@ -6,6 +6,7 @@ import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
 import pg from 'pg';
+import {createHash} from 'node:crypto';
 import {migrate} from '../scripts/postgres-migrate.mjs';
 import {normalize,importSnapshot,verifyDatabase} from '../scripts/postgres-transfer.mjs';
 import {canonical,sha} from '../scripts/release-artifacts.mjs';
@@ -39,7 +40,7 @@ before(async()=>{
  for(const r of ['runtime','identity','publisher'])await admin.query(`ALTER ROLE bytes_${r} LOGIN`);
  env={STORAGE_BACKEND:'postgres',POSTGRES:{connectionString:urlFor('bytes_runtime')},PUBLISHER_DB:{connectionString:urlFor('bytes_publisher')},IDENTITY_DB:{connectionString:urlFor('bytes_identity')},BLOBS,WORKSPACE_ID:'acc3351e-d092-433c-a7e1-8fc3e807ebd4'};
  dir=await mkdtemp(join(tmpdir(),'bytes-pg-test-'));
- await build({stdin:{contents:`export {PostgresDatabase,postgresParameters} from './src/database';export {WorkspaceAccess} from './src/access';export {Store} from './src/store';export {Releases} from './src/releases';export {provisionVerifiedIdentity} from './src/accounts';`,resolveDir:process.cwd(),loader:'ts'},bundle:true,platform:'node',format:'esm',packages:'external',outfile:join(dir,'api.mjs')});
+ await build({stdin:{contents:`export {PostgresDatabase,postgresParameters} from './src/database';export {WorkspaceAccess} from './src/access';export {Store} from './src/store';export {Releases} from './src/releases';export {provisionVerifiedIdentity} from './src/accounts';export {loginRoutes,browserSession} from './src/login';`,resolveDir:process.cwd(),loader:'ts'},bundle:true,platform:'node',format:'esm',packages:'external',outfile:join(dir,'api.mjs')});
  // Bundle pg's CommonJS dependency too, via an entry created inside service.
  // External package resolution starts at the temporary file, so use the explicit pg path.
  const bundled=await readFile(join(dir,'api.mjs'),'utf8');
@@ -52,7 +53,7 @@ after(async()=>{
  if(control){if(dbName)await control.query(`DROP DATABASE IF EXISTS ${dbName} WITH (FORCE)`);if(rolesCreated)for(const r of ['runtime','identity','publisher'])await control.query(`DROP ROLE bytes_${r}`);await control.end();}
  if(dir)await rm(dir,{recursive:true,force:true});
 });
-const pgTest=(name,fn)=>test(name,{skip:!enabled},fn);
+const pgTest=(name,fn)=>test(name,{skip:!enabled,timeout:120000},fn);
 pgTest('legacy D1 import preserves canonical records, indexes, receipts, releases and snapshot cursors',async()=>{
  const workspace=env.WORKSPACE_ID,id=crypto.randomUUID(),pointer=`@concept/${id}:v1`,text='legacy body';
  const hash=sha(text),key=`blobs/sha256/${hash.slice(0,2)}/${hash}`;
@@ -115,7 +116,7 @@ pgTest('no identity and mismatched identity fail closed; runtime cannot administ
 });
 pgTest('FORCE RLS covers every tenant table; role attributes and default privileges are restricted',async()=>{
  const tables=await admin.query("SELECT relname,relrowsecurity,relforcerowsecurity FROM pg_class JOIN pg_namespace n ON n.oid=relnamespace WHERE n.nspname='bytes' AND relkind='r' AND relname NOT IN ('skill_releases','skill_revocations')");
- assert.equal(tables.rows.length,14);for(const t of tables.rows){assert.equal(t.relrowsecurity,true,t.relname);assert.equal(t.relforcerowsecurity,true,t.relname);}
+ assert.equal(tables.rows.length,18);for(const t of tables.rows){assert.equal(t.relrowsecurity,true,t.relname);assert.equal(t.relforcerowsecurity,true,t.relname);}
  const roles=await admin.query("SELECT rolsuper,rolbypassrls,rolcreaterole,rolcreatedb FROM pg_roles WHERE rolname LIKE 'bytes_%'");
  for(const r of roles.rows)assert.ok(Object.values(r).every(x=>x===false));
 });
@@ -197,7 +198,7 @@ pgTest('publisher cannot read workspace data, release adoption and workflows rem
 });
 pgTest('Cloudflare Worker uses Hyperdrive bindings for PostgreSQL storage and MCP tenant isolation',async()=>{
  const {Miniflare,convertV4MiniflareOptions}=await import('miniflare');
- const bundle=await build({entryPoints:['test/fixtures/tenancy-worker.ts'],bundle:true,write:false,format:'esm',platform:'node',target:'es2022',conditions:['workerd'],external:['cloudflare:sockets'],banner:{js:'import {createRequire} from "node:module"; const require=createRequire("/test-worker.js");'}});
+ const bundle=await build({entryPoints:['test/fixtures/tenancy-worker.ts'],bundle:true,write:false,format:'esm',platform:'node',target:'es2022',conditions:['workerd'],external:['cloudflare:*'],banner:{js:'import {createRequire} from "node:module"; const require=createRequire("/test-worker.js");'}});
  const mf=new Miniflare(convertV4MiniflareOptions({modules:true,script:bundle.outputFiles[0].text,
   compatibilityDate:'2026-10-01',compatibilityFlags:['nodejs_compat'],r2Buckets:['BLOBS'],
   hyperdrives:{POSTGRES:env.POSTGRES.connectionString,PUBLISHER_DB:env.PUBLISHER_DB.connectionString,IDENTITY_DB:env.IDENTITY_DB.connectionString},
@@ -218,4 +219,121 @@ pgTest('Cloudflare Worker uses Hyperdrive bindings for PostgreSQL storage and MC
   const own=await get(a);assert.notEqual(own.result?.isError,true,JSON.stringify(own));assert.match(JSON.stringify(own),/worker-private/);
   const foreign=await get(b);assert.equal(foreign.result.isError,true);assert.doesNotMatch(JSON.stringify(foreign),/worker-private/);
  }finally{await mf.dispose();}
+});
+pgTest('magic links are invite-only, browser-bound, expiring and atomically single-use; sessions revoke immediately',async()=>{
+ const identity=new api.PostgresDatabase(env.IDENTITY_DB.connectionString,undefined,'identity');
+ const h=()=>sha(crypto.randomUUID()),o='https://api.bytesskills.com',email='magic@example.com',browser=h();
+ await admin.query('INSERT INTO bytes.login_invites(email) VALUES($1)',[email]);
+ const start=async(e,token,b=browser,ip=h())=>row(identity,'SELECT login_start(?,?,?,?,?,?) AS ok',e,token,b,ip,o,'/app');
+ assert.equal((await start('unknown@example.com',h())).ok,false);
+ const token=h();assert.equal((await start(email,token)).ok,true);
+ const finish=(t,b,s=h(),origin=o)=>row(identity,'SELECT * FROM login_finish(?,?,?,?,?)',t,b,origin,s,null);
+ assert.equal(await finish(token,h()),null);assert.equal(await finish(token,browser,h(),'https://other.example'),null);
+ const session=h();const raced=await Promise.all([finish(token,browser,session),finish(token,browser,h())]);
+ assert.equal(raced.filter(Boolean).length,1);const who=raced.find(Boolean);
+ assert.equal(await finish(token,browser),null);
+ assert.notEqual(who.account_id,'legacy-owner');
+ // Use a separate known session because either concurrent redemption may win.
+ const token2=h(),session2=h();assert.equal((await start(email,token2)).ok,true);
+ const again=await finish(token2,browser,session2);assert.equal(again.account_id,who.account_id);
+ assert.equal((await row(identity,'SELECT * FROM login_session(?,?)',session2,o)).account_id,who.account_id);
+ assert.equal(await row(identity,'SELECT * FROM login_session(?,?)',session2,'https://other.example'),null);
+ await identity.prepare('SELECT login_logout(?,?)').bind(session2,o).run();assert.equal(await row(identity,'SELECT * FROM login_session(?,?)',session2,o),null);
+ const expired=h();assert.equal((await start(email,expired)).ok,true);await admin.query('UPDATE bytes.login_tokens SET expires=now()-interval \'1 second\' WHERE hash=$1',[expired]);assert.equal(await finish(expired,browser),null);
+ assert.equal((await start(email,h())).ok,false);
+ for(const table of ['login_tokens','browser_sessions','login_invites'])await assert.rejects(scoped(who).prepare(`SELECT * FROM ${table}`).all(),/permission denied/);
+});
+pgTest('login HTTP flow sends a confirmation link, ignores scanner GETs, blocks CSRF and protects the dashboard',async()=>{
+ const messages=[],o='https://api.bytesskills.com',email='http-login@example.com';
+ const loginEnv={...env,BASE_URL:o,APP_URL:'https://app.bytesskills.com',LOGIN_ENABLED:'true',EMAIL_FROM:'login@example.com',EMAIL:{async send(m){messages.push(m);}}};
+ await admin.query('INSERT INTO bytes.login_invites(email) VALUES($1)',[email]);
+ const request=(path,opts={})=>new Request(o+path,opts);
+ const page=await api.loginRoutes(request('/login?next=https://evil.example'),loginEnv);
+ const nonce=page.headers.get('set-cookie').split(';')[0];assert.match(nonce,/^__Host-bytes-login=/);assert.match(page.headers.get('set-cookie'),/Secure; HttpOnly; SameSite=Lax/);
+ const post=(path,data,cookie=nonce,origin=o)=>request(path,{method:'POST',headers:{Cookie:cookie,Origin:origin,'CF-Connecting-IP':'192.0.2.1'},body:new URLSearchParams(data)});
+ await assert.rejects(api.loginRoutes(post('/auth/request',{email},nonce,'https://evil.example'),loginEnv),/origin/);
+ await api.loginRoutes(post('/auth/request',{email,next:'//evil.example'}),loginEnv);assert.equal(messages.length,1);
+ const link=messages[0].text.match(/https:\/\/[^\s]+\/auth\/verify\?token=[a-f0-9]+/)[0],token=new URL(link).searchParams.get('token');
+ assert.match(messages[0].text,/10 minutes/);
+ const preview=await api.loginRoutes(new Request(link,{headers:{Cookie:nonce}}),loginEnv);assert.equal(preview.status,200);assert.equal(preview.headers.get('referrer-policy'),'no-referrer');
+ await assert.rejects(api.loginRoutes(new Request(link),loginEnv),/browser/);
+ await assert.rejects(api.loginRoutes(post('/auth/complete',{token,owner_key:'wrong-owner-proof'}),loginEnv),/owner proof/);
+ const confirmed=await api.loginRoutes(post('/auth/complete',{token}),loginEnv);assert.equal(confirmed.status,303);assert.equal(confirmed.headers.get('location'),'/app');
+ const sessionCookie=confirmed.headers.getSetCookie().find(s=>s.startsWith('__Host-bytes-session=')).split(';')[0];
+ await assert.rejects(api.loginRoutes(post('/auth/complete',{token}),loginEnv),/already used/);
+ const dashboard=await api.loginRoutes(request('/app',{headers:{Cookie:sessionCookie}}),loginEnv);assert.equal(dashboard.status,200);
+ const body=await dashboard.text();assert.match(body,/Your artifacts/);const csrf=body.match(/name="csrf" value="([^"]+)"/)[1];
+ await assert.rejects(api.loginRoutes(post('/auth/logout',{csrf:'bad'},sessionCookie),loginEnv),/confirmation/);
+ await api.loginRoutes(post('/auth/logout',{csrf},sessionCookie),loginEnv);
+ assert.equal(await api.browserSession(request('/app',{headers:{Cookie:sessionCookie}}),loginEnv),null);
+});
+pgTest('complete Worker login → account consent → OAuth → MCP rejects cross-account pointers and management scopes',async()=>{
+ const {Miniflare,convertV4MiniflareOptions}=await import('miniflare');
+ const bundle=await build({entryPoints:['test/fixtures/login-worker.ts'],bundle:true,write:false,format:'esm',platform:'node',target:'es2022',conditions:['workerd'],external:['cloudflare:*'],banner:{js:'import {createRequire} from "node:module"; const require=createRequire("/test-worker.js");'}});
+ const base='https://api.bytesskills.com';
+ const mf=new Miniflare(convertV4MiniflareOptions({modules:true,script:bundle.outputFiles[0].text,
+ compatibilityDate:'2026-10-01',compatibilityFlags:['nodejs_compat'],r2Buckets:['BLOBS'],kvNamespaces:['OAUTH_KV'],
+ hyperdrives:{POSTGRES:env.POSTGRES.connectionString,PUBLISHER_DB:env.PUBLISHER_DB.connectionString,IDENTITY_DB:env.IDENTITY_DB.connectionString},
+ bindings:{STORAGE_BACKEND:'postgres',WORKSPACE_ID:env.WORKSPACE_ID,BASE_URL:base,APP_URL:'https://app.bytesskills.com',LOGIN_ENABLED:'true',EMAIL_FROM:'login@example.com',OWNER_KEY_SHA256:sha('test-only-owner-key-000000000000000000000000')}}));
+ const cookies=r=>r.headers.getSetCookie().map(c=>c.split(';')[0]).join('; ');
+ const send=(path,opts={})=>mf.dispatchFetch(base+path,{redirect:'manual',...opts});
+ const post=(path,data,cookie)=>send(path,{method:'POST',headers:{Origin:base,Cookie:cookie??'','Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams(data)});
+ try{
+ const login=async email=>{
+ await admin.query('INSERT INTO bytes.login_invites(email) VALUES($1)',[email]);
+ const first=await send('/login');const nonce=cookies(first);
+ assert.equal((await post('/auth/request',{email},nonce)).status,200);
+ const messages=await (await send('/test/mail')).json();assert.equal(messages.length,1);
+ const token=messages[0].text.match(/token=([a-f0-9]+)/)[1];
+ const done=await post('/auth/complete',{token},nonce);assert.equal(done.status,303,await done.clone().text());return cookies(done);
+ };
+ const a=await login('worker-login-a@example.com'),b=await login('worker-login-b@example.com');
+ const register=await send('/oauth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({client_name:'CI user connection',redirect_uris:['http://localhost:8484/callback'],token_endpoint_auth_method:'none',grant_types:['authorization_code','refresh_token'],response_types:['code']})});
+ assert.equal(register.status,201);const client=await register.json();
+ const verifier='v'.repeat(64),challenge=createHash('sha256').update(verifier).digest('base64url');
+ const params=new URLSearchParams({client_id:client.client_id,redirect_uri:'http://localhost:8484/callback',response_type:'code',scope:'bytes:read bytes:write offline_access',resource:base+'/mcp',state:'ci-state',code_challenge:challenge,code_challenge_method:'S256'});
+ assert.equal((await send('/authorize?'+params)).status,303);
+ const consent=await send('/authorize?'+params,{headers:{Cookie:a}});const text=await consent.text();assert.equal(consent.status,200,text);
+ assert.doesNotMatch(text,/name="key"/);assert.doesNotMatch(text,/value="bytes:manage"/);
+ const handle=text.match(/name="handle" value="([^"]+)"/)[1],csrf=text.match(/name="csrf" value="([^"]+)"/)[1],cookie=a+'; '+cookies(consent);
+ assert.equal((await post('/authorize',{handle,csrf,decision:'approve',scope:'bytes:manage'},cookie)).status,403);
+ assert.equal((await post('/authorize',{handle,csrf,decision:'approve',scope:'bytes:read'},b+'; '+cookies(consent))).status,403);
+ const approved=await post('/authorize',{handle,csrf,decision:'approve',scope:'bytes:read'},cookie);assert.equal(approved.status,303,await approved.clone().text());
+ const code=new URL(approved.headers.get('location')).searchParams.get('code');
+ const tokenResponse=await post('/oauth/token',{grant_type:'authorization_code',client_id:client.client_id,code,redirect_uri:'http://localhost:8484/callback',code_verifier:verifier,resource:base+'/mcp'});assert.equal(tokenResponse.status,200);const tokens=await tokenResponse.json();
+ const call=async(name,args={})=>{const r=await send('/mcp',{method:'POST',headers:{Authorization:'Bearer '+tokens.access_token,'Content-Type':'application/json',Accept:'application/json, text/event-stream'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/call',params:{name,arguments:args}})});assert.equal(r.status,200);return r.json();};
+ const workspace=await call('bytes_workspace');assert.notEqual(workspace.result.isError,true,JSON.stringify(workspace));assert.doesNotMatch(JSON.stringify(workspace),new RegExp(env.WORKSPACE_ID));
+ const legacy=(await admin.query("SELECT pointer FROM bytes.revisions WHERE workspace_id=$1 LIMIT 1",[env.WORKSPACE_ID])).rows[0].pointer;
+ assert.equal((await call('bytes_get',{pointer:legacy,include_content:true})).result.isError,true);
+ assert.equal((await send('/app/artifact?pointer='+encodeURIComponent(legacy),{headers:{Cookie:a}})).status,404);
+ const getCsrf=async cookie=>(await (await send('/app/connections',{headers:{Cookie:cookie}})).text()).match(/name="csrf" value="([^"]+)"/)[1];
+ const connections=await (await send('/app/connections',{headers:{Cookie:a}})).text();
+ const grant=connections.match(/name="grant" value="([^"]+)"/)[1];
+ await post('/app/revoke',{grant,csrf:await getCsrf(b)},b);
+ assert.notEqual((await call('bytes_workspace')).result.isError,true,'Another account cannot revoke this grant');
+ const refreshed=await post('/oauth/token',{grant_type:'refresh_token',client_id:client.client_id,refresh_token:tokens.refresh_token,resource:base+'/mcp'});
+ assert.equal(refreshed.status,200,await refreshed.clone().text());const fresh=await refreshed.json();tokens.access_token=fresh.access_token;
+ assert.notEqual((await call('bytes_workspace')).result.isError,true);
+ assert.equal((await call('bytes_save',{type:'concept',title:'denied',text:'read-only grant',request_id:crypto.randomUUID()})).result.isError,true);
+ await post('/app/revoke',{grant,csrf:await getCsrf(a)},a);
+ const rejected=await send('/mcp',{method:'POST',headers:{Authorization:'Bearer '+tokens.access_token,'Content-Type':'application/json'},body:'{}'});assert.equal(rejected.status,401);
+ const rejectedRefresh=await post('/oauth/token',{grant_type:'refresh_token',client_id:client.client_id,refresh_token:fresh.refresh_token,resource:base+'/mcp'});assert.equal(rejectedRefresh.status,400);
+
+ }finally{await mf.dispose();}
+});
+pgTest('legacy ownership requires explicit claim and cannot be reassigned; disabled accounts invalidate sessions',async()=>{
+ const db=new api.PostgresDatabase(env.IDENTITY_DB.connectionString,undefined,'identity'),o='https://api.bytesskills.com',email='claim@example.com';
+ await admin.query('INSERT INTO bytes.login_invites(email) VALUES($1)',[email]);
+ const b=sha('claim-browser'),h=sha('claim-token'),s=sha('claim-session');
+ assert.equal((await row(db,'SELECT login_start(?,?,?,?,?,?) AS ok',email,h,b,sha('claim-ip'),o,'/app')).ok,true);
+ const result=await row(db,'SELECT * FROM login_finish(?,?,?,?,?)',h,b,o,s,env.WORKSPACE_ID);
+ assert.equal(result.account_id,'legacy-owner');assert.equal(result.workspace_id,env.WORKSPACE_ID);
+ assert.equal((await row(db,'SELECT * FROM login_session(?,?)',s,o)).account_id,'legacy-owner');
+ await admin.query("UPDATE bytes.accounts SET status='disabled' WHERE id='legacy-owner'");
+ assert.equal(await row(db,'SELECT * FROM login_session(?,?)',s,o),null);
+ await admin.query("UPDATE bytes.accounts SET status='active' WHERE id='legacy-owner'");
+ const e2='claim-other@example.com',h2=sha('claim-other-token');await admin.query('INSERT INTO bytes.login_invites(email) VALUES($1)',[e2]);
+ await row(db,'SELECT login_start(?,?,?,?,?,?) AS ok',e2,h2,b,sha('claim-other-ip'),o,'/app');
+ assert.equal(await row(db,'SELECT * FROM login_finish(?,?,?,?,?)',h2,b,o,sha('claim-other-session'),env.WORKSPACE_ID),null);
+ assert.equal((await admin.query("SELECT subject FROM bytes.account_identities WHERE account_id='legacy-owner'")).rows[0].subject,email);
 });
