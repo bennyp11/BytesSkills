@@ -38,9 +38,10 @@ sequenceDiagram
   restricted to `/app` or the local OAuth consent route.
 - Email is normalized to lower case as an explicit v1 identity policy; aliases and
   plus addresses are not collapsed. Accounts retain stable internal UUIDs. Legacy
-  data is never assigned by matching email or signup order. On the first login,
-  the original owner can provide the existing owner key to claim that workspace.
-  Claims are serialized and cannot overwrite an existing identity or owner.
+  data is never assigned by matching email or signup order. An operator can prelink a known email to an existing account using
+  `scripts/link-existing-account.mjs` with the separate administrator credential.
+  The tool refuses reassignment and creates no session. The user must still verify
+  their email. Browser-supplied workspace claims are rejected.
 - The identity connection has function execution privileges, not direct table
   access. Runtime and publisher credentials cannot read login tokens or sessions.
   All four authentication tables have FORCE RLS and a schema-owner policy.
@@ -67,7 +68,7 @@ an account or revoke sessions separately to stop existing access. Never commit
 emails, invitation records, tokens, credentials or workspace exports.
 
 Before rollout: CI must pass the PostgreSQL and full Worker/OAuth tests. After
-rollout: the owner signs in and claims the original workspace; a second invited
+rollout: the operator prelinks the owner email, then the owner signs in; a second invited
 person signs in independently and authorizes an AI. Verify each user's artifacts
 from another device, plus cross-account pointer, file, history and grant denial.
 Do not enable general signup before that pilot is complete.
@@ -87,3 +88,13 @@ R2, OAuth or deployment credentials. GitHub holds only its narrowly scoped invoc
 key (`BYTES_CI_NOTIFY_KEY`). Recipient and key hash are Worker secrets. The notification
 job checks out no code and does not execute test artifacts. Cloudflare acceptance
 confirms queuing, not inbox delivery. A notification failure is visible as a failed job.
+
+## Owner-key retirement (0.9.2)
+
+Production email mode rejects the former owner bearer key for REST and MCP even
+if its hash remains configured. The claim form is removed and the database rejects
+legacy claim arguments. Signed OAuth grants retain their original workspace scope.
+Release automation uses BYTES_RELEASE_KEY in GitHub and RELEASE_KEY_SHA256 in the
+Worker; that credential can only read/publish the core release catalog. It cannot
+access workspace records or MCP. Remove the old production owner secret after rollout.
+Local D1 compatibility fixtures may still exercise the retired pre-login mode.

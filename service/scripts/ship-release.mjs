@@ -13,8 +13,8 @@ const manifest = await verify(dir,commit,target);
 const registered = Object.keys(JSON.parse(await readFile('../plugins/bytesskills-core/skills/bytes/contracts/runtime.json','utf8')).skills).sort();
 if (JSON.stringify(manifest.skills.map(s=>s.skill).sort()) !== JSON.stringify(registered)) throw Error('Incomplete release skill set');
 const base = 'https://api.bytesskills.com'; // Never send a CI credential to an asset-supplied host.
-const key = process.env.BYTES_OWNER_KEY;
-if (!key) throw Error('Missing production BYTES_OWNER_KEY secret');
+const key = process.env.BYTES_RELEASE_KEY;
+if (!key) throw Error('Missing production BYTES_RELEASE_KEY secret');
 async function request(path, body, auth = true, timeoutMs = 30000) {
   const response = await fetch(base+path,{method:body ? 'POST':'GET',redirect:'error',signal:AbortSignal.timeout(timeoutMs),headers:{...(auth ? {Authorization:'Bearer '+key}:{}),'Content-Type':'application/json',Accept:'application/json, text/event-stream'},body:body ? JSON.stringify(body):undefined});
   if (!response.ok) { const error = Error(`Service ${path} failed: HTTP ${response.status}`); error.status = response.status; throw error; }
@@ -54,9 +54,9 @@ if (mode === 'preflight') {
   console.log('Preflight passed; no adoption preferences changed.');
 } else {
   if (health.release !== target || health.commit !== commit) throw Error('Deployed Worker identity does not match release');
-  // Read-only MCP discovery tests auth and the shared tool surface without starting runs.
-  const rpc = await request('/mcp',{jsonrpc:'2.0',id:1,method:'tools/list',params:{}});
-  if (!rpc.result?.tools?.some(t=>t.name==='bytes_begin') || !rpc.result.tools.some(t=>t.name==='bytes_updates')) throw Error('MCP discovery verification failed');
+  // Public discovery proves the endpoint is available without granting CI workspace access.
+  const discovery = await request('/.well-known/oauth-protected-resource/mcp', null, false);
+  if (discovery.resource !== base+'/mcp') throw Error('MCP resource discovery verification failed');
   for (const item of manifest.skills) {
     await request('/v1/releases',JSON.parse(await readFile(resolve(dir,item.file),'utf8')));
     console.log(`Published or verified ${item.skill}@${target}`);

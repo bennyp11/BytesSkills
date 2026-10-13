@@ -218,7 +218,7 @@ const provider = new OAuthProvider<Env>({
         return json({ service: "BytesSkills", version: "0.2.0", status: "ok", login_mode: env.LOGIN_ENABLED === "true" ? "magic-link" : "owner-key", storage_contract: env.STORAGE_BACKEND === "postgres" ? "postgres-rls-v1" : "workspace-v1", release: env.RELEASE_VERSION ?? null, commit: env.RELEASE_COMMIT ?? null });
       if (url.pathname === "/")
         return html(
-          `<p class="muted">BYTESSKILLS · MVP</p><h1>Your creative workspace,<br>across AI tools.</h1><p>Persistent concepts, hooks, scripts, and their history. Connect an AI client to your private workspace.</p><p>MCP endpoint</p><code>${escape(env.BASE_URL)}/mcp</code><p>Choose OAuth when connecting. Approve access with your workspace key.</p><p class="muted">Your content requires authentication. This service provides storage and workflow definitions; your AI supplies the creative work.</p>`,
+          `<p class="muted">BYTESSKILLS · MVP</p><h1>Your creative workspace,<br>across AI tools.</h1><p>Persistent concepts, hooks, scripts, and their history. Connect an AI client to your private workspace.</p><p>MCP endpoint</p><code>${escape(env.BASE_URL)}/mcp</code><p>Choose OAuth when connecting. Sign in with your invited email address to approve access.</p><p class="muted">Your content requires authentication. This service provides storage and workflow definitions; your AI supplies the creative work.</p>`,
         );
       return json({ error: "Not found" }, 404);
     },

@@ -14,7 +14,7 @@ export interface Env {
   EMAIL?: {send(message:{to:string;from:string;subject:string;text:string}):Promise<unknown>};
   BASE_URL: string;
   WORKSPACE_ID: string;
-  OWNER_KEY_SHA256: string;
+  OWNER_KEY_SHA256?: string;
   RELEASE_KEY_SHA256?: string;
   RELEASE_VERSION?: string;
   RELEASE_COMMIT?: string;
@@ -58,7 +58,7 @@ export async function sha(
     .map((x) => x.toString(16).padStart(2, "0"))
     .join("");
 }
-export const ownerKey = (key: string, env: Env) => keyMatches(key, env.OWNER_KEY_SHA256);
+export const ownerKey = (key: string, env: Env) => env.LOGIN_ENABLED === "true" ? Promise.resolve(false) : keyMatches(key, env.OWNER_KEY_SHA256);
 export const releaseKey = (key: string, env: Env) => keyMatches(key, env.RELEASE_KEY_SHA256);
 async function keyMatches(key: string, expected?: string) {
   if (!expected || !/^[a-f0-9]{64}$/.test(expected) || key.length < 32 || key.length > 256)
