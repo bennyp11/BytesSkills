@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { canonical, sha, verify, version } from '../scripts/release-artifacts.mjs';
+import { canonical, sha, verify, version, deployedVersion } from '../scripts/release-artifacts.mjs';
 test('release identity and every asset are checked before deployment', async () => {
   const dir = await mkdtemp(join(tmpdir(),'bytes-manifest-'));
   const commit = 'a'.repeat(40);
@@ -29,4 +29,12 @@ test('release identity and every asset are checked before deployment', async () 
 test('release versions reject shell text, prereleases and leading zeros',()=>{
   for(const input of ['v0.8.0','01.0.0','1.0.0-beta','1.0.0;echo bad','']) assert.throws(()=>version(input));
   assert.equal(version('1.20.3'),'1.20.3');
+});
+
+ test('deployed versions accept valid build metadata without weakening release versions', () => {
+  assert.equal(deployedVersion('0.8.1+postgres-cutover'), '0.8.1');
+  assert.equal(deployedVersion('1.20.3+build.001'), '1.20.3');
+  assert.equal(deployedVersion('1.20.3'), '1.20.3');
+  for (const input of ['1.0.0+', '1.0.0+x..y', '1.0.0+foo/bar', '1.0.0-beta', '01.0.0+x', '1.0.0+x;echo bad', null]) assert.throws(() => deployedVersion(input));
+  assert.throws(() => version('0.8.1+postgres-cutover'));
 });

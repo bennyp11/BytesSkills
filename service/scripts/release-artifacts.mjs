@@ -11,6 +11,12 @@ export function version(value) {
   if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(value)) throw Error('Expected stable semantic version');
   return value;
 }
+// Deployment labels may include SemVer build metadata from an operational cutover.
+// Release artifacts and tags still require plain stable versions.
+export function deployedVersion(value) {
+  if (typeof value !== 'string' || !/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/.test(value)) throw Error('Invalid deployed release version');
+  return version(value.split('+')[0]);
+}
 export async function verify(dir, expectedCommit, expectedVersion) {
   const manifest = JSON.parse(await readFile(resolve(dir, 'manifest.json'), 'utf8'));
   if (manifest.schema_version !== 1 || manifest.commit !== expectedCommit || manifest.version !== version(expectedVersion)) throw Error('Release identity mismatch');
