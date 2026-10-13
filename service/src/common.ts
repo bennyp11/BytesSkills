@@ -8,6 +8,10 @@ export interface Env {
   BLOBS: R2Bucket;
   OAUTH_KV: KVNamespace;
   OAUTH_PROVIDER: OAuthHelpers;
+  LOGIN_ENABLED?: string;
+  APP_URL?: string;
+  EMAIL_FROM?: string;
+  EMAIL?: {send(message:{to:string;from:string;subject:string;text:string}):Promise<unknown>};
   BASE_URL: string;
   WORKSPACE_ID: string;
   OWNER_KEY_SHA256: string;

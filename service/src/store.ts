@@ -439,7 +439,7 @@ export class Store {
       `SELECT h.* FROM heads h ${terms.length ? "WHERE " + terms.join(" AND ") : ""} ORDER BY h.id LIMIT ?`,
     )
       .bind(...args, q.limit + 1)
-      .all<{ id: string }>();
+      .all<{ id: string; pointer: string; title: string }>();
     return {
       items: rows.results.slice(0, q.limit),
       next_cursor:

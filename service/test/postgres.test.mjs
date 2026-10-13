@@ -39,7 +39,7 @@ before(async()=>{
  for(const r of ['runtime','identity','publisher'])await admin.query(`ALTER ROLE bytes_${r} LOGIN`);
  env={STORAGE_BACKEND:'postgres',POSTGRES:{connectionString:urlFor('bytes_runtime')},PUBLISHER_DB:{connectionString:urlFor('bytes_publisher')},IDENTITY_DB:{connectionString:urlFor('bytes_identity')},BLOBS,WORKSPACE_ID:'acc3351e-d092-433c-a7e1-8fc3e807ebd4'};
  dir=await mkdtemp(join(tmpdir(),'bytes-pg-test-'));
- await build({stdin:{contents:`export {PostgresDatabase,postgresParameters} from './src/database';export {WorkspaceAccess} from './src/access';export {Store} from './src/store';export {Releases} from './src/releases';export {provisionVerifiedIdentity} from './src/accounts';`,resolveDir:process.cwd(),loader:'ts'},bundle:true,platform:'node',format:'esm',packages:'external',outfile:join(dir,'api.mjs')});
+ await build({stdin:{contents:`export {PostgresDatabase,postgresParameters} from './src/database';export {WorkspaceAccess} from './src/access';export {Store} from './src/store';export {Releases} from './src/releases';export {provisionVerifiedIdentity} from './src/accounts';export {loginRoutes,browserSession} from './src/login';`,resolveDir:process.cwd(),loader:'ts'},bundle:true,platform:'node',format:'esm',packages:'external',outfile:join(dir,'api.mjs')});
  // Bundle pg's CommonJS dependency too, via an entry created inside service.
  // External package resolution starts at the temporary file, so use the explicit pg path.
  const bundled=await readFile(join(dir,'api.mjs'),'utf8');
@@ -218,4 +218,50 @@ pgTest('Cloudflare Worker uses Hyperdrive bindings for PostgreSQL storage and MC
   const own=await get(a);assert.notEqual(own.result?.isError,true,JSON.stringify(own));assert.match(JSON.stringify(own),/worker-private/);
   const foreign=await get(b);assert.equal(foreign.result.isError,true);assert.doesNotMatch(JSON.stringify(foreign),/worker-private/);
  }finally{await mf.dispose();}
+});
+pgTest('magic links are invite-only, browser-bound, expiring and atomically single-use; sessions revoke immediately',async()=>{
+ const identity=new api.PostgresDatabase(env.IDENTITY_DB.connectionString,undefined,'identity');
+ const h=()=>sha(crypto.randomUUID()),o='https://api.bytesskills.com',email='magic@example.com',browser=h();
+ await admin.query('INSERT INTO bytes.login_invites(email) VALUES($1)',[email]);
+ const start=async(e,token,b=browser,ip=h())=>row(identity,'SELECT login_start(?,?,?,?,?,?) AS ok',e,token,b,ip,o,'/app');
+ assert.equal((await start('unknown@example.com',h())).ok,false);
+ const token=h();assert.equal((await start(email,token)).ok,true);
+ const finish=(t,b,s=h(),origin=o)=>row(identity,'SELECT * FROM login_finish(?,?,?,?,?)',t,b,origin,s,null);
+ assert.equal(await finish(token,h()),null);assert.equal(await finish(token,browser,h(),'https://other.example'),null);
+ const session=h();const raced=await Promise.all([finish(token,browser,session),finish(token,browser,h())]);
+ assert.equal(raced.filter(Boolean).length,1);const who=raced.find(Boolean);
+ assert.equal(await finish(token,browser),null);
+ assert.notEqual(who.account_id,'legacy-owner');
+ // Use a separate known session because either concurrent redemption may win.
+ const token2=h(),session2=h();assert.equal((await start(email,token2)).ok,true);
+ const again=await finish(token2,browser,session2);assert.equal(again.account_id,who.account_id);
+ assert.equal((await row(identity,'SELECT * FROM login_session(?,?)',session2,o)).account_id,who.account_id);
+ assert.equal(await row(identity,'SELECT * FROM login_session(?,?)',session2,'https://other.example'),null);
+ await identity.prepare('SELECT login_logout(?,?)').bind(session2,o).run();assert.equal(await row(identity,'SELECT * FROM login_session(?,?)',session2,o),null);
+ const expired=h();assert.equal((await start(email,expired)).ok,true);await admin.query('UPDATE bytes.login_tokens SET expires=now()-interval \'1 second\' WHERE hash=$1',[expired]);assert.equal(await finish(expired,browser),null);
+ assert.equal((await start(email,h())).ok,false);
+ for(const table of ['login_tokens','browser_sessions','login_invites'])await assert.rejects(scoped(who).prepare(`SELECT * FROM ${table}`).all(),/permission denied/);
+});
+pgTest('login HTTP flow sends a confirmation link, ignores scanner GETs, blocks CSRF and protects the dashboard',async()=>{
+ const messages=[],o='https://api.bytesskills.com',email='http-login@example.com';
+ const loginEnv={...env,BASE_URL:o,APP_URL:'https://app.bytesskills.com',LOGIN_ENABLED:'true',EMAIL_FROM:'login@example.com',EMAIL:{async send(m){messages.push(m);}}};
+ await admin.query('INSERT INTO bytes.login_invites(email) VALUES($1)',[email]);
+ const request=(path,opts={})=>new Request(o+path,opts);
+ const page=await api.loginRoutes(request('/login?next=https://evil.example'),loginEnv);
+ const nonce=page.headers.get('set-cookie').split(';')[0];assert.match(nonce,/^__Host-bytes-login=/);assert.match(page.headers.get('set-cookie'),/Secure; HttpOnly; SameSite=Lax/);
+ const post=(path,data,cookie=nonce,origin=o)=>request(path,{method:'POST',headers:{Cookie:cookie,Origin:origin,'CF-Connecting-IP':'192.0.2.1'},body:new URLSearchParams(data)});
+ await assert.rejects(api.loginRoutes(post('/auth/request',{email},nonce,'https://evil.example'),loginEnv),/origin/);
+ await api.loginRoutes(post('/auth/request',{email,next:'//evil.example'}),loginEnv);assert.equal(messages.length,1);
+ const link=messages[0].text.match(/https:\/\/[^\s]+\/auth\/verify\?token=[a-f0-9]+/)[0],token=new URL(link).searchParams.get('token');
+ assert.match(messages[0].text,/10 minutes/);
+ const preview=await api.loginRoutes(new Request(link,{headers:{Cookie:nonce}}),loginEnv);assert.equal(preview.status,200);assert.equal(preview.headers.get('referrer-policy'),'no-referrer');
+ await assert.rejects(api.loginRoutes(new Request(link),loginEnv),/browser/);
+ const confirmed=await api.loginRoutes(post('/auth/complete',{token}),loginEnv);assert.equal(confirmed.status,303);assert.equal(confirmed.headers.get('location'),'/app');
+ const sessionCookie=confirmed.headers.getSetCookie().find(s=>s.startsWith('__Host-bytes-session=')).split(';')[0];
+ await assert.rejects(api.loginRoutes(post('/auth/complete',{token}),loginEnv),/already used/);
+ const dashboard=await api.loginRoutes(request('/app',{headers:{Cookie:sessionCookie}}),loginEnv);assert.equal(dashboard.status,200);
+ const body=await dashboard.text();assert.match(body,/Your artifacts/);const csrf=body.match(/name="csrf" value="([^"]+)"/)[1];
+ await assert.rejects(api.loginRoutes(post('/auth/logout',{csrf:'bad'},sessionCookie),loginEnv),/confirmation/);
+ await api.loginRoutes(post('/auth/logout',{csrf},sessionCookie),loginEnv);
+ assert.equal(await api.browserSession(request('/app',{headers:{Cookie:sessionCookie}}),loginEnv),null);
 });
