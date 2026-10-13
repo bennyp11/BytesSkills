@@ -9,6 +9,8 @@ const base = process.env.BYTES_URL ?? "https://api.bytesskills.com",
 const headers = { Authorization: "Bearer " + key };
 const health = await fetch(base + "/health");
 assert.equal(health.status, 200);
+const loginMode=(await health.json()).login_mode;
+const oauthChecks=[];
 assert.equal((await fetch(base + "/v1/query")).status, 401);
 const challenge = await fetch(base + "/mcp", {
   method: "POST",
@@ -78,7 +80,10 @@ await call("bytes_save", {
   status: "archived",
 });
 await client.close();
-// Exercise browser-bound consent, PKCE, refresh, and write scope through OAuth.
+// Magic-link OAuth is covered end-to-end in PostgreSQL CI; live email redemption
+// requires the human mailbox and must not be replaced by an administrator bypass.
+if(loginMode !== "magic-link") {
+// Exercise legacy browser-bound consent, PKCE, refresh, and write scope through OAuth.
 const reg = await fetch(base + "/oauth/register", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
@@ -184,6 +189,8 @@ for (const grant of grants.items ?? [])
     });
     assert.equal(r.status, 200);
   }
+oauthChecks.push("OAuth-PKCE-consent","OAuth-write-scope","refresh-token");
+}
 const receipt = {
   tested_at: new Date().toISOString(),
   base_url: base,
@@ -198,11 +205,10 @@ const receipt = {
     "revision",
     "stale-write-rejection",
     "archive",
-    "OAuth-PKCE-consent",
-    "OAuth-write-scope",
-    "refresh-token",
+    ...oauthChecks,
   ],
   test_run: created.pointer,
+  magic_link_live_pilot: loginMode === "magic-link" ? "requires human email confirmation" : "not enabled",
 };
 await writeFile(
   ".secrets/live-verification.json",

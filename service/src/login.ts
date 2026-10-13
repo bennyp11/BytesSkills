@@ -26,7 +26,7 @@ export async function loginRoutes(req:Request,env:Env):Promise<Response|null>{
  if(env.LOGIN_ENABLED!=='true')throw new ApiError(404,'Not found');
  const o=origin(req,env);
  if(p==='/login'&&req.method==='GET'){
-  const nonce=random();return html(`<h1>Sign in to BytesSkills</h1><p>Enter your invited email address. Open the link in this browser.</p><form method="post" action="/auth/request"><input type="email" name="email" required maxlength="254" autocomplete="email"><input type="hidden" name="next" value="${escape(destination(u.searchParams.get('next')??'/app'))}"><button>Send sign-in link</button></form>`,new Headers({'Set-Cookie':setCookie('__Host-bytes-login',nonce,600)}));
+  const nonce=random();return html(`<h1>Sign in to BytesSkills</h1><p>Enter your invited email address. Open the link in this browser.</p><form method="post" action="/auth/request"><input type="email" name="email" aria-label="Email address" required maxlength="254" autocomplete="email"><input type="hidden" name="next" value="${escape(destination(u.searchParams.get('next')??'/app'))}"><button>Send sign-in link</button></form>`,new Headers({'Set-Cookie':setCookie('__Host-bytes-login',nonce,600)}));
  }
  if(p==='/auth/request'){
   post(req,env);const form=new URLSearchParams(await readBody(req,16000));const email=(form.get('email')??'').trim().toLowerCase();
@@ -68,7 +68,7 @@ export async function loginRoutes(req:Request,env:Env):Promise<Response|null>{
   const record=await store.resolve(u.searchParams.get('pointer')??'');const blob=await env.BLOBS.get(store.objectKey(record.content.key));if(!blob)throw new ApiError(404,'Content missing');return new Response(blob.body,{headers:{'Content-Type':'application/octet-stream','Content-Disposition':'attachment','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
  }
  if(p==='/app/artifact'){
-  const item=await store.get(u.searchParams.get('pointer')??'',true);return html(nav+`<h1>Artifact</h1><pre>${escape(JSON.stringify(item,null,2))}</pre>`);
+  const item=await store.get(u.searchParams.get('pointer')??'',true);const history=await store.history(item.pointer);return html(nav+`<h1>${escape(item.title)}</h1><p><code>${escape(item.pointer)}</code></p><pre>${escape('text' in item ? String(item.text) : 'Download the file to view its content.')}</pre><p><a href="/app/content?pointer=${encodeURIComponent(item.pointer)}">Download content</a></p><h2>Revisions</h2>`+history.items.map((r:any)=>`<p><a href="/app/artifact?pointer=${encodeURIComponent(r.pointer)}">Revision ${r.revision}</a></p>`).join(''));
  }
  if(p==='/app/skills')return html(nav+`<h1>Your skills</h1><pre>${escape(JSON.stringify(await new Releases(env,access).state(),null,2))}</pre>`);
  if(p==='/app/connections'){
@@ -76,5 +76,5 @@ export async function loginRoutes(req:Request,env:Env):Promise<Response|null>{
   return html(nav+`<h1>Connected apps</h1>`+grants.items.map(g=>`<section><p>${escape(g.clientId)}</p><form method="post" action="/app/revoke"><input type="hidden" name="csrf" value="${session.csrf}"><input type="hidden" name="grant" value="${escape(g.id)}"><button>Revoke access</button></form></section>`).join(''));
  }
  const rows=await store.query({text:u.searchParams.get('q')??undefined,after:u.searchParams.get('after')??undefined,limit:30});
- return html(nav+`<h1>Your artifacts</h1><form><input name="q" value="${escape(u.searchParams.get('q')??'')}" placeholder="Search"><button>Search</button></form>`+rows.items.map(r=>`<p><a href="/app/artifact?pointer=${encodeURIComponent(r.pointer)}">${escape(r.title)}</a><br><code>${escape(r.pointer)}</code></p>`).join(''));
+ return html(nav+`<h1>Your artifacts</h1><form><input name="q" value="${escape(u.searchParams.get('q')??'')}" placeholder="Search"><button>Search</button></form>`+rows.items.map(r=>`<p><a href="/app/artifact?pointer=${encodeURIComponent(r.pointer)}">${escape(r.title)}</a><br><code>${escape(r.pointer)}</code></p>`).join('')+(rows.next_cursor?`<a href="/app?after=${encodeURIComponent(rows.next_cursor)}&amp;q=${encodeURIComponent(u.searchParams.get('q')??'')}">Next page</a>`:''));
 }

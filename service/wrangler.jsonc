@@ -14,12 +14,19 @@
     {
       "pattern": "api.bytesskills.com",
       "custom_domain": true
+    },
+    {
+      "pattern": "app.bytesskills.com",
+      "custom_domain": true
     }
   ],
   "vars": {
     "BASE_URL": "https://api.bytesskills.com",
     "WORKSPACE_ID": "acc3351e-d092-433c-a7e1-8fc3e807ebd4",
-    "STORAGE_BACKEND": "postgres"
+    "STORAGE_BACKEND": "postgres",
+    "LOGIN_ENABLED": "true",
+    "APP_URL": "https://app.bytesskills.com",
+    "EMAIL_FROM": "login@auth.bytesskills.com"
   },
   "r2_buckets": [
     {
@@ -51,6 +58,15 @@
     {
       "binding": "PUBLISHER_DB",
       "id": "254d320b652d4402a73f25024e4599ce"
+    },
+    {
+      "binding": "IDENTITY_DB",
+      "id": "64b9a6c679654891bc47c333ec144532"
+    }
+  ],
+  "send_email": [
+    {
+      "name": "EMAIL"
     }
   ]
 }
