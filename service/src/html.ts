@@ -18,7 +18,7 @@ button{font:16px 'Times New Roman',serif;padding:6px 14px;margin:10px 8px 10px 0
 :focus-visible{outline:2px solid #551a8b;outline-offset:3px}
 code{font:14px/1.5 monospace;overflow-wrap:anywhere}
 pre{font:15px/1.6 monospace;white-space:pre-wrap;overflow-wrap:anywhere;border-top:1px solid #ddd;border-bottom:1px solid #ddd;padding:14px 0}
-input[readonly]{font:14px/1.5 monospace}.copy-row{display:flex;gap:8px;align-items:center;margin-bottom:14px}.copy-row input{min-width:0;flex:1}.copy-row button{flex-shrink:0;margin:0}.copy-status{min-height:1.5em}
+input[readonly]{font:14px/1.5 monospace}.copy-row{display:flex;gap:8px;align-items:center;margin-bottom:14px}.copy-row input{min-width:0;flex:1}.copy-row button{flex-shrink:0;margin:0}.copy-status{margin:4px 0;font-size:15px}.copy-status:empty{display:none}.artifact-actions{display:flex;gap:8px;flex-wrap:wrap}.artifact-actions button{margin:0}.filters{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin:16px 0}.filters label{margin:0;font-size:15px}.filters select,.filters input[name=format]{font:16px Georgia,serif;padding:5px;max-width:100%}.filters button{margin:0}.listing h2{font-size:18px;margin:0 0 4px}.listing p{margin:4px 0}.listing button{font-size:15px;padding:2px 8px;margin:4px 0 0 8px}.reference-details{margin-top:24px}
 nav,footer,.muted{font-size:15px}.muted,footer{color:#666}
 .workspace-nav{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;border-bottom:1px solid #ccc;padding-bottom:12px}
 .workspace-nav form{margin:0}.workspace-nav button{margin:0;font-size:15px;padding:2px 8px}
@@ -59,19 +59,29 @@ export function html(
   );
 }
 
-// Static, nonce-authorized code. No artifact text is interpolated into JavaScript.
-const copyScript = `document.addEventListener('click', async event => {
- const button=event.target.closest('button[data-copy]');
- if(!button)return;
- const field=document.getElementById(button.dataset.copy),status=document.getElementById('copy-status');
- field.focus();field.select();
- try {await navigator.clipboard.writeText(field.value);status.textContent=button.dataset.label+' copied.';}
- catch {status.textContent='Selected. Press Ctrl+C or ⌘C, or use your device’s Copy menu.';}
+// Static code only: all copied content comes from escaped DOM text or values.
+const copyScript = `document.querySelectorAll('time[datetime]').forEach(node=>{const date=new Date(node.dateTime);if(!Number.isNaN(date.valueOf()))node.textContent=date.toLocaleString(undefined,{year:'numeric',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'});});
+document.addEventListener('click', async event => {
+ const button=event.target.closest('button[data-copy],button[data-copy-value]');if(!button)return;
+ const field=button.dataset.copy?document.getElementById(button.dataset.copy):null;
+ const value=field?(field.value??field.textContent):button.dataset.copyValue;
+ const status=document.getElementById('copy-status');
+ try {await navigator.clipboard.writeText(value);status.textContent=(button.dataset.label??'Reference')+' copied.';}
+ catch {
+  let selected=field;
+  if(!selected||typeof selected.select!=='function'){
+   document.querySelectorAll('.copy-fallback').forEach(e=>e.remove());
+   selected=document.createElement('textarea');selected.readOnly=true;selected.className='copy-fallback';selected.setAttribute('aria-label','Text to copy');selected.value=value;button.parentElement.after(selected);
+  }
+  const details=selected.closest('details');if(details)details.open=true;
+  selected.focus();selected.select();status.textContent='Selected. Press Ctrl+C or ⌘C, or use your device’s Copy menu.';
+ }
 });
 document.querySelectorAll('input[readonly][data-reference]').forEach(field=>field.addEventListener('focus',()=>field.select()));`;
-
+export const copyStatus=()=>`<p id="copy-status" class="muted copy-status" role="status" aria-live="polite"></p>`;
+export function copyButton(label:string,value:string){return `<button type="button" data-copy-value="${escape(value)}" data-label="${escape(label)}">${escape(label)}</button>`;}
 export function artifactReferences(item:{id:string;type:string;pointer:string}) {
  const field=(id:string,label:string,value:string)=>`<label for="${id}">${label}</label><div class="copy-row"><input id="${id}" data-reference readonly value="${escape(value)}" spellcheck="false"><button type="button" data-copy="${id}" data-label="${label}" aria-label="Copy ${label.toLowerCase()}">copy</button></div>`;
- return `<h2>Reference this artifact</h2><p class="muted">Paste a reference into chat or a /bytes command. The revision reference always opens this saved version.</p>`+
- field('artifact-reference','Artifact reference (latest)',`@${item.type}/${item.id}`)+field('revision-reference','Revision reference',item.pointer)+field('artifact-id','Artifact ID',item.id)+`<p id="copy-status" class="muted copy-status" role="status" aria-live="polite"></p>`;
+ return `<details class="reference-details"><summary>Reference details</summary><p class="muted">Copy reference uses this exact revision. Use the latest reference to follow future edits.</p>`+
+ field('artifact-reference','Artifact reference (latest)',`@${item.type}/${item.id}`)+field('revision-reference','Revision reference',item.pointer)+field('artifact-id','Artifact ID',item.id)+`</details>`;
 }

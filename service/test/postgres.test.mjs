@@ -40,7 +40,7 @@ before(async()=>{
  for(const r of ['runtime','identity','publisher'])await admin.query(`ALTER ROLE bytes_${r} LOGIN`);
  env={STORAGE_BACKEND:'postgres',POSTGRES:{connectionString:urlFor('bytes_runtime')},PUBLISHER_DB:{connectionString:urlFor('bytes_publisher')},IDENTITY_DB:{connectionString:urlFor('bytes_identity')},BLOBS,WORKSPACE_ID:'acc3351e-d092-433c-a7e1-8fc3e807ebd4'};
  dir=await mkdtemp(join(tmpdir(),'bytes-pg-test-'));
- await build({stdin:{contents:`export {PostgresDatabase,postgresParameters} from './src/database';export {WorkspaceAccess} from './src/access';export {Store} from './src/store';export {Releases} from './src/releases';export {PrivateSkills} from './src/private-skills';export {provisionVerifiedIdentity} from './src/accounts';export {loginRoutes,browserSession} from './src/login';`,resolveDir:process.cwd(),loader:'ts'},bundle:true,platform:'node',format:'esm',packages:'external',outfile:join(dir,'api.mjs')});
+ await build({stdin:{contents:`export {PostgresDatabase,postgresParameters} from './src/database';export {WorkspaceAccess} from './src/access';export {Store} from './src/store';export {Releases} from './src/releases';export {PrivateSkills} from './src/private-skills';export {browseArtifacts} from './src/artifact-browser';export {provisionVerifiedIdentity} from './src/accounts';export {loginRoutes,browserSession} from './src/login';`,resolveDir:process.cwd(),loader:'ts'},bundle:true,platform:'node',format:'esm',packages:'external',outfile:join(dir,'api.mjs')});
  // Bundle pg's CommonJS dependency too, via an entry created inside service.
  // External package resolution starts at the temporary file, so use the explicit pg path.
  const bundled=await readFile(join(dir,'api.mjs'),'utf8');
@@ -376,4 +376,30 @@ pgTest('private skill drafts are immutable, idempotent, and isolated from other 
  await assert.rejects(scoped(a).prepare('UPDATE private_skills SET title=? WHERE workspace_id=?').bind('X',a.workspace_id).run(),/permission denied/);
  await assert.rejects(new api.PostgresDatabase(env.PUBLISHER_DB.connectionString,undefined,'publisher').prepare('SELECT * FROM private_skills').all(),/permission denied/);
  await assert.rejects(scoped(a).prepare('INSERT INTO skill_revocations VALUES(?,?,?)').bind('help','1.0.0','private publishing').run(),/permission denied/);
+});
+
+pgTest('artifact browser sorts original creation and updates, filters, and paginates tied keys without duplicates',async()=>{
+ const who=await tenant('artifact-browser'),other=await tenant('artifact-browser-other'),ctx=await access(who),s=new api.Store(env,ctx);
+ const first=await save(s,'Zulu',{settings:{format:'reductions'}}),second=await save(s,'Alpha'),third=await save(s,'Alpha');
+ await save(s,'Internal run',{type:'run'});await save(s,'Archived',{status:'archived'});
+ await save(new api.Store(env,await access(other)),'Foreign');
+ await s.save({request_id:crypto.randomUUID(),pointer:first.pointer,expected_revision:1,text:'updated first'});
+ const browse=q=>api.browseArtifacts(env,ctx,q);
+ assert.equal((await browse({})).items[0].id,first.id);
+ assert.equal((await browse({sort:'newest'})).items[0].id,third.id);
+ assert.equal((await browse({sort:'oldest'})).items[0].id,first.id);
+ assert.equal((await browse({format:'reductions'})).items.length,1);
+ assert.equal((await browse({type:'run'})).items.length,1);
+ assert.equal((await browse({runs:true})).items.length,4);
+ assert.equal((await browse({status:'all'})).items.length,4);
+ assert.equal((await browse({text:'pineapple'})).items.length,2);
+ await admin.query('UPDATE bytes.heads SET updated=$1 WHERE workspace_id=$2',['2026-10-01T01:02:03.000Z',who.workspace_id]);
+ for(const sort of ['updated','newest','oldest','title']){
+  const expected=(await browse({sort})).items.map(r=>r.id),seen=[];let cursor;
+  do {const page=await browse({sort,limit:1,cursor});seen.push(...page.items.map(r=>r.id));cursor=page.next??undefined;}while(cursor);
+  assert.deepEqual(seen,expected);assert.equal(new Set(seen).size,3);
+ }
+ const page=await browse({limit:1});await assert.rejects(browse({cursor:page.next,sort:'title'}),/Filters changed/);
+ await assert.rejects(browse({cursor:'bad'}),/Invalid page cursor/);
+ const title=(await browse({sort:'title'})).items;assert.equal(title[0].title,'Alpha');assert.equal(title[2].title,'Zulu');
 });

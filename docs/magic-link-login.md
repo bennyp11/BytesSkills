@@ -114,3 +114,18 @@ Creation uses the signed-in account plus exact Origin and session CSRF validatio
 These drafts can be read/copied in the dashboard but are not registered commands
 or platform packages. Editing/version adoption and private-skill MCP execution are
 separate follow-up work; do not claim those are implemented.
+
+## Artifact browsing (0.10.2)
+
+The app defaults to recently updated, excluding archived artifacts and workflow
+runs. Type, status, format, and search filters combine; selecting type=run explicitly
+shows runs. Date and title sorts use a stable ID tiebreaker and cursors bound to the
+filter/sort selection. Created dates come from revision one; updated dates come
+from the head. Browser dates use the viewer's locale/time zone with a labeled UTC
+fallback. The existing MCP query contract keeps its previous ordering.
+
+List copy buttons copy the complete displayed revision reference. Detail pages put
+content first, with copy reference/content/command actions; raw IDs and latest
+references live in a disclosure. Media files offer download instead of text copying.
+Clipboard denial exposes selected text for manual copying. Scripts remain static
+and nonce-authorized; stored text never enters executable JavaScript.
