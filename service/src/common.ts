@@ -1,12 +1,17 @@
 import type { OAuthHelpers } from "@cloudflare/workers-oauth-provider";
 export interface Env {
-  DB: D1Database;
+  DB: D1Database; // Legacy binding retained only until verified PostgreSQL cutover.
+  STORAGE_BACKEND?: "d1" | "postgres";
+  POSTGRES?: Hyperdrive;
+  PUBLISHER_DB?: Hyperdrive;
+  IDENTITY_DB?: Hyperdrive;
   BLOBS: R2Bucket;
   OAUTH_KV: KVNamespace;
   OAUTH_PROVIDER: OAuthHelpers;
   BASE_URL: string;
   WORKSPACE_ID: string;
   OWNER_KEY_SHA256: string;
+  RELEASE_KEY_SHA256?: string;
   RELEASE_VERSION?: string;
   RELEASE_COMMIT?: string;
 }
@@ -49,13 +54,15 @@ export async function sha(
     .map((x) => x.toString(16).padStart(2, "0"))
     .join("");
 }
-export async function ownerKey(key: string, env: Env) {
-  if (!env.OWNER_KEY_SHA256 || key.length < 32 || key.length > 256)
+export const ownerKey = (key: string, env: Env) => keyMatches(key, env.OWNER_KEY_SHA256);
+export const releaseKey = (key: string, env: Env) => keyMatches(key, env.RELEASE_KEY_SHA256);
+async function keyMatches(key: string, expected?: string) {
+  if (!expected || !/^[a-f0-9]{64}$/.test(expected) || key.length < 32 || key.length > 256)
     return false;
   const hash = await sha(key);
   let diff = 0;
   for (let i = 0; i < 64; i++)
-    diff |= hash.charCodeAt(i) ^ env.OWNER_KEY_SHA256.charCodeAt(i);
+    diff |= hash.charCodeAt(i) ^ expected.charCodeAt(i);
   return diff === 0;
 }
 export const json = (value: unknown, status = 200) =>

@@ -1,17 +1,22 @@
 # BytesSkills cloud MVP
 
+Production uses PlanetScale PostgreSQL with forced row-level security through
+cache-disabled Cloudflare Hyperdrive. The verified 2026-10-12 migration and recovery
+procedure are in [postgres-cutover.md](../docs/postgres-cutover.md). D1 is retained
+as a recovery source and compatibility backend; do not deploy it over current data.
+
 One private workspace, served at https://api.bytesskills.com. MCP endpoint:
 `https://api.bytesskills.com/mcp`. The apex https://bytesskills.com is a landing page.
 
 ## Components
 
 - Cloudflare Worker: authenticated API, stateless Streamable HTTP MCP, connection page.
-- D1: immutable record envelopes, current heads, relationships, tags, FTS5 search and idempotency receipts.
+- PlanetScale PostgreSQL: immutable records, heads, relationships, tags, full-text search, idempotency receipts, and tenant RLS.
 - R2: private content blobs at `<workspace UUID>/blobs/sha256/<prefix>/<hash>`.
 - Workers KV: OAuth client registrations, grants and token state managed by Cloudflare's OAuth library. It does not hold artifact state.
 - GitHub: definitions, skills, source, migrations only; workspace records and exports are excluded.
 
-Cloud records are authoritative in D1. Heads, tags and search are derived, updated in
+Cloud records are authoritative in PostgreSQL. Heads, tags and search are derived, updated in
 one transaction alongside a revision. Original local records import unchanged,
 including their IDs, revision numbers, checksums and provenance.
 
@@ -135,11 +140,11 @@ large video needs a later multipart/direct-upload path. Queries page by UUID, no
 relevance, and ordinary pagination is not a frozen snapshot. History/export are
 bounded. Text is indexed; audio/video are not automatically transcribed.
 
-Blob upload and D1 commit are not one distributed transaction: the blob is verified
+Blob upload and PostgreSQL commit are not one distributed transaction: the blob is verified
 first, so a failed save can leave an unreferenced blob. No automatic blob deletion is
 implemented. Database growth, auth endpoints and operational quotas need monitoring
 before opening this to more users. The integration tests exercise correctness, not
-production load capacity. D1 read replication is disabled for simple current reads.
+production load capacity. Hyperdrive caching is disabled for authorization checks and current reads.
 
 ### Command discovery in ChatGPT
 

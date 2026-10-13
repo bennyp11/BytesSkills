@@ -57,7 +57,12 @@ async function build() {
   for (const name of (await readdir(dir)).sort()) files[name] = sha(await readFile(resolve(dir,name)));
   const migrations = {};
   for (const name of (await readdir('migrations')).filter(n => n.endsWith('.sql')).sort()) migrations[name] = sha(await readFile('migrations/'+name));
-  await writeFile(resolve(dir,'manifest.json'), JSON.stringify({schema_version:1,version:spec.version,commit,summary:spec.summary,files,skills,migrations},null,2)+'\n',{flag:'wx'});
+  const postgres_migrations = {};
+  for (const name of (await readdir('postgres/migrations')).filter(n=>n.endsWith('.sql')).sort())
+    postgres_migrations[name] = sha(await readFile('postgres/migrations/'+name));
+  const config = JSON.parse(await readFile('wrangler.jsonc','utf8'));
+  const storage_backend = config.vars?.STORAGE_BACKEND ?? 'd1';
+  await writeFile(resolve(dir,'manifest.json'), JSON.stringify({schema_version:1,version:spec.version,commit,summary:spec.summary,files,skills,migrations,postgres_migrations,storage_backend},null,2)+'\n',{flag:'wx'});
   await verify(dir,commit,spec.version);
   console.log(`Prepared ${spec.version} at ${commit}`);
 }

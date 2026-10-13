@@ -5,9 +5,9 @@ skills and fictional examples. It does not contain user workspace data.
 
 | Data | Authority |
 | --- | --- |
-| Artifact metadata, pointers, immutable revisions and relationships | Cloudflare D1 |
+| Artifact metadata, pointers, immutable revisions and relationships | PlanetScale PostgreSQL |
 | Artifact text and media bytes | Private Cloudflare R2 |
-| Published skill releases, adoption preferences and workflow sessions | Cloudflare D1 |
+| Published skill releases, adoption preferences and workflow sessions | PlanetScale PostgreSQL |
 | OAuth grants and tokens | Cloudflare KV |
 | Core implementation, reusable library source and infrastructure configuration | GitHub |
 
@@ -23,6 +23,10 @@ no workspace snapshot and needs none. The test suite uses synthetic temporary da
 No import, deployment or destructive storage migration is required for this change.
 Older commits still contain the old snapshot. Removing that history requires a
 separate coordinated history rewrite and does not erase other existing clones.
+
+Production moved to PostgreSQL on 2026-10-12; the historical D1 migration discussion
+above describes the earlier removal of workspace files from Git. See
+[PostgreSQL cutover](postgres-cutover.md) for the current recovery procedure.
 
 ## Recovery
 

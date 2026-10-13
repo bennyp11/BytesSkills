@@ -18,16 +18,9 @@
   ],
   "vars": {
     "BASE_URL": "https://api.bytesskills.com",
-    "WORKSPACE_ID": "acc3351e-d092-433c-a7e1-8fc3e807ebd4"
+    "WORKSPACE_ID": "acc3351e-d092-433c-a7e1-8fc3e807ebd4",
+    "STORAGE_BACKEND": "postgres"
   },
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "bytesskills-mvp",
-      "database_id": "952f6010-c5de-4c0a-8485-cb0ae30f6f1a",
-      "migrations_dir": "migrations"
-    }
-  ],
   "r2_buckets": [
     {
       "binding": "BLOBS",
@@ -49,5 +42,15 @@
   },
   "limits": {
     "cpu_ms": 10000
-  }
+  },
+  "hyperdrive": [
+    {
+      "binding": "POSTGRES",
+      "id": "215663e431854e0c8d79ee6918b11ede"
+    },
+    {
+      "binding": "PUBLISHER_DB",
+      "id": "254d320b652d4402a73f25024e4599ce"
+    }
+  ]
 }
