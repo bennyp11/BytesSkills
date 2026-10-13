@@ -2,11 +2,12 @@ import {ApiError,readBody,sha,type Env} from './common';
 import {database} from './database';
 import {WorkspaceAccess} from './access';
 import {Store} from './store';
-import {Releases} from './releases';
+import {skillPages} from './skill-pages';
 import {escape,html} from './html';
 const random=()=>Array.from(crypto.getRandomValues(new Uint8Array(32)),x=>x.toString(16).padStart(2,'0')).join('');
 const cookie=(req:Request,name:string)=>req.headers.get('Cookie')?.split(';').map(s=>s.trim()).find(s=>s.startsWith(name+'='))?.slice(name.length+1)??'';
 const setCookie=(name:string,value:string,age:number)=>`${name}=${value}; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=${age}`;
+const previewTypes=new Set(['image/png','image/jpeg','image/gif','image/webp','audio/mpeg','audio/mp4','audio/ogg','audio/wav','video/mp4','video/webm']);
 const valid=(s:string)=>/^[a-f0-9]{64}$/.test(s);
 function origin(req:Request,env:Env){const o=new URL(req.url).origin;if(![env.BASE_URL,env.APP_URL].includes(o))throw new ApiError(403,'Invalid login origin');return o;}
 function post(req:Request,env:Env){if(req.method!=='POST')throw new ApiError(405,'POST required');if(req.headers.get('Origin')!==origin(req,env))throw new ApiError(403,'Invalid form origin');}
@@ -22,7 +23,7 @@ export async function browserSession(req:Request,env:Env){
 export function sessionCsrf(req:Request,env:Env,form:URLSearchParams,s:{csrf:string}){post(req,env);if(form.get('csrf')!==s.csrf)throw new ApiError(403,'Invalid session confirmation');}
 export async function loginRoutes(req:Request,env:Env):Promise<Response|null>{
  const u=new URL(req.url),p=u.pathname;
- if(!['/login','/auth/request','/auth/verify','/auth/complete','/auth/logout','/app','/app/artifact','/app/content','/app/skills','/app/connections','/app/revoke'].includes(p))return null;
+ if(!['/login','/auth/request','/auth/verify','/auth/complete','/auth/logout','/app','/app/artifact','/app/content','/app/skills','/app/skills/new','/app/skill','/app/connections','/app/revoke'].includes(p))return null;
  if(env.LOGIN_ENABLED!=='true')throw new ApiError(404,'Not found');
  const o=origin(req,env);
  if(p==='/login'&&req.method==='GET'){
@@ -60,6 +61,7 @@ export async function loginRoutes(req:Request,env:Env):Promise<Response|null>{
  }
  const access=await WorkspaceAccess.authorize(env,session.account_id,session.workspace_id),store=new Store(env,access);
  const nav=`<div class="workspace-nav"><nav aria-label="Workspace"><a href="/app">Artifacts</a> · <a href="/app/skills">Skills</a> · <a href="/app/connections">Connections</a></nav><form method="post" action="/auth/logout"><input type="hidden" name="csrf" value="${session.csrf}"><button>Sign out</button></form></div>`;
+ const skillPage=await skillPages(req,env,access,session,nav);if(skillPage)return skillPage;
  if(p==='/app/revoke'){
   const form=new URLSearchParams(await readBody(req,16000));sessionCsrf(req,env,form,session);
   const id=form.get('grant')??'';if(!id||id.length>256)throw new ApiError(400,'Invalid connection');
@@ -67,16 +69,22 @@ export async function loginRoutes(req:Request,env:Env):Promise<Response|null>{
  }
  if(req.method!=='GET')throw new ApiError(405,'GET required');
  if(p==='/app/content'){
-  const record=await store.resolve(u.searchParams.get('pointer')??'');const blob=await env.BLOBS.get(store.objectKey(record.content.key));if(!blob)throw new ApiError(404,'Content missing');return new Response(blob.body,{headers:{'Content-Type':'application/octet-stream','Content-Disposition':'attachment','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
+  const record=await store.resolve(u.searchParams.get('pointer')??'');const blob=await env.BLOBS.get(store.objectKey(record.content.key));if(!blob)throw new ApiError(404,'Content missing');const inline=u.searchParams.get('view')==='1'&&previewTypes.has(record.content.media_type);return new Response(blob.body,{headers:{'Content-Type':inline?record.content.media_type:'application/octet-stream','Content-Disposition':inline?'inline':'attachment','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
  }
  if(p==='/app/artifact'){
-  const item=await store.get(u.searchParams.get('pointer')??'',true);const history=await store.history(item.pointer);return html(nav+`<h1>${escape(item.title)}</h1><p><code>${escape(item.pointer)}</code></p><pre>${escape('text' in item ? String(item.text) : 'Download the file to view its content.')}</pre><p><a href="/app/content?pointer=${encodeURIComponent(item.pointer)}">Download content</a></p><h2>Revisions</h2>`+history.items.map((r:any)=>`<p><a href="/app/artifact?pointer=${encodeURIComponent(r.pointer)}">Revision ${r.revision}</a></p>`).join(''));
+  const item=await store.get(u.searchParams.get('pointer')??'',true);const history=await store.history(item.pointer);
+  const url='/app/content?pointer='+encodeURIComponent(item.pointer)+'&amp;view=1';
+  let content='text' in item?`<pre>${escape(String(item.text))}</pre>`:'<p>Preview unavailable for this file type. Download it below.</p>';
+  if(previewTypes.has(item.content.media_type))content=item.content.media_type.startsWith('image/')?`<img src="${url}" alt="${escape(item.title)}">`:item.content.media_type.startsWith('video/')?`<video controls preload="metadata" src="${url}"></video>`:`<audio controls preload="metadata" src="${url}"></audio>`;
+  if(item.content.media_type==='application/json')content=`<pre>${escape(await store.contentText(item.content))}</pre>`;
+  return html(nav+`<p><a href="/app">← all artifacts</a></p><h1>${escape(item.title)}</h1><p><code>${escape(item.pointer)}</code></p><p class="muted">${escape(item.type)} · ${escape(item.status)} · revision ${item.revision}</p>${content}<p><a href="/app/content?pointer=${encodeURIComponent(item.pointer)}">Download content</a></p><h2>Revisions</h2>`+history.items.map((r:any)=>`<p><a href="/app/artifact?pointer=${encodeURIComponent(r.pointer)}">Revision ${r.revision}</a></p>`).join(''));
+
  }
- if(p==='/app/skills')return html(nav+`<h1>Your skills</h1><pre>${escape(JSON.stringify(await new Releases(env,access).state(),null,2))}</pre>`);
+
  if(p==='/app/connections'){
   const grants=await env.OAUTH_PROVIDER.listUserGrants(session.account_id,{limit:50,cursor:u.searchParams.get('cursor')??undefined});
   return html(nav+`<h1>Connected apps</h1>`+grants.items.map(g=>`<section><p>${escape(g.clientId)}</p><form method="post" action="/app/revoke"><input type="hidden" name="csrf" value="${session.csrf}"><input type="hidden" name="grant" value="${escape(g.id)}"><button>Revoke access</button></form></section>`).join(''));
  }
  const rows=await store.query({text:u.searchParams.get('q')??undefined,after:u.searchParams.get('after')??undefined,limit:30});
- return html(nav+`<h1>Your artifacts</h1><form><input aria-label="Search artifacts" name="q" value="${escape(u.searchParams.get('q')??'')}" placeholder="Search"><button>Search</button></form>`+rows.items.map(r=>`<p class="listing"><a href="/app/artifact?pointer=${encodeURIComponent(r.pointer)}">${escape(r.title)}</a><br><code>${escape(r.pointer)}</code></p>`).join('')+(rows.next_cursor?`<a href="/app?after=${encodeURIComponent(rows.next_cursor)}&amp;q=${encodeURIComponent(u.searchParams.get('q')??'')}">Next page</a>`:''));
+ return html(nav+`<h1>Your artifacts</h1><form><input aria-label="Search artifacts" name="q" value="${escape(u.searchParams.get('q')??'')}" placeholder="Search"><button>Search</button></form>`+rows.items.map(r=>`<p class="listing"><a class="artifact-link" href="/app/artifact?pointer=${encodeURIComponent(r.pointer)}">${escape(r.title)}<br><code>${escape(r.pointer)}</code><br><span class="muted">open artifact →</span></a></p>`).join('')+(rows.next_cursor?`<a href="/app?after=${encodeURIComponent(rows.next_cursor)}&amp;q=${encodeURIComponent(u.searchParams.get('q')??'')}">Next page</a>`:''));
 }

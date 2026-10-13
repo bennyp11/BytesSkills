@@ -19,7 +19,7 @@ const blobMap=new Map();
 const BLOBS={
  async put(key,data,options){blobMap.set(key,{data:Uint8Array.from(data),customMetadata:options.customMetadata});},
  async head(key){const b=blobMap.get(key);return b?{size:b.data.length,customMetadata:b.customMetadata}:null;},
- async get(key){const b=blobMap.get(key);return b?{arrayBuffer:async()=>b.data.buffer}:null;}
+ async get(key){const b=blobMap.get(key);return b?{body:b.data,arrayBuffer:async()=>b.data.buffer}:null;}
 };
 const tenant=async subject=>api.provisionVerifiedIdentity(env,'https://test.example',subject);
 const access=async t=>api.WorkspaceAccess.authorize(env,t.account_id,t.workspace_id);
@@ -40,7 +40,7 @@ before(async()=>{
  for(const r of ['runtime','identity','publisher'])await admin.query(`ALTER ROLE bytes_${r} LOGIN`);
  env={STORAGE_BACKEND:'postgres',POSTGRES:{connectionString:urlFor('bytes_runtime')},PUBLISHER_DB:{connectionString:urlFor('bytes_publisher')},IDENTITY_DB:{connectionString:urlFor('bytes_identity')},BLOBS,WORKSPACE_ID:'acc3351e-d092-433c-a7e1-8fc3e807ebd4'};
  dir=await mkdtemp(join(tmpdir(),'bytes-pg-test-'));
- await build({stdin:{contents:`export {PostgresDatabase,postgresParameters} from './src/database';export {WorkspaceAccess} from './src/access';export {Store} from './src/store';export {Releases} from './src/releases';export {provisionVerifiedIdentity} from './src/accounts';export {loginRoutes,browserSession} from './src/login';`,resolveDir:process.cwd(),loader:'ts'},bundle:true,platform:'node',format:'esm',packages:'external',outfile:join(dir,'api.mjs')});
+ await build({stdin:{contents:`export {PostgresDatabase,postgresParameters} from './src/database';export {WorkspaceAccess} from './src/access';export {Store} from './src/store';export {Releases} from './src/releases';export {PrivateSkills} from './src/private-skills';export {provisionVerifiedIdentity} from './src/accounts';export {loginRoutes,browserSession} from './src/login';`,resolveDir:process.cwd(),loader:'ts'},bundle:true,platform:'node',format:'esm',packages:'external',outfile:join(dir,'api.mjs')});
  // Bundle pg's CommonJS dependency too, via an entry created inside service.
  // External package resolution starts at the temporary file, so use the explicit pg path.
  const bundled=await readFile(join(dir,'api.mjs'),'utf8');
@@ -116,7 +116,7 @@ pgTest('no identity and mismatched identity fail closed; runtime cannot administ
 });
 pgTest('FORCE RLS covers every tenant table; role attributes and default privileges are restricted',async()=>{
  const tables=await admin.query("SELECT relname,relrowsecurity,relforcerowsecurity FROM pg_class JOIN pg_namespace n ON n.oid=relnamespace WHERE n.nspname='bytes' AND relkind='r' AND relname NOT IN ('skill_releases','skill_revocations')");
- assert.equal(tables.rows.length,18);for(const t of tables.rows){assert.equal(t.relrowsecurity,true,t.relname);assert.equal(t.relforcerowsecurity,true,t.relname);}
+ assert.equal(tables.rows.length,19);for(const t of tables.rows){assert.equal(t.relrowsecurity,true,t.relname);assert.equal(t.relforcerowsecurity,true,t.relname);}
  const roles=await admin.query("SELECT rolsuper,rolbypassrls,rolcreaterole,rolcreatedb FROM pg_roles WHERE rolname LIKE 'bytes_%'");
  for(const r of roles.rows)assert.ok(Object.values(r).every(x=>x===false));
 });
@@ -264,6 +264,28 @@ pgTest('login HTTP flow sends a confirmation link, ignores scanner GETs, blocks 
  await assert.rejects(api.loginRoutes(post('/auth/complete',{token}),loginEnv),/already used/);
  const dashboard=await api.loginRoutes(request('/app',{headers:{Cookie:sessionCookie}}),loginEnv);assert.equal(dashboard.status,200);
  const body=await dashboard.text();assert.match(body,/Your artifacts/);const csrf=body.match(/name="csrf" value="([^"]+)"/)[1];
+ const skillsPage=await api.loginRoutes(request('/app/skills',{headers:{Cookie:sessionCookie}}),loginEnv);assert.match(await skillsPage.text(),/Platform core/);
+ const formPage=await api.loginRoutes(request('/app/skills/new',{headers:{Cookie:sessionCookie}}),loginEnv);const formText=await formPage.text();const id=formText.match(/name="id" value="([^"]+)"/)[1];
+ const skillForm={id,csrf,title:'Personal test skill',summary:'A private workflow',instructions:'Ask for context, then summarize.'};
+ await assert.rejects(api.loginRoutes(post('/app/skills/new',{...skillForm,csrf:'bad'},sessionCookie),loginEnv),/confirmation/);
+ const createdSkill=await api.loginRoutes(post('/app/skills/new',skillForm,sessionCookie),loginEnv);assert.equal(createdSkill.status,303);
+ const detail=await api.loginRoutes(request(createdSkill.headers.get('location'),{headers:{Cookie:sessionCookie}}),loginEnv);assert.match(await detail.text(),/Ask for context, then summarize/);
+ const owner=await api.browserSession(request('/app',{headers:{Cookie:sessionCookie}}),loginEnv);
+ const artifact=await save(new api.Store(loginEnv,await access(owner)),'Clickable artifact');
+ const listing=await api.loginRoutes(request('/app',{headers:{Cookie:sessionCookie}}),loginEnv);assert.ok((await listing.text()).includes('/app/artifact?pointer='+encodeURIComponent(artifact.pointer)));
+ const opened=await api.loginRoutes(request('/app/artifact?pointer='+encodeURIComponent(artifact.pointer),{headers:{Cookie:sessionCookie}}),loginEnv);assert.match(await opened.text(),/a private pineapple/);
+ const core=await api.loginRoutes(request('/app/skill?core=help',{headers:{Cookie:sessionCookie}}),loginEnv);assert.match(await core.text(),/Platform core/);
+ const ownerStore=new api.Store(loginEnv,await access(owner));
+ for(const mime of ['image/png','image/svg+xml']){
+  const bytes=new TextEncoder().encode('synthetic preview fixture '+mime),blob=await ownerStore.putBlob(bytes);
+  const media=await ownerStore.save({request_id:crypto.randomUUID(),type:'image',title:'Media test',content:{...blob,media_type:mime}});
+  const view=await api.loginRoutes(request('/app/artifact?pointer='+encodeURIComponent(media.pointer),{headers:{Cookie:sessionCookie}}),loginEnv);
+  assert.equal((await view.text()).includes('<img src='),mime==='image/png');
+  const download=await api.loginRoutes(request('/app/content?view=1&pointer='+encodeURIComponent(media.pointer),{headers:{Cookie:sessionCookie}}),loginEnv);
+  assert.equal(download.headers.get('content-disposition'),mime==='image/png'?'inline':'attachment');assert.equal((await download.arrayBuffer()).byteLength,bytes.length);
+  assert.equal((await api.loginRoutes(request('/app/content?view=1&pointer='+encodeURIComponent(media.pointer)),loginEnv)).status,303);
+ }
+
  await assert.rejects(api.loginRoutes(post('/auth/logout',{csrf:'bad'},sessionCookie),loginEnv),/confirmation/);
  await api.loginRoutes(post('/auth/logout',{csrf},sessionCookie),loginEnv);
  assert.equal(await api.browserSession(request('/app',{headers:{Cookie:sessionCookie}}),loginEnv),null);
@@ -340,4 +362,18 @@ pgTest('only administrator-prelinked identities inherit legacy data; browser cla
  await row(db,'SELECT login_start(?,?,?,?,?,?) AS ok',e2,h2,b,sha('claim-other-ip'),o,'/app');
  assert.equal(await row(db,'SELECT * FROM login_finish(?,?,?,?,?)',h2,b,o,sha('claim-other-session'),env.WORKSPACE_ID),null);
  assert.equal((await admin.query("SELECT subject FROM bytes.account_identities WHERE account_id='legacy-owner'")).rows[0].subject,email);
+});
+
+pgTest('private skill drafts are immutable, idempotent, and isolated from other tenants and core releases',async()=>{
+ const a=await tenant('private-skill-a'),b=await tenant('private-skill-b');
+ const sa=new api.PrivateSkills(env,await access(a)),sb=new api.PrivateSkills(env,await access(b));
+ const input={id:crypto.randomUUID(),title:'My workflow',summary:'Private summary',instructions:'Do the private task.'};
+ const saved=await sa.create(input);assert.equal(saved.revision,1);assert.deepEqual(await sa.create(input),saved);
+ await assert.rejects(sa.create({...input,instructions:'Overwrite'}),/already saved/);
+ assert.equal((await sa.list()).items.length,1);assert.equal((await sb.list()).items.length,0);await assert.rejects(sb.get(input.id),/not found/);
+ assert.equal((await new api.PostgresDatabase(env.POSTGRES.connectionString).prepare('SELECT * FROM private_skills').all()).results.length,0);
+ await assert.rejects(scoped(b).prepare('INSERT INTO private_skills(workspace_id,id,revision,title,summary,instructions,checksum) VALUES(?,?,1,?,?,?,?)').bind(a.workspace_id,crypto.randomUUID(),'X','X','X','a'.repeat(64)).run(),/row-level security/);
+ await assert.rejects(scoped(a).prepare('UPDATE private_skills SET title=? WHERE workspace_id=?').bind('X',a.workspace_id).run(),/permission denied/);
+ await assert.rejects(new api.PostgresDatabase(env.PUBLISHER_DB.connectionString,undefined,'publisher').prepare('SELECT * FROM private_skills').all(),/permission denied/);
+ await assert.rejects(scoped(a).prepare('INSERT INTO skill_revocations VALUES(?,?,?)').bind('help','1.0.0','private publishing').run(),/permission denied/);
 });
