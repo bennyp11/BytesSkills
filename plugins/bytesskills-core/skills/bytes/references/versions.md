@@ -1,10 +1,12 @@
 # Shared skill releases and adoption
 
-For every new `/bytes` request, call `bytes_begin` with the exact command and a new
+For every new execution, help or sync request, call `bytes_begin` with the exact
+command and a new
 UUID request_id. The returned instructions and resources are the selected immutable
 skill release, not a mutable latest document. Continue clarifications and retries
 within that workflow; a separate user operation starts a new workflow. Never reuse a
-workflow merely to avoid checking for updates.
+workflow merely to avoid checking for updates. Private definition authoring uses
+bytes_author directly instead; see [private authoring](private-library.md).
 
 If `status=update_available`, show current version, latest version and change summary.
 Ask **Update**, **Stay on this version**, or **Always use latest**. Initial adoption
