@@ -50,6 +50,9 @@ test("release builder includes pinned routing/handler, fits server limits and re
     assert.ok(release.instructions.includes("Artifact runtime and workflow contract"));
     const responseContract = await readFile("../plugins/bytesskills-core/skills/bytes/references/responses.md", "utf8");
     assert.ok(release.instructions.includes(responseContract));
+    assert.ok(release.instructions.includes(await readFile('../plugins/bytesskills-core/skills/bytes/references/skill-contract.md', 'utf8')));
+    assert.equal(JSON.parse(release.resources['definitions/skills/brainstorm.json']).schema_version, 2);
+    assert.ok(release.resources['plugins/bytesskills-core/skills/bytes/contracts/skill.schema.json']);
     assert.ok(Object.keys(release.resources).some(p => p.endsWith("references/routing.md")));
     assert.ok(Buffer.byteLength(JSON.stringify(batch.releases)) <= 250000);
     assert.throws(() => execFileSync(process.execPath, args, {stdio: "pipe"}));

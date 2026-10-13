@@ -1,0 +1,340 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "number",
+      "const": 2
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)$"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "active",
+        "deprecated"
+      ]
+    },
+    "purpose": {
+      "type": "string",
+      "minLength": 1
+    },
+    "command": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "natural_language": {
+      "type": "object",
+      "properties": {
+        "positive": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "negative": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "ambiguity_question": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "positive",
+        "negative",
+        "ambiguity_question"
+      ],
+      "additionalProperties": false
+    },
+    "parameters": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "interface": {
+            "type": "string",
+            "enum": [
+              "flag",
+              "conversation"
+            ]
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "string",
+              "number",
+              "boolean",
+              "pointer"
+            ]
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "applies_when": {
+            "type": "string",
+            "minLength": 1
+          },
+          "question": {
+            "type": "string",
+            "minLength": 1
+          },
+          "allow_delegation": {
+            "type": "boolean"
+          },
+          "inherit_from": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "artifact_types": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]*$"
+            }
+          }
+        },
+        "required": [
+          "interface",
+          "type",
+          "required",
+          "applies_when",
+          "question",
+          "allow_delegation",
+          "inherit_from"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "parameter_rules": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "intake_order": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$"
+      }
+    },
+    "outputs": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "artifact_type": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "when": {
+            "type": "string",
+            "minLength": 1
+          },
+          "media_types": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z0-9.+-]+\\/[a-z0-9.+-]+$"
+            }
+          },
+          "persistence": {
+            "type": "string",
+            "enum": [
+              "new-artifact",
+              "append-revision",
+              "new-or-revision"
+            ]
+          },
+          "delivery": {
+            "type": "string",
+            "enum": [
+              "workspace",
+              "workspace-or-explicit-local-file"
+            ]
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9-]*$"
+                  },
+                  "version": {
+                    "type": "string",
+                    "pattern": "^\\d+\\.\\d+\\.\\d+$"
+                  }
+                },
+                "required": [
+                  "id",
+                  "version"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "quality_checks": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "required": [
+          "id",
+          "artifact_type",
+          "when",
+          "media_types",
+          "persistence",
+          "delivery",
+          "profile",
+          "quality_checks"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "required_for": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "unavailable": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id",
+          "required_for",
+          "unavailable"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "effects": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "workspace-write",
+          "local-file-write",
+          "computer-control"
+        ]
+      }
+    },
+    "failure": {
+      "type": "object",
+      "properties": {
+        "partial": {
+          "type": "string",
+          "const": "preserve-completed-outputs"
+        },
+        "retry": {
+          "type": "string",
+          "const": "reuse-save-request-id-for-identical-retry"
+        },
+        "conflict": {
+          "type": "string",
+          "const": "reread-and-resolve-never-overwrite"
+        }
+      },
+      "required": [
+        "partial",
+        "retry",
+        "conflict"
+      ],
+      "additionalProperties": false
+    },
+    "response_contract": {
+      "type": "string",
+      "const": "references/responses.md"
+    },
+    "execution_contract": {
+      "type": "string",
+      "const": "references/skill-contract.md"
+    },
+    "quality_checks": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "handler": {
+      "type": "string",
+      "pattern": "^references\\/[a-z0-9/.-]+\\.md$"
+    }
+  },
+  "required": [
+    "schema_version",
+    "id",
+    "version",
+    "status",
+    "purpose",
+    "command",
+    "natural_language",
+    "parameters",
+    "parameter_rules",
+    "intake_order",
+    "outputs",
+    "capabilities",
+    "effects",
+    "failure",
+    "response_contract",
+    "execution_contract",
+    "quality_checks",
+    "handler"
+  ],
+  "additionalProperties": false
+}

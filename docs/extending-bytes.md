@@ -71,6 +71,11 @@ user Git; the current cloud publisher supports releases for registered skill fam
 
 ## Add a skill
 
+Use [skill contract v2](skill-contract.md) and the updated template. It separates
+flags from conversational intake and declares typed deliverables, capability limits,
+failure behavior and shared response rules. CI validates source contracts; it does
+not grant runtime permissions or validate generated file contents.
+
 Copy `templates/extensions/skill.json` into `definitions/skills/<id>.json`, fill it
 in and create the handler in the bytes skill's references directory. Use the generic
 SKILL template for instruction structure, but keep `/bytes` as the public entry point.

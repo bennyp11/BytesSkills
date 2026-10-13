@@ -2,6 +2,8 @@ import { readFile, access, readdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
+import { validateSkillContract } from './skill-contract.mjs';
+import { schemaText } from './export-skill-schema.mjs';
 const slug = z.string().regex(/^[a-z][a-z0-9-]*$/);
 const version = z.string().regex(/^\d+\.\d+\.\d+$/);
 const unique = values => new Set(values).size === values.length;
@@ -42,8 +44,9 @@ export const skillContractSchema = z.object({...authoringBase, command: slug,
 export const profileSchema = z.object({...authoringBase, base_type: slug,
   fields: z.record(slug, fieldSchema), migration_notes: z.string().min(1)}).strict();
 export function validateAuthoring(value, kind, types) {
+  if (kind === 'skill' && value.schema_version === 2) return validateSkillContract(value, types);
   const parsed = (kind === "skill" ? skillContractSchema : profileSchema).parse(value);
-  const refs = kind === "skill" ? parsed.outputs : [parsed.base_type];
+  const refs = kind === "skill" ? [...parsed.outputs] : [parsed.base_type];
   for (const field of Object.values(kind === "skill" ? parsed.parameters : parsed.fields))
     refs.push(...(field.artifact_types ?? []));
   for (const type of refs) if (!types.includes(type)) throw Error("Unknown profile/skill artifact type: " + type);
@@ -90,6 +93,8 @@ export function validateRoutes(registry, operations) {
 }
 export async function checkLibrary(root = resolve("..")) {
   const skill = resolve(root, "plugins/bytesskills-core/skills/bytes");
+  if (await readFile(resolve(skill, 'contracts/skill.schema.json'), 'utf8') !== schemaText())
+    throw Error('Stale skill JSON Schema; run node scripts/export-skill-schema.mjs');
   const json = async path => JSON.parse(await readFile(path, "utf8"));
   const registry = await json(resolve(skill, "contracts/runtime.json"));
   const operations = (await json(resolve(skill, "contracts/operations.json"))).operations;
@@ -110,10 +115,27 @@ export async function checkLibrary(root = resolve("..")) {
       if (ids.has(entry.id)) throw Error("Duplicate authoring ID: " + entry.id);
       ids.add(entry.id);
       if (kind === "skill") {
+        if (entry.schema_version !== 2) throw Error('Migrate source skill contracts to schema_version 2: ' + entry.id);
         const spec = registry.skills[entry.id];
         if (!spec || !spec.commands.includes(entry.command) || spec.handler !== entry.handler)
           throw Error("Skill contract disagrees with runtime registry: " + entry.id);
+        const operation = operations[entry.command];
+        if (!spec.can_save) throw Error('Artifact-producing contract cannot use a read-only route');
+        for (const output of entry.outputs) {
+          if (!(operation?.outputs ?? []).includes(output.artifact_type))
+            throw Error('Output disagrees with operation: ' + output.artifact_type);
+          if (operation.persistence === 'new-artifacts' && output.persistence !== 'new-artifact')
+            throw Error('New-artifact operation cannot append revisions');
+          if (output.profile) {
+            const profile = await json(resolve(root, 'definitions/object-profiles', output.profile.id + '.json'));
+            validateAuthoring(profile, 'profile', registry.artifact_types);
+            if (profile.version !== output.profile.version || profile.base_type !== output.artifact_type)
+              throw Error('Output profile version/type mismatch');
+          }
+        }
         await access(resolve(skill, entry.handler));
+        await access(resolve(skill, entry.execution_contract));
+        await access(resolve(skill, entry.response_contract));
       }
     }
   }

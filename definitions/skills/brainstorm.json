@@ -1,0 +1,266 @@
+{
+  "schema_version": 2,
+  "id": "brainstorm",
+  "version": "0.1.0",
+  "status": "draft",
+  "purpose": "Create concepts, hooks or a script from clarified intent and pinned sources.",
+  "command": "brainstorm",
+  "natural_language": {
+    "positive": [
+      "Using BytesSkills, brainstorm reduction concepts.",
+      "Give me five hooks for this saved concept using BytesSkills."
+    ],
+    "negative": [
+      "Explain what brainstorming means.",
+      "Create a brainstorming skill."
+    ],
+    "ambiguity_question": "Are we exploring topics/concepts, hooks, or a script?"
+  },
+  "parameters": {
+    "concepts": {
+      "type": "boolean",
+      "required": false,
+      "applies_when": "Output selector is unresolved",
+      "question": "Are we brainstorming concepts?",
+      "allow_delegation": false,
+      "inherit_from": [],
+      "interface": "flag"
+    },
+    "hooks": {
+      "type": "boolean",
+      "required": false,
+      "applies_when": "Output selector is unresolved",
+      "question": "Are we brainstorming hooks?",
+      "allow_delegation": false,
+      "inherit_from": [],
+      "interface": "flag"
+    },
+    "script": {
+      "type": "boolean",
+      "required": false,
+      "applies_when": "Output selector is unresolved",
+      "question": "Are we writing a script?",
+      "allow_delegation": false,
+      "inherit_from": [],
+      "interface": "flag"
+    },
+    "concept": {
+      "type": "pointer",
+      "required": false,
+      "applies_when": "Hooks or script, unless premise development is explicitly delegated",
+      "question": "Which concept should this develop?",
+      "allow_delegation": false,
+      "inherit_from": [],
+      "artifact_types": [
+        "concept"
+      ],
+      "interface": "flag"
+    },
+    "hook": {
+      "type": "pointer",
+      "required": false,
+      "applies_when": "Script",
+      "question": "Which hook should open the script, or should I create one?",
+      "allow_delegation": true,
+      "inherit_from": [],
+      "artifact_types": [
+        "hook"
+      ],
+      "interface": "flag"
+    },
+    "format": {
+      "type": "string",
+      "required": true,
+      "applies_when": "Always",
+      "question": "Which format should this follow?",
+      "allow_delegation": true,
+      "inherit_from": [
+        "concept.settings.format",
+        "hook.settings.format"
+      ],
+      "interface": "flag"
+    },
+    "seed": {
+      "type": "string",
+      "required": false,
+      "applies_when": "Concepts",
+      "question": "Do you have a topic or seed, or should we discover one?",
+      "allow_delegation": true,
+      "inherit_from": [],
+      "interface": "flag"
+    },
+    "audience": {
+      "type": "string",
+      "required": true,
+      "applies_when": "Always",
+      "question": "Who is this for?",
+      "allow_delegation": true,
+      "inherit_from": [
+        "concept.settings.audience"
+      ],
+      "interface": "conversation"
+    },
+    "bait": {
+      "type": "string",
+      "required": false,
+      "applies_when": "Selected format uses bait",
+      "question": "Which engagement intent should this use, if applicable?",
+      "allow_delegation": true,
+      "inherit_from": [
+        "concept.settings.bait"
+      ],
+      "interface": "conversation"
+    },
+    "count": {
+      "type": "number",
+      "required": true,
+      "applies_when": "Concepts or hooks",
+      "question": "How many candidates should I create?",
+      "allow_delegation": true,
+      "inherit_from": [],
+      "interface": "flag"
+    },
+    "length": {
+      "type": "string",
+      "required": true,
+      "applies_when": "Script",
+      "question": "What target length should the script have?",
+      "allow_delegation": true,
+      "inherit_from": [],
+      "interface": "conversation"
+    },
+    "parent": {
+      "type": "pointer",
+      "required": false,
+      "applies_when": "Organizing concepts as children",
+      "question": "Which concept should contain these narrower concepts?",
+      "allow_delegation": false,
+      "inherit_from": [],
+      "artifact_types": [
+        "concept"
+      ],
+      "interface": "flag"
+    },
+    "from": {
+      "type": "pointer",
+      "required": false,
+      "applies_when": "Deriving concept alternatives",
+      "question": "Which concept should these alternatives derive from?",
+      "allow_delegation": false,
+      "inherit_from": [],
+      "artifact_types": [
+        "concept"
+      ],
+      "interface": "flag"
+    },
+    "strategy": {
+      "type": "string",
+      "required": false,
+      "applies_when": "Concepts",
+      "question": "What should we look for when selecting topics?",
+      "allow_delegation": true,
+      "inherit_from": [],
+      "interface": "flag"
+    },
+    "topic": {
+      "type": "string",
+      "required": false,
+      "applies_when": "Concepts",
+      "question": "What topic should we explore, or should we discover one?",
+      "allow_delegation": true,
+      "inherit_from": [],
+      "interface": "flag"
+    }
+  },
+  "parameter_rules": [
+    "Exactly one of concepts, hooks, script must be selected; clarify the selector as one question.",
+    "Count is a positive integer; scripts produce one output.",
+    "Hooks/scripts need a resolved concept or explicitly delegated premise development; save any developed premise before using its pointer.",
+    "Validate that a supplied hook belongs to the selected concept; conflicting formats or sources require clarification.",
+    "Parent is containment; from is derivation. Never substitute one for the other.",
+    "Follow docs/commands.md for accepted values and format-specific intake.",
+    "Topic and seed are alternative starting points; clarify once if neither is resolved.",
+    "Parent and from are mutually exclusive.",
+    "Conversation inputs do not introduce new CLI flags; format-specific flags require their own pinned contract."
+  ],
+  "intake_order": [
+    "concepts",
+    "hooks",
+    "script",
+    "concept",
+    "hook",
+    "format",
+    "topic",
+    "seed",
+    "strategy",
+    "audience",
+    "bait",
+    "count",
+    "length",
+    "parent",
+    "from"
+  ],
+  "outputs": [
+    {
+      "id": "concept",
+      "artifact_type": "concept",
+      "when": "Concepts mode, or a premise developed with explicit delegation.",
+      "media_types": [
+        "text/markdown"
+      ],
+      "persistence": "new-artifact",
+      "delivery": "workspace",
+      "profile": null,
+      "quality_checks": [
+        "Addresses the clarified intent and selected format.",
+        "Pins actual source revisions; never creates fictitious references."
+      ]
+    },
+    {
+      "id": "hook",
+      "artifact_type": "hook",
+      "when": "Hooks mode.",
+      "media_types": [
+        "text/markdown"
+      ],
+      "persistence": "new-artifact",
+      "delivery": "workspace",
+      "profile": null,
+      "quality_checks": [
+        "Addresses the clarified intent and selected format.",
+        "Pins actual source revisions; never creates fictitious references."
+      ]
+    },
+    {
+      "id": "script",
+      "artifact_type": "script",
+      "when": "Script mode.",
+      "media_types": [
+        "text/markdown"
+      ],
+      "persistence": "new-artifact",
+      "delivery": "workspace",
+      "profile": null,
+      "quality_checks": [
+        "Addresses the clarified intent and selected format.",
+        "Pins actual source revisions; never creates fictitious references."
+      ]
+    }
+  ],
+  "capabilities": [],
+  "effects": [
+    "workspace-write"
+  ],
+  "failure": {
+    "partial": "preserve-completed-outputs",
+    "retry": "reuse-save-request-id-for-identical-retry",
+    "conflict": "reread-and-resolve-never-overwrite"
+  },
+  "response_contract": "references/responses.md",
+  "execution_contract": "references/skill-contract.md",
+  "quality_checks": [
+    "Alternatives receive separate artifact IDs.",
+    "Unresolved applicable inputs are clarified before generation."
+  ],
+  "handler": "references/artifacts.md"
+}
