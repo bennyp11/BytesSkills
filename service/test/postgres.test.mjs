@@ -306,6 +306,19 @@ pgTest('complete Worker login → account consent → OAuth → MCP rejects cros
  const legacy=(await admin.query("SELECT pointer FROM bytes.revisions WHERE workspace_id=$1 LIMIT 1",[env.WORKSPACE_ID])).rows[0].pointer;
  assert.equal((await call('bytes_get',{pointer:legacy,include_content:true})).result.isError,true);
  assert.equal((await send('/app/artifact?pointer='+encodeURIComponent(legacy),{headers:{Cookie:a}})).status,404);
+ const getCsrf=async cookie=>(await (await send('/app/connections',{headers:{Cookie:cookie}})).text()).match(/name="csrf" value="([^"]+)"/)[1];
+ const connections=await (await send('/app/connections',{headers:{Cookie:a}})).text();
+ const grant=connections.match(/name="grant" value="([^"]+)"/)[1];
+ await post('/app/revoke',{grant,csrf:await getCsrf(b)},b);
+ assert.notEqual((await call('bytes_workspace')).result.isError,true,'Another account cannot revoke this grant');
+ const refreshed=await post('/oauth/token',{grant_type:'refresh_token',client_id:client.client_id,refresh_token:tokens.refresh_token,resource:base+'/mcp'});
+ assert.equal(refreshed.status,200,await refreshed.clone().text());const fresh=await refreshed.json();tokens.access_token=fresh.access_token;
+ assert.notEqual((await call('bytes_workspace')).result.isError,true);
+ assert.equal((await call('bytes_save',{type:'concept',title:'denied',text:'read-only grant',request_id:crypto.randomUUID()})).result.isError,true);
+ await post('/app/revoke',{grant,csrf:await getCsrf(a)},a);
+ const rejected=await send('/mcp',{method:'POST',headers:{Authorization:'Bearer '+tokens.access_token,'Content-Type':'application/json'},body:'{}'});assert.equal(rejected.status,401);
+ const rejectedRefresh=await post('/oauth/token',{grant_type:'refresh_token',client_id:client.client_id,refresh_token:fresh.refresh_token,resource:base+'/mcp'});assert.equal(rejectedRefresh.status,400);
+
  }finally{await mf.dispose();}
 });
 pgTest('legacy ownership requires explicit claim and cannot be reassigned; disabled accounts invalidate sessions',async()=>{
