@@ -13,6 +13,7 @@ async function walk(dir) {
 await walk(resolve(root, "definitions"));
 for (const p of [
   "docs/commands.md",
+  "plugins/bytesskills-core/skills/bytes/references/private-library.md",
   "plugins/bytesskills-core/skills/bytes/references/skill-contract.md",
   "plugins/bytesskills-core/skills/bytes/contracts/skill.schema.json",
   "plugins/bytesskills-core/skills/bytes/references/responses.md",

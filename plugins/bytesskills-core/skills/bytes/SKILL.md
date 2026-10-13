@@ -17,10 +17,17 @@ Read [routing](references/routing.md) for explicit BytesSkills requests phrased 
 ordinary language. Normalize them to the same command contract and begin/adoption
 flow; ask about ambiguous intent before starting work.
 
-## Connected workspace: begin every request
+## Private skills and formats
+
+For create/change/customize requests, read [private authoring](references/private-library.md).
+Default to the user’s private workspace. Use bytes_author directly; core changes
+become private copies. Execution uses bytes_begin with the selected private pointers.
+
+## Connected workspace: begin every execution request
 
 For connected BytesSkills tools, read [version/adoption instructions](references/versions.md).
-Call `bytes_begin` at the start of every new `/bytes` request, including help. Follow
+Call `bytes_begin` at the start of every new execution request, including help.
+Private authoring uses bytes_author directly instead. Follow
 its pinned instructions/resources; ask about new releases when it returns
 `update_available`. Never use a remembered instruction version to bypass this check.
 Read [cloud guidance](references/cloud.md) for artifact operations. Saves require the
