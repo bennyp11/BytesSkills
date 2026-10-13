@@ -29,3 +29,14 @@ test('dedicated release key cannot access workspace or MCP; owner cannot publish
     assert.equal((await denied.json()).result.isError,true);
   }finally{await mf.dispose();}
 });
+
+test('production email login rejects the retired owner key for REST and MCP', async () => {
+ const owner='retired-owner-key-0000000000000000000000';
+ const mf=new Miniflare(convertV4MiniflareOptions({modules:true,scriptPath:'dist/index.js',compatibilityDate:'2026-10-01',compatibilityFlags:['nodejs_compat','global_fetch_strictly_public'],kvNamespaces:['OAUTH_KV'],bindings:{BASE_URL:'https://api.bytesskills.com',LOGIN_ENABLED:'true',OWNER_KEY_SHA256:createHash('sha256').update(owner).digest('hex')}}));
+ try {
+  for(const path of ['/v1/query','/v1/releases','/mcp']) {
+   const r=await mf.dispatchFetch('https://api.bytesskills.com'+path,{headers:{Authorization:'Bearer '+owner}});
+   assert.equal(r.status,401);
+  }
+ }finally{await mf.dispose();}
+});

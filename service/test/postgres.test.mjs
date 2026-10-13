@@ -257,7 +257,7 @@ pgTest('login HTTP flow sends a confirmation link, ignores scanner GETs, blocks 
  assert.match(messages[0].text,/10 minutes/);
  const preview=await api.loginRoutes(new Request(link,{headers:{Cookie:nonce}}),loginEnv);assert.equal(preview.status,200);assert.equal(preview.headers.get('referrer-policy'),'no-referrer');
  await assert.rejects(api.loginRoutes(new Request(link),loginEnv),/browser/);
- await assert.rejects(api.loginRoutes(post('/auth/complete',{token,owner_key:'wrong-owner-proof'}),loginEnv),/owner proof/);
+ await assert.rejects(api.loginRoutes(post('/auth/complete',{token,owner_key:'wrong-owner-proof'}),loginEnv),/claims are retired/);
  const confirmed=await api.loginRoutes(post('/auth/complete',{token}),loginEnv);assert.equal(confirmed.status,303);assert.equal(confirmed.headers.get('location'),'/app');
  const sessionCookie=confirmed.headers.getSetCookie().find(s=>s.startsWith('__Host-bytes-session=')).split(';')[0];
  await assert.rejects(api.loginRoutes(post('/auth/complete',{token}),loginEnv),/already used/);
@@ -321,12 +321,15 @@ pgTest('complete Worker login → account consent → OAuth → MCP rejects cros
 
  }finally{await mf.dispose();}
 });
-pgTest('legacy ownership requires explicit claim and cannot be reassigned; disabled accounts invalidate sessions',async()=>{
+pgTest('only administrator-prelinked identities inherit legacy data; browser claims fail and disabled accounts invalidate sessions',async()=>{
  const db=new api.PostgresDatabase(env.IDENTITY_DB.connectionString,undefined,'identity'),o='https://api.bytesskills.com',email='claim@example.com';
  await admin.query('INSERT INTO bytes.login_invites(email) VALUES($1)',[email]);
  const b=sha('claim-browser'),h=sha('claim-token'),s=sha('claim-session');
  assert.equal((await row(db,'SELECT login_start(?,?,?,?,?,?) AS ok',email,h,b,sha('claim-ip'),o,'/app')).ok,true);
- const result=await row(db,'SELECT * FROM login_finish(?,?,?,?,?)',h,b,o,s,env.WORKSPACE_ID);
+ assert.equal(await row(db,'SELECT * FROM login_finish(?,?,?,?,?)',h,b,o,s,env.WORKSPACE_ID),null);
+ await admin.query("UPDATE bytes.accounts SET status='active' WHERE id='legacy-owner'");
+ await admin.query("INSERT INTO bytes.account_identities(issuer,subject,account_id) VALUES('https://api.bytesskills.com/email',$1,'legacy-owner')",[email]);
+ const result=await row(db,'SELECT * FROM login_finish(?,?,?,?,?)',h,b,o,s,null);
  assert.equal(result.account_id,'legacy-owner');assert.equal(result.workspace_id,env.WORKSPACE_ID);
  assert.equal((await row(db,'SELECT * FROM login_session(?,?)',s,o)).account_id,'legacy-owner');
  await admin.query("UPDATE bytes.accounts SET status='disabled' WHERE id='legacy-owner'");

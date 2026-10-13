@@ -36,10 +36,10 @@ jobs:
       - name: Check credentials before cloud mutations
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          BYTES_OWNER_KEY: ${{ secrets.BYTES_OWNER_KEY }}
+          BYTES_RELEASE_KEY: ${{ secrets.BYTES_RELEASE_KEY }}
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || { echo 'Missing production CLOUDFLARE_API_TOKEN'; exit 1; }
-          test -n "$BYTES_OWNER_KEY" || { echo 'Missing production BYTES_OWNER_KEY'; exit 1; }
+          test -n "$BYTES_RELEASE_KEY" || { echo 'Missing production BYTES_RELEASE_KEY'; exit 1; }
       - name: Download prepared assets
         env:
           GH_TOKEN: ${{ github.token }}
@@ -48,7 +48,7 @@ jobs:
       - name: Verify bytes, migrations and deployed version before changes
         run: node scripts/ship-release.mjs preflight ../release-dist
         env:
-          BYTES_OWNER_KEY: ${{ secrets.BYTES_OWNER_KEY }}
+          BYTES_RELEASE_KEY: ${{ secrets.BYTES_RELEASE_KEY }}
       - name: Apply reviewed additive migrations
         run: node scripts/deploy-migrations.mjs
         env:
@@ -64,7 +64,7 @@ jobs:
       - name: Verify Worker and publish immutable skills
         run: node scripts/ship-release.mjs publish ../release-dist
         env:
-          BYTES_OWNER_KEY: ${{ secrets.BYTES_OWNER_KEY }}
+          BYTES_RELEASE_KEY: ${{ secrets.BYTES_RELEASE_KEY }}
       - name: Report incomplete deployment
         if: failure()
         run: |

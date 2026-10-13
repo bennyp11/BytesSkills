@@ -1,4 +1,4 @@
 {
-  "version": "0.9.1",
-  "summary": "Support deployment after PostgreSQL cutover build labels; add invite-only Cloudflare magic-link login, private account dashboards, account-bound AI consent, and PostgreSQL authentication tests in CI."
+  "version": "0.9.2",
+  "summary": "Retire owner-key login and production bearer access; use verified email accounts and a separate release-only CI credential."
 }

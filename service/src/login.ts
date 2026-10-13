@@ -1,4 +1,4 @@
-import {ApiError,readBody,sha,ownerKey,type Env} from './common';
+import {ApiError,readBody,sha,type Env} from './common';
 import {database} from './database';
 import {WorkspaceAccess} from './access';
 import {Store} from './store';
@@ -40,13 +40,14 @@ export async function loginRoutes(req:Request,env:Env):Promise<Response|null>{
  if(p==='/auth/verify'&&req.method==='GET'){
   const token=u.searchParams.get('token')??'';if(!valid(token)||!valid(cookie(req,'__Host-bytes-login')))throw new ApiError(400,'Open the link in the browser where you requested it, or request a new link');
   const headers=new Headers({'Referrer-Policy':'no-referrer'});
-  const response=html(`<h1>Confirm sign-in</h1><p>Continue only if you requested this link.</p><form method="post" action="/auth/complete"><input type="hidden" name="token" value="${token}"><details><summary>Claim an existing owner workspace</summary><p>Only for the original owner signing in for the first time.</p><input type="password" name="owner_key" autocomplete="off" aria-label="Existing owner key"></details><button>Sign in</button></form>`,headers);response.headers.set('Referrer-Policy','no-referrer');return response;
+  const response=html(`<h1>Confirm sign-in</h1><p>Continue only if you requested this link.</p><form method="post" action="/auth/complete"><input type="hidden" name="token" value="${token}"><button>Sign in</button></form>`,headers);response.headers.set('Referrer-Policy','no-referrer');return response;
  }
+ if(p==='/auth/complete'&&req.method==='GET')return loginRedirect('/app');
  if(p==='/auth/complete'){
   post(req,env);const form=new URLSearchParams(await readBody(req,16000));const token=form.get('token')??'',nonce=cookie(req,'__Host-bytes-login');
   if(!valid(token)||!valid(nonce))throw new ApiError(400,'Invalid or expired sign-in link');
-  const key=form.get('owner_key')??'';if(key&&!await ownerKey(key,env))throw new ApiError(403,'Invalid owner proof');
-  const session=random();const result=await authRow<{account_id:string;workspace_id:string;destination:string}>(env,'SELECT * FROM login_finish(?,?,?,?,?)',await sha(token),await sha(nonce),o,await sha(session),key?env.WORKSPACE_ID:null);
+  if(form.has('owner_key'))throw new ApiError(400,'Owner-key claims are retired. Request a new sign-in link.');
+  const session=random();const result=await authRow<{account_id:string;workspace_id:string;destination:string}>(env,'SELECT * FROM login_finish(?,?,?,?,?)',await sha(token),await sha(nonce),o,await sha(session),null);
   if(!result)throw new ApiError(400,'Invalid, expired, or already used link. Request a new link.');
   const headers=new Headers({Location:destination(result.destination),'Cache-Control':'no-store'});headers.append('Set-Cookie',setCookie('__Host-bytes-session',session,604800));headers.append('Set-Cookie',setCookie('__Host-bytes-login','',0));return new Response(null,{status:303,headers});
  }
