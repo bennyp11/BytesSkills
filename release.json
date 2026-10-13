@@ -1,4 +1,4 @@
 {
-  "version": "0.10.0",
-  "summary": "Browse artifact previews and core skill instructions, and create isolated private skill drafts with stable IDs."
+  "version": "0.10.1",
+  "summary": "Add copy buttons and selectable artifact IDs, latest references, and exact revision references."
 }
