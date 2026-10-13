@@ -6,6 +6,7 @@ import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
 import pg from 'pg';
+import {createHash} from 'node:crypto';
 import {migrate} from '../scripts/postgres-migrate.mjs';
 import {normalize,importSnapshot,verifyDatabase} from '../scripts/postgres-transfer.mjs';
 import {canonical,sha} from '../scripts/release-artifacts.mjs';
@@ -115,7 +116,7 @@ pgTest('no identity and mismatched identity fail closed; runtime cannot administ
 });
 pgTest('FORCE RLS covers every tenant table; role attributes and default privileges are restricted',async()=>{
  const tables=await admin.query("SELECT relname,relrowsecurity,relforcerowsecurity FROM pg_class JOIN pg_namespace n ON n.oid=relnamespace WHERE n.nspname='bytes' AND relkind='r' AND relname NOT IN ('skill_releases','skill_revocations')");
- assert.equal(tables.rows.length,14);for(const t of tables.rows){assert.equal(t.relrowsecurity,true,t.relname);assert.equal(t.relforcerowsecurity,true,t.relname);}
+ assert.equal(tables.rows.length,18);for(const t of tables.rows){assert.equal(t.relrowsecurity,true,t.relname);assert.equal(t.relforcerowsecurity,true,t.relname);}
  const roles=await admin.query("SELECT rolsuper,rolbypassrls,rolcreaterole,rolcreatedb FROM pg_roles WHERE rolname LIKE 'bytes_%'");
  for(const r of roles.rows)assert.ok(Object.values(r).every(x=>x===false));
 });
@@ -264,4 +265,45 @@ pgTest('login HTTP flow sends a confirmation link, ignores scanner GETs, blocks 
  await assert.rejects(api.loginRoutes(post('/auth/logout',{csrf:'bad'},sessionCookie),loginEnv),/confirmation/);
  await api.loginRoutes(post('/auth/logout',{csrf},sessionCookie),loginEnv);
  assert.equal(await api.browserSession(request('/app',{headers:{Cookie:sessionCookie}}),loginEnv),null);
+});
+pgTest('complete Worker login → account consent → OAuth → MCP rejects cross-account pointers and management scopes',async()=>{
+ const {Miniflare,convertV4MiniflareOptions}=await import('miniflare');
+ const bundle=await build({entryPoints:['test/fixtures/login-worker.ts'],bundle:true,write:false,format:'esm',platform:'node',target:'es2022',conditions:['workerd'],external:['cloudflare:sockets'],banner:{js:'import {createRequire} from "node:module"; const require=createRequire("/test-worker.js");'}});
+ const base='https://api.bytesskills.com';
+ const mf=new Miniflare(convertV4MiniflareOptions({modules:true,script:bundle.outputFiles[0].text,
+ compatibilityDate:'2026-10-01',compatibilityFlags:['nodejs_compat'],r2Buckets:['BLOBS'],kvNamespaces:['OAUTH_KV'],
+ hyperdrives:{POSTGRES:env.POSTGRES.connectionString,PUBLISHER_DB:env.PUBLISHER_DB.connectionString,IDENTITY_DB:env.IDENTITY_DB.connectionString},
+ bindings:{STORAGE_BACKEND:'postgres',WORKSPACE_ID:env.WORKSPACE_ID,BASE_URL:base,APP_URL:'https://app.bytesskills.com',LOGIN_ENABLED:'true',EMAIL_FROM:'login@example.com',OWNER_KEY_SHA256:sha('test-only-owner-key-000000000000000000000000')}}));
+ const cookies=r=>r.headers.getSetCookie().map(c=>c.split(';')[0]).join('; ');
+ const send=(path,opts={})=>mf.dispatchFetch(base+path,opts);
+ const post=(path,data,cookie)=>send(path,{method:'POST',headers:{Origin:base,Cookie:cookie??'','Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams(data)});
+ try{
+ const login=async email=>{
+ await admin.query('INSERT INTO bytes.login_invites(email) VALUES($1)',[email]);
+ const first=await send('/login');const nonce=cookies(first);
+ assert.equal((await post('/auth/request',{email},nonce)).status,200);
+ const messages=await (await send('/test/mail')).json();assert.equal(messages.length,1);
+ const token=messages[0].text.match(/token=([a-f0-9]+)/)[1];
+ const done=await post('/auth/complete',{token},nonce);assert.equal(done.status,303,await done.clone().text());return cookies(done);
+ };
+ const a=await login('worker-login-a@example.com'),b=await login('worker-login-b@example.com');
+ const register=await send('/oauth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({client_name:'CI user connection',redirect_uris:['http://localhost:8484/callback'],token_endpoint_auth_method:'none',grant_types:['authorization_code','refresh_token'],response_types:['code']})});
+ assert.equal(register.status,201);const client=await register.json();
+ const verifier='v'.repeat(64),challenge=createHash('sha256').update(verifier).digest('base64url');
+ const params=new URLSearchParams({client_id:client.client_id,redirect_uri:'http://localhost:8484/callback',response_type:'code',scope:'bytes:read bytes:write offline_access',resource:base+'/mcp',state:'ci-state',code_challenge:challenge,code_challenge_method:'S256'});
+ assert.equal((await send('/authorize?'+params)).status,303);
+ const consent=await send('/authorize?'+params,{headers:{Cookie:a}});const text=await consent.text();assert.equal(consent.status,200,text);
+ assert.doesNotMatch(text,/name="key"/);assert.doesNotMatch(text,/value="bytes:manage"/);
+ const handle=text.match(/name="handle" value="([^"]+)"/)[1],csrf=text.match(/name="csrf" value="([^"]+)"/)[1],cookie=a+'; '+cookies(consent);
+ assert.equal((await post('/authorize',{handle,csrf,decision:'approve',scope:'bytes:manage'},cookie)).status,403);
+ assert.equal((await post('/authorize',{handle,csrf,decision:'approve',scope:'bytes:read'},b+'; '+cookies(consent))).status,403);
+ const approved=await post('/authorize',{handle,csrf,decision:'approve',scope:'bytes:read'},cookie);assert.equal(approved.status,303,await approved.clone().text());
+ const code=new URL(approved.headers.get('location')).searchParams.get('code');
+ const tokenResponse=await post('/oauth/token',{grant_type:'authorization_code',client_id:client.client_id,code,redirect_uri:'http://localhost:8484/callback',code_verifier:verifier,resource:base+'/mcp'});assert.equal(tokenResponse.status,200);const tokens=await tokenResponse.json();
+ const call=async(name,args={})=>{const r=await send('/mcp',{method:'POST',headers:{Authorization:'Bearer '+tokens.access_token,'Content-Type':'application/json',Accept:'application/json, text/event-stream'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/call',params:{name,arguments:args}})});assert.equal(r.status,200);return r.json();};
+ const workspace=await call('bytes_workspace');assert.notEqual(workspace.result.isError,true,JSON.stringify(workspace));assert.doesNotMatch(JSON.stringify(workspace),new RegExp(env.WORKSPACE_ID));
+ const legacy=(await admin.query("SELECT pointer FROM bytes.revisions WHERE workspace_id=$1 LIMIT 1",[env.WORKSPACE_ID])).rows[0].pointer;
+ assert.equal((await call('bytes_get',{pointer:legacy,include_content:true})).result.isError,true);
+ assert.equal((await send('/app/artifact?pointer='+encodeURIComponent(legacy),{headers:{Cookie:a}})).status,404);
+ }finally{await mf.dispose();}
 });

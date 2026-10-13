@@ -252,6 +252,7 @@ export default {
   async fetch(req: Request, env: Env, ctx: ExecutionContext) {
     try {
       const url = new URL(req.url);
+      if (env.APP_URL && url.origin === env.APP_URL && url.pathname === "/") return new Response(null,{status:303,headers:{Location:"/app"}});
       if (env.APP_URL && url.origin === env.APP_URL && !["/login","/app"].includes(url.pathname) && !url.pathname.startsWith("/auth/") && !url.pathname.startsWith("/app/")) return json({error:"Not found"},404);
       if (url.hostname === "bytesskills.com") {
         return Response.redirect(env.BASE_URL + url.pathname + url.search, 308);
