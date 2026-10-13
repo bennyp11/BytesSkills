@@ -19,7 +19,7 @@ const blobMap=new Map();
 const BLOBS={
  async put(key,data,options){blobMap.set(key,{data:Uint8Array.from(data),customMetadata:options.customMetadata});},
  async head(key){const b=blobMap.get(key);return b?{size:b.data.length,customMetadata:b.customMetadata}:null;},
- async get(key){const b=blobMap.get(key);return b?{arrayBuffer:async()=>b.data.buffer}:null;}
+ async get(key){const b=blobMap.get(key);return b?{body:b.data,arrayBuffer:async()=>b.data.buffer}:null;}
 };
 const tenant=async subject=>api.provisionVerifiedIdentity(env,'https://test.example',subject);
 const access=async t=>api.WorkspaceAccess.authorize(env,t.account_id,t.workspace_id);
@@ -274,6 +274,18 @@ pgTest('login HTTP flow sends a confirmation link, ignores scanner GETs, blocks 
  const artifact=await save(new api.Store(loginEnv,await access(owner)),'Clickable artifact');
  const listing=await api.loginRoutes(request('/app',{headers:{Cookie:sessionCookie}}),loginEnv);assert.ok((await listing.text()).includes('/app/artifact?pointer='+encodeURIComponent(artifact.pointer)));
  const opened=await api.loginRoutes(request('/app/artifact?pointer='+encodeURIComponent(artifact.pointer),{headers:{Cookie:sessionCookie}}),loginEnv);assert.match(await opened.text(),/a private pineapple/);
+ const core=await api.loginRoutes(request('/app/skill?core=help',{headers:{Cookie:sessionCookie}}),loginEnv);assert.match(await core.text(),/Platform core/);
+ const ownerStore=new api.Store(loginEnv,await access(owner));
+ for(const mime of ['image/png','image/svg+xml']){
+  const bytes=new TextEncoder().encode('synthetic preview fixture '+mime),blob=await ownerStore.putBlob(bytes);
+  const media=await ownerStore.save({request_id:crypto.randomUUID(),type:'image',title:'Media test',content:{...blob,media_type:mime}});
+  const view=await api.loginRoutes(request('/app/artifact?pointer='+encodeURIComponent(media.pointer),{headers:{Cookie:sessionCookie}}),loginEnv);
+  assert.equal((await view.text()).includes('<img src='),mime==='image/png');
+  const download=await api.loginRoutes(request('/app/content?view=1&pointer='+encodeURIComponent(media.pointer),{headers:{Cookie:sessionCookie}}),loginEnv);
+  assert.equal(download.headers.get('content-disposition'),mime==='image/png'?'inline':'attachment');assert.equal((await download.arrayBuffer()).byteLength,bytes.length);
+  assert.equal((await api.loginRoutes(request('/app/content?view=1&pointer='+encodeURIComponent(media.pointer)),loginEnv)).status,303);
+ }
+
  await assert.rejects(api.loginRoutes(post('/auth/logout',{csrf:'bad'},sessionCookie),loginEnv),/confirmation/);
  await api.loginRoutes(post('/auth/logout',{csrf},sessionCookie),loginEnv);
  assert.equal(await api.browserSession(request('/app',{headers:{Cookie:sessionCookie}}),loginEnv),null);
