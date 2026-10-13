@@ -317,10 +317,11 @@ export class Releases {
     }
     const definitions = new Definitions(this.env,this.access);
     const snapshot = await definitions.snapshot(a.skill_pointer,a.format_pointers??[]);
+    const helpRequest=a.command.trim().split(/\s+/).includes('--help');
     if(a.skill_pointer && !/^\/bytes run(?:\s|$)/.test(a.command))
       throw new ApiError(400,'Use /bytes run for an explicitly selected private skill');
-    const skill = snapshot.skill?.definition.base_skill ?? commandSkill(a.command);
-    if(snapshot.formats.length && !registry.skills[skill].can_save)
+    const skill = helpRequest ? commandSkill(a.command) : snapshot.skill?.definition.base_skill ?? commandSkill(a.command);
+    if(snapshot.formats.length && !registry.skills[skill].can_save && !helpRequest)
       throw new ApiError(400,'Private formats apply to creative workflows');
     let state = await this.state();
     const { rows, hash } = await this.catalog();
@@ -443,7 +444,7 @@ export class Releases {
       version: row.version,
       checksum: row.checksum,
       expires_at: session.expires_at,
-      instructions: snapshot?.skill ? privateExecutionInstructions : release.instructions + (snapshot?.formats.length ? '\nUse the attached private format snapshots for this request instead of similarly named core formats. Their pinned revisions are authoritative for the selected format.' : ''),
+      instructions: snapshot?.skill ? (row.skill==='help' ? 'Explain the attached private skill contract and formats. This is read-only help: do not execute, start creative intake or save artifacts.' : privateExecutionInstructions) : release.instructions + (snapshot?.formats.length ? '\nUse the attached private format snapshots for this request instead of similarly named core formats. Their pinned revisions are authoritative for the selected format.' : ''),
       resources: release.resources,
       ...(snapshot ? {private_definitions:snapshot} : {}),
     };

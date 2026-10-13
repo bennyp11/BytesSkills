@@ -426,6 +426,11 @@ pgTest('private definitions pin format/skill revisions across instances, preserv
  const rel=new api.Releases(env,ctx),scopes=['bytes:read','bytes:write'],updates=await rel.updates();
  await rel.adopt({request_id:crypto.randomUUID(),expected_revision:updates.state_revision,catalog_hash:updates.catalog_hash,skill:'brainstorm',action:'update'},scopes);
  const req={request_id:crypto.randomUUID(),command:'/bytes run',skill_pointer:skill.pointer.split(':')[0]};
+ const helpUpdates=await rel.updates();
+ await rel.adopt({request_id:crypto.randomUUID(),expected_revision:helpUpdates.state_revision,catalog_hash:helpUpdates.catalog_hash,skill:'help',action:'update'},scopes);
+ const help=await rel.begin({...req,request_id:crypto.randomUUID(),command:'/bytes run --help'},scopes);
+ assert.equal(help.skill,'help');assert.match(help.instructions,/read-only/);
+ await assert.rejects(rel.provenance(help.workflow_id,scopes,'concept'),/cannot save/);
  const begin=await rel.begin(req,scopes);assert.equal(begin.status,'ready');assert.equal(begin.private_definitions.formats[0].pointer,format.pointer);
  const format2=await da.save({request_id:crypto.randomUUID(),title:'New format',pointer:format.pointer,expected_revision:1,definition:{...f,instructions:'A different opening'}},noCore);
  const skill2=await da.save({request_id:crypto.randomUUID(),title:'My updated brainstorm',pointer:skill.pointer,expected_revision:1,definition:{...d,instructions:'Use the new approach',formats:[{name:'default',pointer:format2.pointer}]}},noCore);

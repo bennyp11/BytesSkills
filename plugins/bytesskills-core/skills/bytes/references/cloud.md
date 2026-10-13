@@ -2,7 +2,8 @@
 
 When the BytesSkills MCP tools are connected, use them for the active shared
 workspace. Start every execution request with `bytes_begin`; private definition
-authoring uses bytes_author directly (see private-library.md). see [versions](versions.md). Use `bytes_workspace` to verify identity and access.
+authoring uses bytes_author directly (see [private authoring](private-library.md)).
+See [versions](versions.md) for execution adoption. Use `bytes_workspace` to verify identity and access.
 Use the ready workflow response for pinned definitions and contracts. `bytes_library` is current-library discovery only; do not mix it into a pinned workflow. Local checkout
 files may be newer than the deployed library; record the actual versions used.
 Do not mix local and remote writes to the same workspace or silently switch to
