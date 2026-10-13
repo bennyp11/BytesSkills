@@ -25,7 +25,10 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npm run build
+      - run: npx playwright install --with-deps chromium
       - run: npm test
+        env:
+          BYTES_BROWSER_TESTS: "1"
       - run: python3 -m unittest discover -s ../tests -q
 
   postgres:

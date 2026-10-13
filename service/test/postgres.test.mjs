@@ -255,8 +255,9 @@ pgTest('login HTTP flow sends a confirmation link, ignores scanner GETs, blocks 
  await api.loginRoutes(post('/auth/request',{email,next:'//evil.example'}),loginEnv);assert.equal(messages.length,1);
  const link=messages[0].text.match(/https:\/\/[^\s]+\/auth\/verify\?token=[a-f0-9]+/)[0],token=new URL(link).searchParams.get('token');
  assert.match(messages[0].text,/10 minutes/);
- const preview=await api.loginRoutes(new Request(link,{headers:{Cookie:nonce}}),loginEnv);assert.equal(preview.status,200);assert.equal(preview.headers.get('referrer-policy'),'no-referrer');
+ const preview=await api.loginRoutes(new Request(link,{headers:{Cookie:nonce}}),loginEnv);assert.equal(preview.status,200);assert.equal(preview.headers.get('referrer-policy'),'strict-origin');
  await assert.rejects(api.loginRoutes(new Request(link),loginEnv),/browser/);
+ await assert.rejects(api.loginRoutes(post('/auth/complete',{token},nonce,'null'),loginEnv),/origin/);
  await assert.rejects(api.loginRoutes(post('/auth/complete',{token,owner_key:'wrong-owner-proof'}),loginEnv),/claims are retired/);
  const confirmed=await api.loginRoutes(post('/auth/complete',{token}),loginEnv);assert.equal(confirmed.status,303);assert.equal(confirmed.headers.get('location'),'/app');
  const sessionCookie=confirmed.headers.getSetCookie().find(s=>s.startsWith('__Host-bytes-session=')).split(';')[0];
