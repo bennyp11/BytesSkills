@@ -1,0 +1,11 @@
+{
+ "name":"bytesskills-ci-email",
+ "main":"worker.ts",
+ "account_id":"f6c273ea7837c6c7b5cdab3cdaa905c7",
+ "compatibility_date":"2026-10-01",
+ "workers_dev":true,
+ "preview_urls":false,
+ "send_email":[{"name":"EMAIL"}],
+ "vars":{"EMAIL_FROM":"login@auth.bytesskills.com"},
+ "observability":{"enabled":true,"logs":{"enabled":true,"invocation_logs":false}}
+}

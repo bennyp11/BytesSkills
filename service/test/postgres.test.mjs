@@ -53,7 +53,7 @@ after(async()=>{
  if(control){if(dbName)await control.query(`DROP DATABASE IF EXISTS ${dbName} WITH (FORCE)`);if(rolesCreated)for(const r of ['runtime','identity','publisher'])await control.query(`DROP ROLE bytes_${r}`);await control.end();}
  if(dir)await rm(dir,{recursive:true,force:true});
 });
-const pgTest=(name,fn)=>test(name,{skip:!enabled},fn);
+const pgTest=(name,fn)=>test(name,{skip:!enabled,timeout:120000},fn);
 pgTest('legacy D1 import preserves canonical records, indexes, receipts, releases and snapshot cursors',async()=>{
  const workspace=env.WORKSPACE_ID,id=crypto.randomUUID(),pointer=`@concept/${id}:v1`,text='legacy body';
  const hash=sha(text),key=`blobs/sha256/${hash.slice(0,2)}/${hash}`;
@@ -198,7 +198,7 @@ pgTest('publisher cannot read workspace data, release adoption and workflows rem
 });
 pgTest('Cloudflare Worker uses Hyperdrive bindings for PostgreSQL storage and MCP tenant isolation',async()=>{
  const {Miniflare,convertV4MiniflareOptions}=await import('miniflare');
- const bundle=await build({entryPoints:['test/fixtures/tenancy-worker.ts'],bundle:true,write:false,format:'esm',platform:'node',target:'es2022',conditions:['workerd'],external:['cloudflare:sockets'],banner:{js:'import {createRequire} from "node:module"; const require=createRequire("/test-worker.js");'}});
+ const bundle=await build({entryPoints:['test/fixtures/tenancy-worker.ts'],bundle:true,write:false,format:'esm',platform:'node',target:'es2022',conditions:['workerd'],external:['cloudflare:*'],banner:{js:'import {createRequire} from "node:module"; const require=createRequire("/test-worker.js");'}});
  const mf=new Miniflare(convertV4MiniflareOptions({modules:true,script:bundle.outputFiles[0].text,
   compatibilityDate:'2026-10-01',compatibilityFlags:['nodejs_compat'],r2Buckets:['BLOBS'],
   hyperdrives:{POSTGRES:env.POSTGRES.connectionString,PUBLISHER_DB:env.PUBLISHER_DB.connectionString,IDENTITY_DB:env.IDENTITY_DB.connectionString},
@@ -268,14 +268,14 @@ pgTest('login HTTP flow sends a confirmation link, ignores scanner GETs, blocks 
 });
 pgTest('complete Worker login → account consent → OAuth → MCP rejects cross-account pointers and management scopes',async()=>{
  const {Miniflare,convertV4MiniflareOptions}=await import('miniflare');
- const bundle=await build({entryPoints:['test/fixtures/login-worker.ts'],bundle:true,write:false,format:'esm',platform:'node',target:'es2022',conditions:['workerd'],external:['cloudflare:sockets'],banner:{js:'import {createRequire} from "node:module"; const require=createRequire("/test-worker.js");'}});
+ const bundle=await build({entryPoints:['test/fixtures/login-worker.ts'],bundle:true,write:false,format:'esm',platform:'node',target:'es2022',conditions:['workerd'],external:['cloudflare:*'],banner:{js:'import {createRequire} from "node:module"; const require=createRequire("/test-worker.js");'}});
  const base='https://api.bytesskills.com';
  const mf=new Miniflare(convertV4MiniflareOptions({modules:true,script:bundle.outputFiles[0].text,
  compatibilityDate:'2026-10-01',compatibilityFlags:['nodejs_compat'],r2Buckets:['BLOBS'],kvNamespaces:['OAUTH_KV'],
  hyperdrives:{POSTGRES:env.POSTGRES.connectionString,PUBLISHER_DB:env.PUBLISHER_DB.connectionString,IDENTITY_DB:env.IDENTITY_DB.connectionString},
  bindings:{STORAGE_BACKEND:'postgres',WORKSPACE_ID:env.WORKSPACE_ID,BASE_URL:base,APP_URL:'https://app.bytesskills.com',LOGIN_ENABLED:'true',EMAIL_FROM:'login@example.com',OWNER_KEY_SHA256:sha('test-only-owner-key-000000000000000000000000')}}));
  const cookies=r=>r.headers.getSetCookie().map(c=>c.split(';')[0]).join('; ');
- const send=(path,opts={})=>mf.dispatchFetch(base+path,opts);
+ const send=(path,opts={})=>mf.dispatchFetch(base+path,{redirect:'manual',...opts});
  const post=(path,data,cookie)=>send(path,{method:'POST',headers:{Origin:base,Cookie:cookie??'','Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams(data)});
  try{
  const login=async email=>{
