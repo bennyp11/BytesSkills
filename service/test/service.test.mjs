@@ -785,3 +785,19 @@ test("auto adoption never escalates scopes; revoked and expired workflows cannot
   });
   assert.equal(expired.body.result.isError, true);
 });
+
+test('MCP responses carry diagnostic IDs without changing auth or tool data', async () => {
+  for (const token of [key, 'invalid']) {
+    const r=await mf.dispatchFetch(base+'/mcp', {method:'POST',headers:{
+      Authorization:'Bearer '+token,'Content-Type':'application/json',Accept:'application/json, text/event-stream'
+    },body:JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/call',params:{name:'bytes_workspace',arguments:{}}})});
+    assert.match(r.headers.get('X-Bytes-Request-Id'),/^[a-f0-9-]{36}$/);
+    assert.match(r.headers.get('Server-Timing'),/^bytes;dur=\d/);
+    if(token===key) {
+      assert.equal(r.status,200);
+      const body=await r.json();
+      assert.equal(body.result._meta['bytes/request_id'],r.headers.get('X-Bytes-Request-Id'));
+      assert.equal(JSON.parse(body.result.content[0].text).workspace_id,'acc3351e-d092-433c-a7e1-8fc3e807ebd4');
+    } else assert.equal(r.status,401);
+  }
+});

@@ -1,3 +1,4 @@
+import { timed } from './telemetry';
 import { database, type Database, type Statement } from './database';
 import { requireAccess, type WorkspaceAccess } from "./access";
 import { z } from "zod";
@@ -129,9 +130,9 @@ export class Store {
   async contentText(content: RecordData["content"]) {
     if (content.bytes > 300_000)
       throw new ApiError(413, "Text content too large");
-    const blob = await this.env.BLOBS.get(this.objectKey(content.key));
+    const blob = await timed("blob_get", () => this.env.BLOBS.get(this.objectKey(content.key)));
     if (!blob) throw new ApiError(409, "Missing content");
-    const data = await blob.arrayBuffer();
+    const data = await timed("blob_read", () => blob.arrayBuffer());
     if (
       data.byteLength !== content.bytes ||
       (await sha(data)) !== content.sha256
@@ -148,11 +149,11 @@ export class Store {
     if (expected && expected !== hash)
       throw new ApiError(409, "Content checksum mismatch");
     const key = `blobs/sha256/${hash.slice(0, 2)}/${hash}`;
-    await this.env.BLOBS.put(this.objectKey(key), data, {
+    await timed("blob_put", () => this.env.BLOBS.put(this.objectKey(key), data, {
       sha256: hash,
       onlyIf: { etagDoesNotMatch: "*" },
       customMetadata: { sha256: hash },
-    });
+    }));
     return { key, sha256: hash, bytes: data.byteLength };
   }
   async validateContent(content: RecordData["content"]) {
@@ -161,7 +162,7 @@ export class Store {
       `blobs/sha256/${content.sha256.slice(0, 2)}/${content.sha256}`
     )
       throw new ApiError(400, "Content key mismatch");
-    const obj = await this.env.BLOBS.head(this.objectKey(content.key));
+    const obj = await timed("blob_head", () => this.env.BLOBS.head(this.objectKey(content.key)));
     if (
       !obj ||
       obj.size !== content.bytes ||
