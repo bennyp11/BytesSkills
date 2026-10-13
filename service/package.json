@@ -28,6 +28,7 @@
     "@types/pg": "^8.23.1",
     "esbuild": "0.28.2",
     "miniflare": "^5.20261006.1-alpha",
+    "playwright": "^1.64.0",
     "typescript": "^5.9.3",
     "wrangler": "^4.149.0"
   }

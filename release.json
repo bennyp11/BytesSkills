@@ -1,4 +1,4 @@
 {
-  "version": "0.9.2",
-  "summary": "Retire owner-key login and production bearer access; use verified email accounts and a separate release-only CI credential."
+  "version": "0.9.3",
+  "summary": "Fix Chrome magic-link confirmation Origin handling and add a real Chromium form-submission regression test."
 }

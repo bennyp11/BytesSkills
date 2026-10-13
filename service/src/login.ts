@@ -39,8 +39,9 @@ export async function loginRoutes(req:Request,env:Env):Promise<Response|null>{
  }
  if(p==='/auth/verify'&&req.method==='GET'){
   const token=u.searchParams.get('token')??'';if(!valid(token)||!valid(cookie(req,'__Host-bytes-login')))throw new ApiError(400,'Open the link in the browser where you requested it, or request a new link');
-  const headers=new Headers({'Referrer-Policy':'no-referrer'});
-  const response=html(`<h1>Confirm sign-in</h1><p>Continue only if you requested this link.</p><form method="post" action="/auth/complete"><input type="hidden" name="token" value="${token}"><button>Sign in</button></form>`,headers);response.headers.set('Referrer-Policy','no-referrer');return response;
+  // Preserve the form Origin without disclosing the token-bearing URL in Referer.
+  const headers=new Headers();
+  const response=html(`<h1>Confirm sign-in</h1><p>Continue only if you requested this link.</p><form method="post" action="/auth/complete"><input type="hidden" name="token" value="${token}"><button>Sign in</button></form>`,headers);response.headers.set('Referrer-Policy','strict-origin');return response;
  }
  if(p==='/auth/complete'&&req.method==='GET')return loginRedirect('/app');
  if(p==='/auth/complete'){
