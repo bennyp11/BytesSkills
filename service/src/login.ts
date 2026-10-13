@@ -3,7 +3,7 @@ import {database} from './database';
 import {WorkspaceAccess} from './access';
 import {Store} from './store';
 import {skillPages} from './skill-pages';
-import {escape,html} from './html';
+import {escape,html,artifactReferences} from './html';
 const random=()=>Array.from(crypto.getRandomValues(new Uint8Array(32)),x=>x.toString(16).padStart(2,'0')).join('');
 const cookie=(req:Request,name:string)=>req.headers.get('Cookie')?.split(';').map(s=>s.trim()).find(s=>s.startsWith(name+'='))?.slice(name.length+1)??'';
 const setCookie=(name:string,value:string,age:number)=>`${name}=${value}; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=${age}`;
@@ -77,7 +77,7 @@ export async function loginRoutes(req:Request,env:Env):Promise<Response|null>{
   let content='text' in item?`<pre>${escape(String(item.text))}</pre>`:'<p>Preview unavailable for this file type. Download it below.</p>';
   if(previewTypes.has(item.content.media_type))content=item.content.media_type.startsWith('image/')?`<img src="${url}" alt="${escape(item.title)}">`:item.content.media_type.startsWith('video/')?`<video controls preload="metadata" src="${url}"></video>`:`<audio controls preload="metadata" src="${url}"></audio>`;
   if(item.content.media_type==='application/json')content=`<pre>${escape(await store.contentText(item.content))}</pre>`;
-  return html(nav+`<p><a href="/app">← all artifacts</a></p><h1>${escape(item.title)}</h1><p><code>${escape(item.pointer)}</code></p><p class="muted">${escape(item.type)} · ${escape(item.status)} · revision ${item.revision}</p>${content}<p><a href="/app/content?pointer=${encodeURIComponent(item.pointer)}">Download content</a></p><h2>Revisions</h2>`+history.items.map((r:any)=>`<p><a href="/app/artifact?pointer=${encodeURIComponent(r.pointer)}">Revision ${r.revision}</a></p>`).join(''));
+  return html(nav+`<p><a href="/app">← all artifacts</a></p><h1>${escape(item.title)}</h1>${artifactReferences(item)}<p class="muted">${escape(item.type)} · ${escape(item.status)} · revision ${item.revision}</p>${content}<p><a href="/app/content?pointer=${encodeURIComponent(item.pointer)}">Download content</a></p><h2>Revisions</h2>`+history.items.map((r:any)=>`<p><a href="/app/artifact?pointer=${encodeURIComponent(r.pointer)}">Revision ${r.revision}</a></p>`).join(''),new Headers(),undefined,true);
 
  }
 
