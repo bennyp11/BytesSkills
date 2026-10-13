@@ -1,7 +1,7 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "id": "captions",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "status": "draft",
   "purpose": "Use CapCut computer control to add readable, speech-aligned captions and export a verified captioned video.",
   "command": "captions",
@@ -22,61 +22,137 @@
       "type": "string",
       "required": true,
       "question": "Use CapCut for this captioning workflow?",
-      "allow_delegation": false
+      "allow_delegation": false,
+      "applies_when": "When relevant to the requested operation; follow the pinned handler for conditional inputs.",
+      "inherit_from": [],
+      "interface": "flag"
     },
     "source": {
       "type": "string",
       "required": true,
       "question": "Which video or project should I caption?",
-      "allow_delegation": false
+      "allow_delegation": false,
+      "applies_when": "When relevant to the requested operation; follow the pinned handler for conditional inputs.",
+      "inherit_from": [],
+      "interface": "flag"
     },
     "project": {
       "type": "string",
       "required": false,
       "question": "Which existing CapCut project should I use?",
-      "allow_delegation": false
+      "allow_delegation": false,
+      "applies_when": "When relevant to the requested operation; follow the pinned handler for conditional inputs.",
+      "inherit_from": [],
+      "interface": "flag"
     },
     "language": {
       "type": "string",
       "required": true,
       "question": "What language is spoken, or should I detect it?",
-      "allow_delegation": true
+      "allow_delegation": true,
+      "applies_when": "When relevant to the requested operation; follow the pinned handler for conditional inputs.",
+      "inherit_from": [],
+      "interface": "flag"
     },
     "style": {
       "type": "string",
       "required": true,
       "question": "What caption style should I use?",
-      "allow_delegation": true
+      "allow_delegation": true,
+      "applies_when": "When relevant to the requested operation; follow the pinned handler for conditional inputs.",
+      "inherit_from": [],
+      "interface": "flag"
     },
     "placement": {
       "type": "string",
       "required": true,
       "question": "Where should captions appear?",
-      "allow_delegation": true
+      "allow_delegation": true,
+      "applies_when": "When relevant to the requested operation; follow the pinned handler for conditional inputs.",
+      "inherit_from": [],
+      "interface": "flag"
     },
     "existing": {
       "type": "string",
       "required": false,
       "question": "If captions exist, should I preserve, replace or restyle them?",
-      "allow_delegation": false
+      "allow_delegation": false,
+      "applies_when": "When relevant to the requested operation; follow the pinned handler for conditional inputs.",
+      "inherit_from": [],
+      "interface": "flag"
     },
     "output": {
       "type": "string",
       "required": true,
       "question": "Where should I save the captioned video?",
-      "allow_delegation": true
+      "allow_delegation": true,
+      "applies_when": "When relevant to the requested operation; follow the pinned handler for conditional inputs.",
+      "inherit_from": [],
+      "interface": "flag"
     }
   },
   "outputs": [
-    "plan",
-    "video"
+    {
+      "id": "plan",
+      "artifact_type": "plan",
+      "when": "Save the agreed editing or captioning plan before modifying footage.",
+      "media_types": [
+        "text/markdown"
+      ],
+      "persistence": "new-or-revision",
+      "delivery": "workspace",
+      "profile": null,
+      "quality_checks": [
+        "Plan distinguishes requested work from verified completed work."
+      ]
+    },
+    {
+      "id": "video",
+      "artifact_type": "video",
+      "when": "After a real export has been produced and verified.",
+      "media_types": [
+        "video/mp4",
+        "video/quicktime",
+        "video/webm"
+      ],
+      "persistence": "new-or-revision",
+      "delivery": "workspace-or-explicit-local-file",
+      "profile": null,
+      "quality_checks": [
+        "File bytes exist; observed container, duration and dimensions match the delivered export.",
+        "Claim cloud persistence only after verified upload; a path or expiring URL alone is insufficient."
+      ]
+    }
   ],
-  "persistence": "new-artifacts-or-revisions",
   "capabilities": [
-    "host-computer-control",
-    "capcut-ui",
-    "source-file-access",
-    "export-file-access"
+    {
+      "id": "host-computer-control",
+      "required_for": [
+        "video"
+      ],
+      "unavailable": "Stop video execution and explain the missing capability. Preserve any saved plan; do not claim a video was produced."
+    },
+    {
+      "id": "capcut-ui",
+      "required_for": [
+        "video"
+      ],
+      "unavailable": "Stop video execution and explain the missing capability. Preserve any saved plan; do not claim a video was produced."
+    },
+    {
+      "id": "source-file-access",
+      "required_for": [
+        "video"
+      ],
+      "unavailable": "Stop video execution and explain the missing capability. Preserve any saved plan; do not claim a video was produced."
+    },
+    {
+      "id": "export-file-access",
+      "required_for": [
+        "video"
+      ],
+      "unavailable": "Stop video execution and explain the missing capability. Preserve any saved plan; do not claim a video was produced."
+    }
   ],
   "quality_checks": [
     "Caption text matches reviewed speech; uncertainty and review gaps are disclosed.",
@@ -85,5 +161,31 @@
     "The exported video contains visible captions and retains intended source timing, framing and audio.",
     "Cloud video persistence is claimed only after verified byte ingestion."
   ],
-  "handler": "references/captions/instructions.md"
+  "handler": "references/captions/instructions.md",
+  "parameter_rules": [
+    "Explicit values override compatible inherited values. Conflicting sources require clarification.",
+    "Only applicable unresolved inputs trigger questions. Defaults are suggestions until accepted or delegated."
+  ],
+  "intake_order": [
+    "app",
+    "source",
+    "project",
+    "language",
+    "style",
+    "placement",
+    "existing",
+    "output"
+  ],
+  "effects": [
+    "workspace-write",
+    "local-file-write",
+    "computer-control"
+  ],
+  "failure": {
+    "partial": "preserve-completed-outputs",
+    "retry": "reuse-save-request-id-for-identical-retry",
+    "conflict": "reread-and-resolve-never-overwrite"
+  },
+  "response_contract": "references/responses.md",
+  "execution_contract": "references/skill-contract.md"
 }

@@ -1,22 +1,79 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "id": "example-skill",
   "version": "0.1.0",
   "status": "draft",
   "purpose": "Replace with the concrete task this skill performs",
   "command": "example-skill",
   "natural_language": {
-    "positive": ["Using BytesSkills, perform this specific task"],
-    "negative": ["Explain what this task means without performing it"],
+    "positive": [
+      "Using BytesSkills, perform this specific task"
+    ],
+    "negative": [
+      "Explain what this task means without performing it"
+    ],
     "ambiguity_question": "Which saved artifact should this operate on?"
   },
   "parameters": {
-    "source": {"type": "pointer", "artifact_types": ["concept"], "required": true, "question": "Which concept should I use?", "allow_delegation": false},
-    "direction": {"type": "string", "required": true, "question": "What direction should I take?", "allow_delegation": true}
+    "source": {
+      "type": "pointer",
+      "artifact_types": [
+        "concept"
+      ],
+      "required": true,
+      "question": "Which concept should I use?",
+      "allow_delegation": false,
+      "applies_when": "When relevant to the requested operation; follow the pinned handler for conditional inputs.",
+      "inherit_from": [],
+      "interface": "flag"
+    },
+    "direction": {
+      "type": "string",
+      "required": true,
+      "question": "What direction should I take?",
+      "allow_delegation": true,
+      "applies_when": "When relevant to the requested operation; follow the pinned handler for conditional inputs.",
+      "inherit_from": [],
+      "interface": "flag"
+    }
   },
-  "outputs": ["plan"],
-  "persistence": "new-artifacts",
+  "outputs": [
+    {
+      "id": "plan",
+      "artifact_type": "plan",
+      "when": "After completing the requested plan.",
+      "media_types": [
+        "text/markdown"
+      ],
+      "persistence": "new-artifact",
+      "delivery": "workspace",
+      "profile": null,
+      "quality_checks": [
+        "Plan distinguishes requested work from verified completed work."
+      ]
+    }
+  ],
   "capabilities": [],
-  "quality_checks": ["Output addresses the supplied source and direction"],
-  "handler": "references/example-skill/instructions.md"
+  "quality_checks": [
+    "Output addresses the supplied source and direction"
+  ],
+  "handler": "references/example-skill/instructions.md",
+  "parameter_rules": [
+    "Explicit values override compatible inherited values. Conflicting sources require clarification.",
+    "Only applicable unresolved inputs trigger questions. Defaults are suggestions until accepted or delegated."
+  ],
+  "intake_order": [
+    "source",
+    "direction"
+  ],
+  "effects": [
+    "workspace-write"
+  ],
+  "failure": {
+    "partial": "preserve-completed-outputs",
+    "retry": "reuse-save-request-id-for-identical-retry",
+    "conflict": "reread-and-resolve-never-overwrite"
+  },
+  "response_contract": "references/responses.md",
+  "execution_contract": "references/skill-contract.md"
 }

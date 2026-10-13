@@ -1,7 +1,7 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "id": "edit",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "status": "draft",
   "purpose": "Operate CapCut through available host computer control to edit a supplied video and deliver a verified export.",
   "command": "edit",
@@ -22,73 +22,155 @@
       "type": "string",
       "required": true,
       "question": "Use CapCut desktop or an available CapCut web surface?",
-      "allow_delegation": false
+      "allow_delegation": false,
+      "applies_when": "When relevant to the requested operation; follow the pinned handler for conditional inputs.",
+      "inherit_from": [],
+      "interface": "flag"
     },
     "source": {
       "type": "string",
       "required": true,
       "question": "Which source footage or existing CapCut project should I edit?",
-      "allow_delegation": false
+      "allow_delegation": false,
+      "applies_when": "When relevant to the requested operation; follow the pinned handler for conditional inputs.",
+      "inherit_from": [],
+      "interface": "flag"
     },
     "req": {
       "type": "string",
       "required": true,
       "question": "What should the finished edit accomplish?",
-      "allow_delegation": true
+      "allow_delegation": true,
+      "applies_when": "When relevant to the requested operation; follow the pinned handler for conditional inputs.",
+      "inherit_from": [],
+      "interface": "flag"
     },
     "project": {
       "type": "string",
       "required": false,
       "question": "Which existing project should I continue?",
-      "allow_delegation": false
+      "allow_delegation": false,
+      "applies_when": "When relevant to the requested operation; follow the pinned handler for conditional inputs.",
+      "inherit_from": [],
+      "interface": "flag"
     },
     "format": {
       "type": "string",
       "required": false,
       "question": "Which content format should this follow, if any?",
-      "allow_delegation": true
+      "allow_delegation": true,
+      "applies_when": "When relevant to the requested operation; follow the pinned handler for conditional inputs.",
+      "inherit_from": [],
+      "interface": "flag"
     },
     "duration": {
       "type": "string",
       "required": true,
       "question": "What target duration should I use, or should I preserve the source length?",
-      "allow_delegation": true
+      "allow_delegation": true,
+      "applies_when": "When relevant to the requested operation; follow the pinned handler for conditional inputs.",
+      "inherit_from": [],
+      "interface": "flag"
     },
     "aspect": {
       "type": "string",
       "required": true,
       "question": "Which aspect ratio should I use, or should I preserve the source aspect?",
-      "allow_delegation": true
+      "allow_delegation": true,
+      "applies_when": "When relevant to the requested operation; follow the pinned handler for conditional inputs.",
+      "inherit_from": [],
+      "interface": "flag"
     },
     "captions": {
       "type": "string",
       "required": true,
       "question": "Should I create captions, preserve them or use none?",
-      "allow_delegation": true
+      "allow_delegation": true,
+      "applies_when": "When relevant to the requested operation; follow the pinned handler for conditional inputs.",
+      "inherit_from": [],
+      "interface": "flag"
     },
     "music": {
       "type": "string",
       "required": true,
       "question": "Should I preserve the audio, use no music or use an approved asset?",
-      "allow_delegation": true
+      "allow_delegation": true,
+      "applies_when": "When relevant to the requested operation; follow the pinned handler for conditional inputs.",
+      "inherit_from": [],
+      "interface": "flag"
     },
     "output": {
       "type": "string",
       "required": true,
       "question": "Where should the exported video be saved?",
-      "allow_delegation": true
+      "allow_delegation": true,
+      "applies_when": "When relevant to the requested operation; follow the pinned handler for conditional inputs.",
+      "inherit_from": [],
+      "interface": "flag"
     }
   },
   "outputs": [
-    "plan",
-    "video"
+    {
+      "id": "plan",
+      "artifact_type": "plan",
+      "when": "Save the agreed editing or captioning plan before modifying footage.",
+      "media_types": [
+        "text/markdown"
+      ],
+      "persistence": "new-or-revision",
+      "delivery": "workspace",
+      "profile": null,
+      "quality_checks": [
+        "Plan distinguishes requested work from verified completed work."
+      ]
+    },
+    {
+      "id": "video",
+      "artifact_type": "video",
+      "when": "After a real export has been produced and verified.",
+      "media_types": [
+        "video/mp4",
+        "video/quicktime",
+        "video/webm"
+      ],
+      "persistence": "new-or-revision",
+      "delivery": "workspace-or-explicit-local-file",
+      "profile": null,
+      "quality_checks": [
+        "File bytes exist; observed container, duration and dimensions match the delivered export.",
+        "Claim cloud persistence only after verified upload; a path or expiring URL alone is insufficient."
+      ]
+    }
   ],
-  "persistence": "new-artifacts-or-revisions",
   "capabilities": [
-    "host-computer-control",
-    "capcut-ui",
-    "source-file-access",
-    "export-file-access"
+    {
+      "id": "host-computer-control",
+      "required_for": [
+        "video"
+      ],
+      "unavailable": "Stop video execution and explain the missing capability. Preserve any saved plan; do not claim a video was produced."
+    },
+    {
+      "id": "capcut-ui",
+      "required_for": [
+        "video"
+      ],
+      "unavailable": "Stop video execution and explain the missing capability. Preserve any saved plan; do not claim a video was produced."
+    },
+    {
+      "id": "source-file-access",
+      "required_for": [
+        "video"
+      ],
+      "unavailable": "Stop video execution and explain the missing capability. Preserve any saved plan; do not claim a video was produced."
+    },
+    {
+      "id": "export-file-access",
+      "required_for": [
+        "video"
+      ],
+      "unavailable": "Stop video execution and explain the missing capability. Preserve any saved plan; do not claim a video was produced."
+    }
   ],
   "quality_checks": [
     "Edits follow the supplied brief and pinned format.",
@@ -97,5 +179,33 @@
     "Caption/audio review claims match the tools actually available.",
     "Local-only exports are not represented as uploaded video artifacts."
   ],
-  "handler": "references/edit/instructions.md"
+  "handler": "references/edit/instructions.md",
+  "parameter_rules": [
+    "Explicit values override compatible inherited values. Conflicting sources require clarification.",
+    "Only applicable unresolved inputs trigger questions. Defaults are suggestions until accepted or delegated."
+  ],
+  "intake_order": [
+    "app",
+    "source",
+    "req",
+    "project",
+    "format",
+    "duration",
+    "aspect",
+    "captions",
+    "music",
+    "output"
+  ],
+  "effects": [
+    "workspace-write",
+    "local-file-write",
+    "computer-control"
+  ],
+  "failure": {
+    "partial": "preserve-completed-outputs",
+    "retry": "reuse-save-request-id-for-identical-retry",
+    "conflict": "reread-and-resolve-never-overwrite"
+  },
+  "response_contract": "references/responses.md",
+  "execution_contract": "references/skill-contract.md"
 }

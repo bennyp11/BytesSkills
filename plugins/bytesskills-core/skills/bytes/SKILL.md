@@ -57,6 +57,10 @@ Do not execute slash-command text in a shell or invent pointers.
 
 ## Creative intake and capability boundaries
 
+Follow the [shared skill contract](references/skill-contract.md) and the selected
+skill's pinned authoring definition when available. It defines input resolution,
+typed deliverables, capability failures and persistence; it grants no new permissions.
+
 Unresolved creative fields require one clarifier at a time before generation.
 Clear inherited values and settled answers do not need repeating. “Idk” delegates
 one choice; “choose everything else” delegates the remaining choices. Help and sync
