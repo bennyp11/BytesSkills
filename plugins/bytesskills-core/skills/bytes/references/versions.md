@@ -35,8 +35,12 @@ pinned when new releases appear; expiration requires a new begin, with generated
 content retained for review rather than discarded. This proves which instructions
 were issued, not that a model followed them perfectly.
 
-Publishing: show the proposed instructions and summary; publish only when the user
-asks. `bytes_publish` needs the separate `bytes:manage` scope. Publish a new semantic
+Private authoring uses bytes_author directly and does not publish platform releases.
+See private-library.md for private copies and pinned execution.
+
+Platform publishing (operator only): show the proposed instructions and summary; publish only when the user
+asks. `bytes_publish` needs a platform operator credential and the separate `bytes:manage` scope.
+Ordinary user customizations must use bytes_author instead. Publish a new semantic
 version; never overwrite a published one. Include the complete required instructions
 and resources in the release, so a pinned workflow cannot mix in current definitions.
 Do not promote ordinary artifact content into instructions without an explicit request.

@@ -28,6 +28,8 @@ still requires appropriate tools.
 
 - [GitHub release automation](docs/releases.md): prepare, publish, verify and recover releases.
 
+- [Private skills and formats](plugins/bytesskills-core/skills/bytes/references/private-library.md): create, customize and run definitions in your workspace through MCP.
+
 - [Skill contract v2](docs/skill-contract.md): inputs, typed outputs, capability boundaries and authoring validation.
 
 - [Add skills, formats and object profiles](docs/extending-bytes.md): contracts, natural-language routing and release process.

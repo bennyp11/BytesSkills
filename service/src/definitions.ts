@@ -48,7 +48,8 @@ export class Definitions {
   return {record,definition};
  }
  validateSkill(d:Extract<PrivateDefinition,{kind:'skill'}>){
-  validateSkillContract(d.contract,types.filter(t=>!['skill','format'].includes(t)));
+  try{validateSkillContract(d.contract,types.filter(t=>!['skill','format'].includes(t)));}
+  catch(error){if(error instanceof z.ZodError)throw error;throw new ApiError(400,'Invalid skill contract: '+(error as Error).message);}
   // Runtime packages execute inline instructions, never arbitrary resource paths.
   if(d.contract.outputs.some((o:any)=>o.profile!==null))throw new ApiError(400,'Private output profiles are not supported yet; use null');
   if(new Set(d.formats.map(f=>f.name)).size!==d.formats.length)throw new ApiError(400,'Format names must be unique');

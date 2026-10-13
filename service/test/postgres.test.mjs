@@ -492,7 +492,11 @@ pgTest('MCP authors and executes private definitions with no manage scope and st
  assert.equal((await call('bytes_history',{pointer:first.data.pointer})).data.items.length,2);
  const invalid=structuredClone(privateSkill);invalid.contract.outputs[0].artifact_type='format';
  assert.equal((await call('bytes_author',{request_id:crypto.randomUUID(),title:'Bad skill',definition:invalid})).error,true);
- assert.equal((await call('bytes_publish',{releases:[]})).error,true);
+ const denied=await call('bytes_publish',{releases:[{skill:'brainstorm',version:'9.0.0',summary:'forbidden',protocol:1,required_scopes:['bytes:read'],instructions:'Forbidden core edit',resources:{}}]});
+ assert.equal(denied.error,true);assert.equal(denied.data.status,403);
  const privateList=await call('bytes_query',{type:'skill'});assert.equal(privateList.data.items.length,1);
+ const source=await call('bytes_definition_source',{core_skill:'brainstorm'});assert.equal(source.error,false);
+ const copied=await call('bytes_author',{request_id:crypto.randomUUID(),title:'Customized core',definition:privateSkill,core_source:source.data.core_source});
+ assert.equal(copied.error,false,JSON.stringify(copied));assert.equal(copied.data.provenance.core_source.version,source.data.core_source.version);
  }finally{await mf.dispose();}
 });
