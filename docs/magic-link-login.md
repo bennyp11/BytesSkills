@@ -98,3 +98,19 @@ Release automation uses BYTES_RELEASE_KEY in GitHub and RELEASE_KEY_SHA256 in th
 Worker; that credential can only read/publish the core release catalog. It cannot
 access workspace records or MCP. Remove the old production owner secret after rollout.
 Local D1 compatibility fixtures may still exercise the retired pre-login mode.
+
+## Artifact and skill browser (0.10.0)
+
+Artifacts open from their listing into text/JSON or allowlisted raster, audio, and
+video previews. Content requests resolve the pointer in the signed-in workspace;
+unsupported formats download as attachments. SVG/HTML never render inline.
+
+The skills page lists all core skills with selected/latest versions and read-only
+instructions/resources. Users can create private skill drafts with names,
+descriptions and instructions. Drafts have server-generated UUIDs, immutable first
+revisions, checksums, retry-safe creation, and their own FORCE RLS table. No draft
+write targets the core catalog; the publisher role cannot read private drafts.
+Creation uses the signed-in account plus exact Origin and session CSRF validation.
+These drafts can be read/copied in the dashboard but are not registered commands
+or platform packages. Editing/version adoption and private-skill MCP execution are
+separate follow-up work; do not claim those are implemented.

@@ -12,7 +12,8 @@ h1{font-size:25px;line-height:1.25;letter-spacing:0;margin:20px 0 16px;padding:5
 h2{font-size:20px;margin:24px 0 12px}
 a{color:#551a8b}a:hover{color:#0000ee}
 p{margin:16px 0}label{display:block;margin-bottom:7px}
-input[type=password],input[type=email],input[name=q]{box-sizing:border-box;max-width:100%;width:100%;font:16px Arial,sans-serif;padding:7px 9px;border:1px solid #888;border-radius:0;background:#fff;color:#222}
+input[type=password],input[type=email],input[name=q],input[name=title],textarea{box-sizing:border-box;max-width:100%;width:100%;font:16px Arial,sans-serif;padding:7px 9px;border:1px solid #888;border-radius:0;background:#fff;color:#222}
+textarea{display:block;resize:vertical;margin-bottom:16px}img,video{max-width:100%;height:auto}audio{max-width:100%}.artifact-link{display:block}.artifact-link:hover{background:#f5f5f5}details{margin:12px 0}summary{cursor:pointer}
 button{font:16px 'Times New Roman',serif;padding:6px 14px;margin:10px 8px 10px 0;cursor:pointer}
 :focus-visible{outline:2px solid #551a8b;outline-offset:3px}
 code{font:14px/1.5 monospace;overflow-wrap:anywhere}
@@ -44,7 +45,7 @@ export function html(
   headers.set("Cache-Control", "no-store");
   headers.set(
     "Content-Security-Policy",
-    `default-src 'none'; style-src 'unsafe-inline'; form-action ${formAction}; frame-ancestors 'none'; base-uri 'none'`,
+    `default-src 'none'; img-src 'self'; media-src 'self'; style-src 'unsafe-inline'; form-action ${formAction}; frame-ancestors 'none'; base-uri 'none'`,
   );
   // Preserve Origin on same-origin form POSTs; suppress cross-origin referrers.
   headers.set("Referrer-Policy", "same-origin");

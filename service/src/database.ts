@@ -54,10 +54,10 @@ export class PostgresDatabase implements Database {
       const check = await client.query(`SELECT current_user AS name,rolsuper,rolbypassrls,rolcreaterole,
         EXISTS(SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
           WHERE n.nspname='bytes' AND pg_has_role(current_user,c.relowner,'MEMBER')) AS owns_data,
-        (SELECT count(*)=14 AND bool_and(c.relrowsecurity AND c.relforcerowsecurity)
+        (SELECT count(*)=15 AND bool_and(c.relrowsecurity AND c.relforcerowsecurity)
           FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='bytes'
           AND c.relname IN ('accounts','account_identities','workspace_memberships','workspace','revisions','heads',
-            'tags','edges','requests','library_state','library_decisions','workflow_sessions','revision_workflows','search_documents')) AS rls_ready
+            'tags','edges','requests','library_state','library_decisions','workflow_sessions','revision_workflows','search_documents','private_skills')) AS rls_ready
         FROM pg_roles WHERE rolname=current_user`);
       const r = check.rows[0];
       if (r?.name !== `bytes_${this.role}` || r.rolsuper || r.rolbypassrls || r.rolcreaterole || r.owns_data)
