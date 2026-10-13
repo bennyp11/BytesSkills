@@ -55,7 +55,7 @@ if (mode === 'preflight') {
 } else {
   if (health.release !== target || health.commit !== commit) throw Error('Deployed Worker identity does not match release');
   // Public discovery proves the endpoint is available without granting CI workspace access.
-  const discovery = await request('/.well-known/oauth-protected-resource', null, false);
+  const discovery = await request('/.well-known/oauth-protected-resource/mcp', null, false);
   if (discovery.resource !== base+'/mcp') throw Error('MCP resource discovery verification failed');
   for (const item of manifest.skills) {
     await request('/v1/releases',JSON.parse(await readFile(resolve(dir,item.file),'utf8')));
