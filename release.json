@@ -1,4 +1,4 @@
 {
-  "version": "0.10.1",
-  "summary": "Add copy buttons and selectable artifact IDs, latest references, and exact revision references."
+  "version": "0.10.2",
+  "summary": "Browse artifacts by dates, title, type, format and status; copy references from compact rows and content-first detail pages."
 }

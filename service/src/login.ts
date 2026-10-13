@@ -3,7 +3,9 @@ import {database} from './database';
 import {WorkspaceAccess} from './access';
 import {Store} from './store';
 import {skillPages} from './skill-pages';
-import {escape,html,artifactReferences} from './html';
+import {escape,html,artifactReferences,copyButton,copyStatus} from './html';
+import {browseArtifacts,artifactFormats} from './artifact-browser';
+import registry from '../../plugins/bytesskills-core/skills/bytes/contracts/runtime.json';
 const random=()=>Array.from(crypto.getRandomValues(new Uint8Array(32)),x=>x.toString(16).padStart(2,'0')).join('');
 const cookie=(req:Request,name:string)=>req.headers.get('Cookie')?.split(';').map(s=>s.trim()).find(s=>s.startsWith(name+'='))?.slice(name.length+1)??'';
 const setCookie=(name:string,value:string,age:number)=>`${name}=${value}; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=${age}`;
@@ -74,10 +76,10 @@ export async function loginRoutes(req:Request,env:Env):Promise<Response|null>{
  if(p==='/app/artifact'){
   const item=await store.get(u.searchParams.get('pointer')??'',true);const history=await store.history(item.pointer);
   const url='/app/content?pointer='+encodeURIComponent(item.pointer)+'&amp;view=1';
-  let content='text' in item?`<pre>${escape(String(item.text))}</pre>`:'<p>Preview unavailable for this file type. Download it below.</p>';
+  let content='text' in item?`<pre id="artifact-content">${escape(String(item.text))}</pre>`:'<p>Preview unavailable for this file type. Download it below.</p>';
   if(previewTypes.has(item.content.media_type))content=item.content.media_type.startsWith('image/')?`<img src="${url}" alt="${escape(item.title)}">`:item.content.media_type.startsWith('video/')?`<video controls preload="metadata" src="${url}"></video>`:`<audio controls preload="metadata" src="${url}"></audio>`;
-  if(item.content.media_type==='application/json')content=`<pre>${escape(await store.contentText(item.content))}</pre>`;
-  return html(nav+`<p><a href="/app">← all artifacts</a></p><h1>${escape(item.title)}</h1>${artifactReferences(item)}<p class="muted">${escape(item.type)} · ${escape(item.status)} · revision ${item.revision}</p>${content}<p><a href="/app/content?pointer=${encodeURIComponent(item.pointer)}">Download content</a></p><h2>Revisions</h2>`+history.items.map((r:any)=>`<p><a href="/app/artifact?pointer=${encodeURIComponent(r.pointer)}">Revision ${r.revision}</a></p>`).join(''),new Headers(),undefined,true);
+  if(item.content.media_type==='application/json')content=`<pre id="artifact-content">${escape(await store.contentText(item.content))}</pre>`;
+  return html(nav+`<p><a href="/app">← all artifacts</a></p><h1>${escape(item.title)}</h1><p class="muted">${escape(item.type)} · ${escape(item.status)} · revision ${item.revision}</p><div class="artifact-actions">${copyButton("Copy reference",item.pointer)}${'text' in item||item.content.media_type==='application/json'?'<button type="button" data-copy="artifact-content" data-label="Content">Copy content</button>':''}${copyButton("Copy command",'/bytes show '+item.pointer)}</div>${copyStatus()}${content}${artifactReferences(item)}<p><a href="/app/content?pointer=${encodeURIComponent(item.pointer)}">Download content</a></p><h2>Revisions</h2>`+history.items.map((r:any)=>`<p><a href="/app/artifact?pointer=${encodeURIComponent(r.pointer)}">Revision ${r.revision}</a></p>`).join(''),new Headers(),undefined,true);
 
  }
 
@@ -85,6 +87,17 @@ export async function loginRoutes(req:Request,env:Env):Promise<Response|null>{
   const grants=await env.OAUTH_PROVIDER.listUserGrants(session.account_id,{limit:50,cursor:u.searchParams.get('cursor')??undefined});
   return html(nav+`<h1>Connected apps</h1>`+grants.items.map(g=>`<section><p>${escape(g.clientId)}</p><form method="post" action="/app/revoke"><input type="hidden" name="csrf" value="${session.csrf}"><input type="hidden" name="grant" value="${escape(g.id)}"><button>Revoke access</button></form></section>`).join(''));
  }
- const rows=await store.query({text:u.searchParams.get('q')??undefined,after:u.searchParams.get('after')??undefined,limit:30});
- return html(nav+`<h1>Your artifacts</h1><form><input aria-label="Search artifacts" name="q" value="${escape(u.searchParams.get('q')??'')}" placeholder="Search"><button>Search</button></form>`+rows.items.map(r=>`<p class="listing"><a class="artifact-link" href="/app/artifact?pointer=${encodeURIComponent(r.pointer)}">${escape(r.title)}<br><code>${escape(r.pointer)}</code><br><span class="muted">open artifact →</span></a></p>`).join('')+(rows.next_cursor?`<a href="/app?after=${encodeURIComponent(rows.next_cursor)}&amp;q=${encodeURIComponent(u.searchParams.get('q')??'')}">Next page</a>`:''));
+ const rows=await browseArtifacts(env,access,{text:u.searchParams.get('q')??'',type:u.searchParams.get('type')??'',status:u.searchParams.get('status')??'',format:u.searchParams.get('format')??'',sort:u.searchParams.get('sort')??'updated',runs:u.searchParams.get('runs')==='1',cursor:u.searchParams.get('cursor')??undefined});
+ const q=rows.filters,formats=await artifactFormats(env,access);
+ const select=(name:string,label:string,choices:[string,string][],value:string)=>`<label>${label}<br><select name="${name}">${choices.map(([v,t])=>`<option value="${escape(v)}" ${v===value?'selected':''}>${escape(t)}</option>`).join('')}</select></label>`;
+ const dates=(s:string)=>{const date=new Date(s);return Number.isNaN(date.valueOf())?'unknown date':date.toLocaleString('en-US',{timeZone:'UTC',year:'numeric',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' UTC';};
+ const next=new URLSearchParams(u.searchParams);if(rows.next)next.set('cursor',rows.next);
+ return html(nav+`<h1>Your artifacts</h1><form><input aria-label="Search artifacts" name="q" value="${escape(q.text)}" placeholder="Search"><div class="filters">`+
+ select('sort','Sort',[['updated','Recently updated'],['newest','Newest created'],['oldest','Oldest created'],['title','Title A–Z']],q.sort)+
+ select('type','Type',[['','All types'],...registry.artifact_types.map(t=>[t,t] as [string,string])],q.type)+
+ select('status','Status',[['','Active (not archived)'],['all','All statuses'],...registry.statuses.map(t=>[t,t] as [string,string])],q.status)+
+ select('format','Format',[['','All formats'],...formats.map(t=>[t,t] as [string,string])],q.format)+
+ `<label><input type="checkbox" name="runs" value="1" ${q.runs?'checked':''}> Show runs</label><button>Apply</button><a href="/app">Reset</a></div></form>${copyStatus()}`+
+ (rows.items.length?rows.items.map(r=>`<div class="listing"><h2><a href="/app/artifact?pointer=${encodeURIComponent(r.pointer)}">${escape(r.title)}</a></h2><p class="muted">${escape(r.type)} · ${escape(r.status)}${r.format?' · '+escape(r.format):''}<br>Updated <time datetime="${escape(r.updated)}">${escape(dates(r.updated))}</time> · Created <time datetime="${escape(r.created)}">${escape(dates(r.created))}</time></p><a href="/app/artifact?pointer=${encodeURIComponent(r.pointer)}">open</a>${copyButton('Copy reference',r.pointer)}</div>`).join(''):'<p>No artifacts match these filters.</p>')+
+ (rows.next?`<p><a href="/app?${escape(next.toString())}">Next page →</a></p>`:''),new Headers(),undefined,true);
 }
