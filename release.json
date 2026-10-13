@@ -1,4 +1,4 @@
 {
-  "version": "0.9.3",
-  "summary": "Fix Chrome magic-link confirmation Origin handling and add a real Chromium form-submission regression test."
+  "version": "0.9.4",
+  "summary": "Match the app to the homepage with serif typography, purple links, simple controls, and a compact classifieds-style workspace."
 }

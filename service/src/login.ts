@@ -59,7 +59,7 @@ export async function loginRoutes(req:Request,env:Env):Promise<Response|null>{
   return new Response(null,{status:303,headers:{Location:'/login','Set-Cookie':setCookie('__Host-bytes-session','',0),'Cache-Control':'no-store'}});
  }
  const access=await WorkspaceAccess.authorize(env,session.account_id,session.workspace_id),store=new Store(env,access);
- const nav=`<nav><a href="/app">Artifacts</a> · <a href="/app/skills">Skills</a> · <a href="/app/connections">Connections</a></nav><form method="post" action="/auth/logout"><input type="hidden" name="csrf" value="${session.csrf}"><button>Sign out</button></form>`;
+ const nav=`<div class="workspace-nav"><nav aria-label="Workspace"><a href="/app">Artifacts</a> · <a href="/app/skills">Skills</a> · <a href="/app/connections">Connections</a></nav><form method="post" action="/auth/logout"><input type="hidden" name="csrf" value="${session.csrf}"><button>Sign out</button></form></div>`;
  if(p==='/app/revoke'){
   const form=new URLSearchParams(await readBody(req,16000));sessionCsrf(req,env,form,session);
   const id=form.get('grant')??'';if(!id||id.length>256)throw new ApiError(400,'Invalid connection');
@@ -78,5 +78,5 @@ export async function loginRoutes(req:Request,env:Env):Promise<Response|null>{
   return html(nav+`<h1>Connected apps</h1>`+grants.items.map(g=>`<section><p>${escape(g.clientId)}</p><form method="post" action="/app/revoke"><input type="hidden" name="csrf" value="${session.csrf}"><input type="hidden" name="grant" value="${escape(g.id)}"><button>Revoke access</button></form></section>`).join(''));
  }
  const rows=await store.query({text:u.searchParams.get('q')??undefined,after:u.searchParams.get('after')??undefined,limit:30});
- return html(nav+`<h1>Your artifacts</h1><form><input name="q" value="${escape(u.searchParams.get('q')??'')}" placeholder="Search"><button>Search</button></form>`+rows.items.map(r=>`<p><a href="/app/artifact?pointer=${encodeURIComponent(r.pointer)}">${escape(r.title)}</a><br><code>${escape(r.pointer)}</code></p>`).join('')+(rows.next_cursor?`<a href="/app?after=${encodeURIComponent(rows.next_cursor)}&amp;q=${encodeURIComponent(u.searchParams.get('q')??'')}">Next page</a>`:''));
+ return html(nav+`<h1>Your artifacts</h1><form><input aria-label="Search artifacts" name="q" value="${escape(u.searchParams.get('q')??'')}" placeholder="Search"><button>Search</button></form>`+rows.items.map(r=>`<p class="listing"><a href="/app/artifact?pointer=${encodeURIComponent(r.pointer)}">${escape(r.title)}</a><br><code>${escape(r.pointer)}</code></p>`).join('')+(rows.next_cursor?`<a href="/app?after=${encodeURIComponent(rows.next_cursor)}&amp;q=${encodeURIComponent(u.searchParams.get('q')??'')}">Next page</a>`:''));
 }
