@@ -1,7 +1,9 @@
 # Shared workspace (cloud MVP)
 
 When the BytesSkills MCP tools are connected, use them for the active shared
-workspace. Start every request with `bytes_begin`; see [versions](versions.md). Use `bytes_workspace` to verify identity and access.
+workspace. Start every execution request with `bytes_begin`; private definition
+authoring uses bytes_author directly (see [private authoring](private-library.md)).
+See [versions](versions.md) for execution adoption. Use `bytes_workspace` to verify identity and access.
 Use the ready workflow response for pinned definitions and contracts. `bytes_library` is current-library discovery only; do not mix it into a pinned workflow. Local checkout
 files may be newer than the deployed library; record the actual versions used.
 Do not mix local and remote writes to the same workspace or silently switch to
@@ -34,7 +36,7 @@ optional and inherits on revisions; supplied maps/lists replace whole values.
 The service enforces storage invariants, not creative format semantics. The assistant
 still performs intake, resolves inherited settings and surfaces incompatible inputs.
 
-The remote D1 database is authoritative. Local workspace files marked storage.mode
+The remote PostgreSQL database and private R2 content are authoritative. Local workspace files marked storage.mode
 remote are read-only private recovery mirrors kept outside Git. A confirmed cloud save
 is the persistence result; there is no Git backup step or Git backup pending state. `/bytes sync --latest` adopts published skill releases; it does not deploy source or merge artifact state. `/bytes sync --git` updates a local checkout only.
 

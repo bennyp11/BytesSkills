@@ -40,7 +40,7 @@ before(async()=>{
  for(const r of ['runtime','identity','publisher'])await admin.query(`ALTER ROLE bytes_${r} LOGIN`);
  env={STORAGE_BACKEND:'postgres',POSTGRES:{connectionString:urlFor('bytes_runtime')},PUBLISHER_DB:{connectionString:urlFor('bytes_publisher')},IDENTITY_DB:{connectionString:urlFor('bytes_identity')},BLOBS,WORKSPACE_ID:'acc3351e-d092-433c-a7e1-8fc3e807ebd4'};
  dir=await mkdtemp(join(tmpdir(),'bytes-pg-test-'));
- await build({stdin:{contents:`export {PostgresDatabase,postgresParameters} from './src/database';export {WorkspaceAccess} from './src/access';export {Store} from './src/store';export {Releases} from './src/releases';export {PrivateSkills} from './src/private-skills';export {browseArtifacts} from './src/artifact-browser';export {provisionVerifiedIdentity} from './src/accounts';export {loginRoutes,browserSession} from './src/login';`,resolveDir:process.cwd(),loader:'ts'},bundle:true,platform:'node',format:'esm',packages:'external',outfile:join(dir,'api.mjs')});
+ await build({stdin:{contents:`export {PostgresDatabase,postgresParameters} from './src/database';export {WorkspaceAccess} from './src/access';export {Store} from './src/store';export {Releases} from './src/releases';export {Definitions} from './src/definitions';export {PrivateSkills} from './src/private-skills';export {browseArtifacts} from './src/artifact-browser';export {provisionVerifiedIdentity} from './src/accounts';export {loginRoutes,browserSession} from './src/login';`,resolveDir:process.cwd(),loader:'ts'},bundle:true,platform:'node',format:'esm',packages:'external',outfile:join(dir,'api.mjs')});
  // Bundle pg's CommonJS dependency too, via an entry created inside service.
  // External package resolution starts at the temporary file, so use the explicit pg path.
  const bundled=await readFile(join(dir,'api.mjs'),'utf8');
@@ -402,4 +402,106 @@ pgTest('artifact browser sorts original creation and updates, filters, and pagin
  const page=await browse({limit:1});await assert.rejects(browse({cursor:page.next,sort:'title'}),/Filters changed/);
  await assert.rejects(browse({cursor:'bad'}),/Invalid page cursor/);
  const title=(await browse({sort:'title'})).items;assert.equal(title[0].title,'Alpha');assert.equal(title[2].title,'Zulu');
+});
+
+pgTest('private definitions pin format/skill revisions across instances, preserve origin and enforce isolation',async()=>{
+ const a=await tenant('definitions-a'),b=await tenant('definitions-b'),ctx=await access(a);
+ const da=new api.Definitions(env,ctx),db=new api.Definitions(env,await access(b)),s=new api.Store(env,ctx);
+ const contract=JSON.parse(await readFile('../definitions/skills/brainstorm.json','utf8'));
+ const f={schema_version:1,kind:'format',name:'My reductions',purpose:'Explain simply',instructions:'Start with a contradiction. Explain it. Qualify the simplification.',defaults:{tone:'warm'},review_checks:['Explanation resolves the hook']};
+ const noCore=async()=>{throw Error('No publication access needed');};
+ const input={request_id:crypto.randomUUID(),title:'My reductions',definition:f};
+ const results=await Promise.all([da.save(input,noCore),da.save(input,noCore)]),format=results[0];
+ assert.equal(results[1].pointer,format.pointer);assert.equal(format.type,'format');
+ assert.equal((await db.store.query({type:'format'})).items.length,0);
+ await assert.rejects(db.load(format.pointer),/missing/i);
+ await assert.rejects(da.save({...input,title:'Different'},noCore),/reused/);
+ const d={schema_version:1,kind:'skill',base_skill:'brainstorm',instructions:'Brainstorm original ideas for my audience.',contract,formats:[{name:'default',pointer:format.pointer.split(':')[0]}]};
+ const skillInput={request_id:crypto.randomUUID(),title:'My brainstorm',definition:d};
+ const skill=await da.save(skillInput,noCore);
+ assert.equal((await da.load(skill.pointer)).definition.formats[0].pointer,format.pointer);
+ await assert.rejects(db.save({...skillInput,request_id:crypto.randomUUID()},noCore),/missing/i);
+ const pub=new api.Releases(env,await api.WorkspaceAccess.authorize(env,'legacy-owner',env.WORKSPACE_ID,true,true));
+ await pub.publish({releases:[{skill:'brainstorm',version:'1.1.0',summary:'private test',protocol:1,required_scopes:['bytes:read','bytes:write'],instructions:'Core brainstorming',resources:{}}]});
+ const rel=new api.Releases(env,ctx),scopes=['bytes:read','bytes:write'],updates=await rel.updates();
+ await rel.adopt({request_id:crypto.randomUUID(),expected_revision:updates.state_revision,catalog_hash:updates.catalog_hash,skill:'brainstorm',action:'update'},scopes);
+ const req={request_id:crypto.randomUUID(),command:'/bytes run',skill_pointer:skill.pointer.split(':')[0]};
+ const helpUpdates=await rel.updates();
+ await rel.adopt({request_id:crypto.randomUUID(),expected_revision:helpUpdates.state_revision,catalog_hash:helpUpdates.catalog_hash,skill:'help',action:'update'},scopes);
+ const help=await rel.begin({...req,request_id:crypto.randomUUID(),command:'/bytes run --help'},scopes);
+ assert.equal(help.skill,'help');assert.match(help.instructions,/read-only/);
+ await assert.rejects(rel.provenance(help.workflow_id,scopes,'concept'),/cannot save/);
+ const begin=await rel.begin(req,scopes);assert.equal(begin.status,'ready');assert.equal(begin.private_definitions.formats[0].pointer,format.pointer);
+ const format2=await da.save({request_id:crypto.randomUUID(),title:'New format',pointer:format.pointer,expected_revision:1,definition:{...f,instructions:'A different opening'}},noCore);
+ const skill2=await da.save({request_id:crypto.randomUUID(),title:'My updated brainstorm',pointer:skill.pointer,expected_revision:1,definition:{...d,instructions:'Use the new approach',formats:[{name:'default',pointer:format2.pointer}]}},noCore);
+ // Another instance of the same account sees updates; retries remain pinned.
+ const otherInstance=new api.Releases(env,await api.WorkspaceAccess.authorize(env,a.account_id,a.workspace_id));
+ assert.deepEqual(await otherInstance.begin(req,scopes),begin);
+ assert.equal((await da.save(skillInput,noCore)).pointer,skill.pointer,'Retry preserves the original receipt after defaults change');
+ const next=await otherInstance.begin({...req,request_id:crypto.randomUUID()},scopes);
+ assert.equal(next.private_definitions.skill.pointer,skill2.pointer);assert.equal(next.private_definitions.formats[0].pointer,format2.pointer);
+ const explicit=await rel.begin({request_id:crypto.randomUUID(),command:'/bytes brainstorm --concepts',format_pointers:[format2.pointer]},scopes);
+ assert.equal(explicit.private_definitions.formats[0].pointer,format2.pointer);
+ await assert.rejects(new api.Releases(env,await access(b)).begin(req,scopes),/missing/i);
+ await assert.rejects(rel.begin({...req,command:'/bytes edit'},scopes),/different command/);
+ await assert.rejects(rel.provenance(begin.workflow_id,scopes,'video'),/not declared/);
+ const provenance=await rel.provenance(begin.workflow_id,scopes,'concept');
+ const out=await s.save({request_id:crypto.randomUUID(),type:'concept',title:'Output',text:'Idea',provenance:{skill_release:provenance}},begin.workflow_id);
+ assert.equal(out.provenance.skill_release.private_definitions.skill.pointer,skill.pointer);
+ assert.equal((await s.history(format.pointer)).items.length,2);
+ const race=await Promise.allSettled(['One','Two'].map(title=>da.save({request_id:crypto.randomUUID(),pointer:format2.pointer,expected_revision:2,title,definition:f},noCore)));
+ assert.equal(race.filter(x=>x.status==='fulfilled').length,1);
+ const coreBefore=(await admin.query('SELECT count(*)::int n FROM bytes.skill_releases')).rows[0].n;
+ const copied=await da.save({request_id:crypto.randomUUID(),title:'Core customized',definition:f,core_source:{skill:'brainstorm',version:'1.1.0',path:'definitions/formats/reductions.json'}},async()=>({checksum:'a'.repeat(64),release:{resources:{'definitions/formats/reductions.json':'original'}}}));
+ assert.equal(copied.provenance.core_source.version,'1.1.0');
+ assert.equal((await admin.query('SELECT count(*)::int n FROM bytes.skill_releases')).rows[0].n,coreBefore);
+ await assert.rejects(new api.PostgresDatabase(env.PUBLISHER_DB.connectionString,undefined,'publisher').prepare('SELECT * FROM revisions WHERE type=?').bind('format').all(),/permission denied/);
+ // No cross-workspace blob lookup, even with a known content address.
+ assert.equal(await env.BLOBS.get(db.store.objectKey(format.content.key)),null);
+ const legacy=await new api.PrivateSkills(env,ctx).create({id:crypto.randomUUID(),title:'Legacy',summary:'old',instructions:'Old draft'});
+ const migrated=await da.save({request_id:crypto.randomUUID(),title:'Migrated',definition:d,legacy_skill_id:legacy.id},noCore);
+ assert.equal(migrated.id,legacy.id);assert.equal(migrated.provenance.legacy_source.checksum,legacy.checksum);
+ await assert.rejects(db.save({request_id:crypto.randomUUID(),title:'Steal',definition:{...d,formats:[]},legacy_skill_id:legacy.id},noCore),/not found/);
+});
+
+pgTest('MCP authors and executes private definitions with no manage scope and stamps exact output provenance',async()=>{
+ const {Miniflare,convertV4MiniflareOptions}=await import('miniflare');
+ const bundle=await build({entryPoints:['test/fixtures/private-definitions-worker.ts'],bundle:true,write:false,format:'esm',platform:'node',target:'es2022',conditions:['workerd'],external:['cloudflare:*'],banner:{js:'import {createRequire} from "node:module"; const require=createRequire("/test-worker.js");'}});
+ const a=await tenant('mcp-private-a'),b=await tenant('mcp-private-b');
+ const mf=new Miniflare(convertV4MiniflareOptions({modules:true,script:bundle.outputFiles[0].text,compatibilityDate:'2026-10-01',compatibilityFlags:['nodejs_compat'],r2Buckets:['BLOBS'],
+ hyperdrives:{POSTGRES:env.POSTGRES.connectionString,PUBLISHER_DB:env.PUBLISHER_DB.connectionString},bindings:{STORAGE_BACKEND:'postgres',WORKSPACE_ID:env.WORKSPACE_ID}}));
+ const scopes='bytes:read bytes:write';
+ const call=async(name,args={},who=a,permissions=scopes)=>{
+  const res=await mf.dispatchFetch('https://test/mcp',{method:'POST',headers:{'test-account':who.account_id,'test-workspace':who.workspace_id,'test-scopes':permissions,'Content-Type':'application/json',Accept:'application/json, text/event-stream'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/call',params:{name,arguments:args}})});
+  assert.equal(res.status,200);const json=await res.json();assert.ok(json.result,JSON.stringify(json));return {error:json.result.isError===true,data:JSON.parse(json.result.content[0].text)};
+ };
+ try{
+ const contract=JSON.parse(await readFile('../definitions/skills/brainstorm.json','utf8'));
+ const format={schema_version:1,kind:'format',name:'Mine',purpose:'Explain',instructions:'Use a warm opening',defaults:{},review_checks:['Accurate']};
+ const request={request_id:crypto.randomUUID(),title:'My format',definition:format};
+ assert.equal((await call('bytes_author',request,a,'bytes:read')).data.status,403);
+ const first=await call('bytes_author',request);assert.equal(first.error,false,JSON.stringify(first));
+ assert.equal((await call('bytes_author',request)).data.pointer,first.data.pointer);
+ assert.equal((await call('bytes_get',{pointer:first.data.pointer})).data.definition.kind,'format');
+ assert.equal((await call('bytes_get',{pointer:first.data.pointer},b)).error,true);
+ const privateSkill={schema_version:1,kind:'skill',base_skill:'brainstorm',instructions:'Create two ideas',contract,formats:[{name:'default',pointer:first.data.pointer}]};
+ const authored=await call('bytes_author',{request_id:crypto.randomUUID(),title:'My skill',definition:privateSkill});assert.equal(authored.error,false,JSON.stringify(authored));
+ const updates=(await call('bytes_updates')).data;
+ assert.equal((await call('bytes_adopt',{request_id:crypto.randomUUID(),expected_revision:updates.state_revision,catalog_hash:updates.catalog_hash,skill:'brainstorm',action:'update'})).error,false);
+ const began=await call('bytes_begin',{request_id:crypto.randomUUID(),command:'/bytes run',skill_pointer:authored.data.pointer});assert.equal(began.error,false,JSON.stringify(began));assert.equal(began.data.status,'ready');
+ const output=await call('bytes_save',{request_id:crypto.randomUUID(),workflow_id:began.data.workflow_id,type:'concept',title:'A concept',text:'A useful idea'});assert.equal(output.error,false,JSON.stringify(output));
+ assert.equal(output.data.provenance.skill_release.private_definitions.skill.pointer,authored.data.pointer);
+ assert.ok(output.data.relations.links.includes(first.data.pointer));
+ assert.equal((await call('bytes_save',{request_id:crypto.randomUUID(),workflow_id:began.data.workflow_id,type:'video',title:'Wrong type',text:'not a video'})).error,true);
+ const updated=await call('bytes_author',{request_id:crypto.randomUUID(),title:'Revised',pointer:first.data.pointer,expected_revision:1,definition:{...format,instructions:'Revised format'}});assert.equal(updated.error,false,JSON.stringify(updated));
+ assert.equal((await call('bytes_history',{pointer:first.data.pointer})).data.items.length,2);
+ const invalid=structuredClone(privateSkill);invalid.contract.outputs[0].artifact_type='format';
+ assert.equal((await call('bytes_author',{request_id:crypto.randomUUID(),title:'Bad skill',definition:invalid})).error,true);
+ const denied=await call('bytes_publish',{releases:[{skill:'brainstorm',version:'9.0.0',summary:'forbidden',protocol:1,required_scopes:['bytes:read'],instructions:'Forbidden core edit',resources:{}}]});
+ assert.equal(denied.error,true);assert.equal(denied.data.status,403);
+ const privateList=await call('bytes_query',{type:'skill'});assert.equal(privateList.data.items.length,1);
+ const source=await call('bytes_definition_source',{core_skill:'brainstorm'});assert.equal(source.error,false);
+ const copied=await call('bytes_author',{request_id:crypto.randomUUID(),title:'Customized core',definition:privateSkill,core_source:source.data.core_source});
+ assert.equal(copied.error,false,JSON.stringify(copied));assert.equal(copied.data.provenance.core_source.version,source.data.core_source.version);
+ }finally{await mf.dispose();}
 });

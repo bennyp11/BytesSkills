@@ -143,7 +143,7 @@ export async function checkLibrary(root = resolve("..")) {
     validateAuthoring(await json(resolve(root, "templates/extensions", name + ".json")), kind, registry.artifact_types);
   formatSchema.parse(await json(resolve(root, "templates/extensions/format.json")));
   // A new fundamental type requires a deliberate SQL migration, not just registry edits.
-  const sql = await readFile(resolve(root, "service/migrations/0001_artifacts.sql"), "utf8");
+  const sql = await readFile(resolve(root, "service/postgres/migrations/0005_private_definitions.sql"), "utf8");
   const sqlTypes = [...sql.match(/type IN \(([^)]+)\)/)[1].matchAll(/'([^']+)'/g)].map(x => x[1]);
   if (JSON.stringify([...sqlTypes].sort()) !== JSON.stringify([...registry.artifact_types].sort()))
     throw Error("Artifact registry and SQL type constraint differ; implement and verify a migration before extending types");

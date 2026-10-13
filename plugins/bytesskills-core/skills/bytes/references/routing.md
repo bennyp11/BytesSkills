@@ -34,8 +34,9 @@ Do not claim unrelated requests or another plugin's namespace.
 | “Using BytesSkills, edit this video in CapCut for me” | `/bytes edit --app=capcut`; clarify source and brief as needed |
 | “Make this better,” with several possible artifacts | Clarify target and requested change first |
 
-Authoring and execution are different intents. “Add a format named interview” is
-an authoring request, not permission to generate an interview. There is no deployed
-`/bytes add` or `/bytes create-skill` command yet. Use the source authoring process
-when the repository is available, or explain the capability gap; never invent an
-admin tool or claim a definition was published because its draft was written.
+Authoring and execution are different intents. “Add a format named interview”
+uses the [private authoring flow](private-library.md), not brainstorm or platform
+publication. Create/change requests default to private artifacts through bytes_author;
+core customization creates a private copy. Skill execution uses bytes_begin with
+skill_pointer and optional format_pointers. Clarify ambiguous targets instead of
+silently shadowing a core definition. Never fabricate a successful save.

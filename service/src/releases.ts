@@ -3,6 +3,7 @@ import { requireAccess, type WorkspaceAccess } from "./access";
 import { z } from "zod";
 import { ApiError, canonical, sha, type Env } from "./common";
 import registry from "../../plugins/bytesskills-core/skills/bytes/contracts/runtime.json";
+import { Definitions, definitionPointer, privateExecutionInstructions, type DefinitionSnapshot } from './definitions';
 export const skills = Object.keys(registry.skills) as [keyof typeof registry.skills, ...(keyof typeof registry.skills)[]];
 const skillSchema = z.enum(skills);
 export const releaseSchema = z
@@ -26,6 +27,8 @@ export const beginSchema = z
   .object({
     request_id: z.string().uuid(),
     command: z.string().trim().min(1).max(16000),
+    skill_pointer: definitionPointer.optional(),
+    format_pointers: z.array(definitionPointer).max(20).optional(),
   })
   .strict();
 export const adoptSchema = z
@@ -301,7 +304,6 @@ export class Releases {
   }
   async begin(raw: unknown, scopes: string[]) {
     const a = beginSchema.parse(raw),
-      skill = commandSkill(a.command),
       fingerprint = await sha(canonical(a));
     const old = await this.db.prepare(
       "SELECT * FROM workflow_sessions WHERE workspace_id=? AND id=?",
@@ -313,6 +315,14 @@ export class Releases {
         throw new ApiError(409, "Request ID reused with different command");
       return this.session(old, scopes);
     }
+    const definitions = new Definitions(this.env,this.access);
+    const snapshot = await definitions.snapshot(a.skill_pointer,a.format_pointers??[]);
+    const helpRequest=a.command.trim().split(/\s+/).includes('--help');
+    if(a.skill_pointer && !/^\/bytes run(?:\s|$)/.test(a.command))
+      throw new ApiError(400,'Use /bytes run for an explicitly selected private skill');
+    const skill = helpRequest ? commandSkill(a.command) : snapshot.skill?.definition.base_skill ?? commandSkill(a.command);
+    if(snapshot.formats.length && !registry.skills[skill].can_save && !helpRequest)
+      throw new ApiError(400,'Private formats apply to creative workflows');
     let state = await this.state();
     const { rows, hash } = await this.catalog();
     let selected = rows.find(
@@ -378,11 +388,14 @@ export class Releases {
         command: a.command,
         created_at: now.toISOString(),
         expires_at: new Date(now.getTime() + 86400000).toISOString(),
+        definition_snapshot: snapshot.skill||snapshot.formats.length ? canonical(snapshot) : null,
       };
     const response = await this.session(session, scopes);
     try {
       await this.db.prepare(
-        "INSERT INTO workflow_sessions VALUES(?,?,?,?,?,?,?,?)",
+        session.definition_snapshot
+          ? "INSERT INTO workflow_sessions(workspace_id,id,fingerprint,skill,version,command,created_at,expires_at,definition_snapshot) VALUES(?,?,?,?,?,?,?,?,?)"
+          : "INSERT INTO workflow_sessions(workspace_id,id,fingerprint,skill,version,command,created_at,expires_at) VALUES(?,?,?,?,?,?,?,?)",
       )
         .bind(
           this.access.workspaceId,
@@ -393,6 +406,7 @@ export class Releases {
           session.command,
           session.created_at,
           session.expires_at,
+          ...(session.definition_snapshot ? [session.definition_snapshot] : []),
         )
         .run();
     } catch (e) {
@@ -421,6 +435,8 @@ export class Releases {
     const release = await this.verified(row);
     if (release.required_scopes.some((s) => !scopes.includes(s)))
       throw new ApiError(403, "Workflow requires additional permissions");
+    const snapshot:DefinitionSnapshot|null=session.definition_snapshot?JSON.parse(session.definition_snapshot):null;
+    if(snapshot)await new Definitions(this.env,this.access).verifySnapshot(snapshot);
     return {
       status: "ready",
       workflow_id: session.id,
@@ -428,11 +444,12 @@ export class Releases {
       version: row.version,
       checksum: row.checksum,
       expires_at: session.expires_at,
-      instructions: release.instructions,
+      instructions: snapshot?.skill ? (row.skill==='help' ? 'Explain the attached private skill contract and formats. This is read-only help: do not execute, start creative intake or save artifacts.' : privateExecutionInstructions) : release.instructions + (snapshot?.formats.length ? '\nUse the attached private format snapshots for this request instead of similarly named core formats. Their pinned revisions are authoritative for the selected format.' : ''),
       resources: release.resources,
+      ...(snapshot ? {private_definitions:snapshot} : {}),
     };
   }
-  async provenance(id: string, scopes: string[]) {
+  async provenance(id: string, scopes: string[], outputType?:string) {
     const session = await this.db.prepare(
       "SELECT * FROM workflow_sessions WHERE workspace_id=? AND id=?",
     )
@@ -443,11 +460,18 @@ export class Releases {
     const r = await this.session(session, scopes);
     if (!registry.skills[session.skill as keyof typeof registry.skills]?.can_save)
       throw new ApiError(403, "This workflow cannot save artifacts");
+    if(r.private_definitions?.skill&&outputType&&outputType!=='run'&&
+      !r.private_definitions.skill.definition.contract.outputs.some((o:any)=>o.artifact_type===outputType))
+      throw new ApiError(400,'Output type is not declared by the private skill contract');
     return {
       workflow_id: id,
       skill: r.skill,
       version: r.version,
       checksum: r.checksum,
+      ...(r.private_definitions ? {private_definitions: {
+        skill:r.private_definitions.skill ? {pointer:r.private_definitions.skill.pointer,checksum:r.private_definitions.skill.checksum} : null,
+        formats:r.private_definitions.formats.map(f=>({pointer:f.pointer,checksum:f.checksum})),
+      }} : {}),
     };
   }
 }

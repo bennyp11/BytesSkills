@@ -46,7 +46,10 @@ Implemented on this branch:
 - Release candidates require an explicit version and refuse to overwrite an existing
   candidate. Previously published releases and saved artifacts are unchanged.
 
-Not implemented: a conversational authoring/admin command, automatic profile field
+Private conversational authoring and execution are described in
+[the private library contract](../plugins/bytesskills-core/skills/bytes/references/private-library.md).
+
+Not implemented: a public authoring/admin command, automatic profile field
 validation on `bytes_save`, automatic inheritance resolution, or dynamically adding
 new command families without deploying the server. Draft contracts are not activated
 by writing a file. The library checks validate declared structure, not editorial truth.
@@ -65,9 +68,8 @@ it using the table above, then ask only unresolved applicable questions, one at 
 5. What makes the result acceptable? What should happen on partial failure?
 
 Produce a reviewable draft contract and instruction file. A discussion or draft is
-not a publication. Source changes follow normal branch/test/review flow. Personal
-future authoring should publish immutable definitions to the cloud, without requiring
-user Git; the current cloud publisher supports releases for registered skill families.
+not a publication. Source changes follow normal branch/test/review flow. Personal authoring saves immutable skill/format artifact revisions through bytes_author
+without Git. Core publication remains restricted to the release pipeline/operator.
 
 ## Add a skill
 

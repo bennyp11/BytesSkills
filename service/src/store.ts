@@ -186,7 +186,7 @@ export class Store {
       );
     return this.resolve(row.pointer);
   }
-  async save(raw: unknown, workflowId?: string) {
+  async save(raw: unknown, workflowId?: string, migrationId?: string) {
     const req = saveSchema.parse(raw);
     if (new TextEncoder().encode(canonical(req)).length > 250_000)
       throw new ApiError(413, "Metadata/content too large");
@@ -216,7 +216,9 @@ export class Store {
       throw new ApiError(400, "New artifacts require type and title");
     if (old && old.type !== type)
       throw new ApiError(400, "Cannot change artifact type");
-    const id = old?.id ?? crypto.randomUUID(),
+    if (['skill','format'].includes(type) && this.env.STORAGE_BACKEND !== 'postgres')
+      throw new ApiError(400, 'Private definitions require the shared PostgreSQL workspace');
+    const id = old?.id ?? (migrationId ? z.string().uuid().parse(migrationId) : crypto.randomUUID()),
       revision = (old?.revision ?? 0) + 1;
     const rawParent =
       req.parent === undefined ? (old?.parent ?? null) : req.parent;

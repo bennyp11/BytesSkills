@@ -56,3 +56,7 @@ Follow `references/responses.md`: actual outcome, readable title/preview, real p
 pointer, and independently copyable follow-up commands with known values substituted.
 Explain what each command does (for example, “Open this revision”). Suggestions do
 not execute themselves. Never show template IDs as saved artifacts.
+
+Private authoring and execution use [private-library.md](private-library.md).
+Private definitions are validated workspace artifacts; authoring uses bytes_author
+directly and execution uses bytes_begin with private pointers.

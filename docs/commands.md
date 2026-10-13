@@ -85,12 +85,18 @@ same structure without claiming a save; failures never receive invented IDs.
 Follow-up commands are suggestions, not automatic execution. The shared contract
 is embedded in every newly built skill release and inherited by new skills.
 
-## Definition editing
+## Private definition authoring and execution
 
-For now, edit format, treatment and workflow files through an explicit natural-
-language request and review the resulting file diff. Dedicated `/format` or
-`/treatment` management commands are deferred until real authoring examples establish
-their needs. This avoids claiming that `/bytes refine` also edits every kind of definition.
+Natural-language create/change/customize requests use bytes_author in the private
+workspace. Core formats/skills are copied privately with exact origin provenance.
+See [private library](../plugins/bytesskills-core/skills/bytes/references/private-library.md).
+No platform publishing or Git operation is needed.
+
+`/bytes run --skill=@skill/<UUID> [--format=@format/<UUID>]` runs a private skill.
+The assistant passes skill_pointer and optional format_pointers to bytes_begin.
+Core creative commands can also receive a private format through format_pointers.
+Use `/bytes show`, `bytes_query` and `bytes_history` for skill/format artifacts.
+There is no standalone CLI parser and no implicit name-based override of core skills.
 
 ## Clarification-first intake
 

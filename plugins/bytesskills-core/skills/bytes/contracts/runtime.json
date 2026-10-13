@@ -9,7 +9,9 @@
     "image",
     "audio",
     "run",
-    "brief"
+    "brief",
+    "skill",
+    "format"
   ],
   "statuses": [
     "draft",

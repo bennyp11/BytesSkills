@@ -13,8 +13,8 @@ Users' artifacts and private skill drafts are not platform definitions.
 
 The intended onboarding model is an empty personal workspace plus a choice of
 starter packages. The existing Content Creator workflows are our reference examples,
-not universal preferences. Package selection, personal forks and user publication
-remain future work; this change does not give users a path to platform publication.
+not universal preferences. Package selection and public user publication remain future work; private copies
+and execution are now supported through the MCP private-library flow. This change does not give users a path to platform publication.
 
 ## Authoring source
 
