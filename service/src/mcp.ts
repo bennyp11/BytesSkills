@@ -1,3 +1,4 @@
+import { timed, toolError, requestId } from './telemetry';
 import { type WorkspaceAccess } from "./access";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
@@ -33,12 +34,15 @@ export async function mcp(request: Request, env: Env, scopes: string[], access: 
   const wrap =
     (fn: (a: any) => Promise<unknown> | unknown) => async (a: any) => {
       try {
-        const result = await fn(a);
+        const result = await timed("tool", async () => fn(a));
         return {
           content: [{ type: "text" as const, text: JSON.stringify(result) }],
+          _meta: { "bytes/request_id": requestId() },
         };
       } catch (e) {
+        toolError(e instanceof ApiError ? e.status : 400);
         return {
+          _meta: { "bytes/request_id": requestId() },
           isError: true,
           content: [
             {

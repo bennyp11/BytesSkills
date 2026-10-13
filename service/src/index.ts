@@ -1,3 +1,4 @@
+import { observeMcp, timed, identifyRpc, oauthStarted, oauthAccepted } from './telemetry';
 import { WorkspaceAccess } from "./access";
 import OAuthProvider, {
   AuthorizationError,
@@ -67,7 +68,7 @@ async function api(req: Request, env: Env) {
   const canPublish = env.RELEASE_KEY_SHA256 ? await releaseKey(token, env) : isOwner;
   if (isReleaseRoute ? !canPublish : !isOwner)
     return json({ error: isReleaseRoute ? "Release bearer key required" : "Owner bearer key required" }, 401);
-  const access = await WorkspaceAccess.authorize(env, "legacy-owner", env.WORKSPACE_ID, true, isReleaseRoute && canPublish);
+  const access = await timed("membership", () => WorkspaceAccess.authorize(env, "legacy-owner", env.WORKSPACE_ID, true, isReleaseRoute && canPublish));
   if (
     req.method === "POST" &&
     new URL(req.url).pathname === "/v1/releases/revoke"
@@ -187,6 +188,7 @@ const provider = new OAuthProvider<Env>({
   apiRoute: "/mcp",
   apiHandler: {
     async fetch(req, env, ctx) {
+      oauthAccepted();
       const props = ctx.props as {
         workspace_id?: string;
         scopes?: string[];
@@ -195,9 +197,9 @@ const provider = new OAuthProvider<Env>({
       };
       // Existing signed grants without account_id remain confined to the original workspace.
       const legacy = props.account_id === undefined && props.workspace_id === env.WORKSPACE_ID;
-      const access = await WorkspaceAccess.authorize(env,
+      const access = await timed("membership", () => WorkspaceAccess.authorize(env,
         legacy ? "legacy-owner" : (props.account_id ?? ""), props.workspace_id ?? "",
-        legacy, legacy && props.owner === true && !env.RELEASE_KEY_SHA256);
+        legacy, legacy && props.owner === true && !env.RELEASE_KEY_SHA256));
       const auth = (ctx as unknown as { auth: { scope?: string[] } }).auth;
       const scopes = legacy && props.owner
         ? ["bytes:read", "bytes:write", "bytes:manage"]
@@ -248,7 +250,7 @@ const provider = new OAuthProvider<Env>({
         }
       : null,
 });
-export default {
+const handler = {
   async fetch(req: Request, env: Env, ctx: ExecutionContext) {
     try {
       const url = new URL(req.url);
@@ -268,13 +270,15 @@ export default {
         throw new ApiError(403, "Origin not allowed");
       // Bound all JSON/form payloads before the SDK/provider allocates them.
       if (req.method === "POST") {
-        const body = await readBody(req);
+        const body = await timed("request_body", () => readBody(req));
+        if (url.pathname === "/mcp") identifyRpc(body);
         req = new Request(req.url, {
           method: req.method,
           headers: req.headers,
           body,
         });
       }
+      oauthStarted();
       return await provider.fetch(req, env, ctx);
     } catch (e) {
       if (e instanceof ApiError) return json({ error: e.message }, e.status);
@@ -340,3 +344,9 @@ export default {
   },
 };
 
+
+export default {
+  fetch(req:Request, env:Env, ctx:ExecutionContext) {
+    return observeMcp(req, env.RELEASE_VERSION, () => handler.fetch(req,env,ctx));
+  },
+};

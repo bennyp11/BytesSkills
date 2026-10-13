@@ -1,4 +1,4 @@
 {
-  "version": "0.12.0",
-  "summary": "Create and revise private skill and format artifacts through MCP, customize core definitions privately, and pin exact private revisions for cross-device execution."
+  "version": "0.12.1",
+  "summary": "Add privacy-preserving per-request MCP timings to diagnose server latency and cross-device tool-call overhead."
 }

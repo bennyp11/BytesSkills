@@ -1,3 +1,4 @@
+import { timed } from './telemetry';
 import pg from 'pg';
 import { ApiError, type Env } from './common';
 
@@ -45,46 +46,48 @@ export class PostgresDatabase implements Database {
     // One client per operation; Hyperdrive provides the pool. Never retain a client
     // across Worker requests, and never set identity outside this transaction.
     const client = new pg.Client({connectionString: this.connectionString, connectionTimeoutMillis: 10000});
-    await client.connect();
     try {
-      await client.query('BEGIN');
-      await client.query("SET LOCAL search_path = bytes, pg_catalog");
-      await client.query("SET LOCAL statement_timeout = '15s'");
-      await client.query("SET LOCAL lock_timeout = '5s'");
-      const check = await client.query(`SELECT current_user AS name,rolsuper,rolbypassrls,rolcreaterole,
-        EXISTS(SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
-          WHERE n.nspname='bytes' AND pg_has_role(current_user,c.relowner,'MEMBER')) AS owns_data,
-        (SELECT count(*)=15 AND bool_and(c.relrowsecurity AND c.relforcerowsecurity)
-          FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='bytes'
-          AND c.relname IN ('accounts','account_identities','workspace_memberships','workspace','revisions','heads',
-            'tags','edges','requests','library_state','library_decisions','workflow_sessions','revision_workflows','search_documents','private_skills')) AS rls_ready
-        FROM pg_roles WHERE rolname=current_user`);
-      const r = check.rows[0];
-      if (r?.name !== `bytes_${this.role}` || r.rolsuper || r.rolbypassrls || r.rolcreaterole || r.owns_data)
-        throw new Error('Unsafe database runtime role');
-      if (!r.rls_ready) throw new Error('Workspace row security is unavailable');
-      await client.query(`SELECT set_config('bytes.account_id',$1,true),
-        set_config('bytes.workspace_id',$2,true),set_config('bytes.legacy_owner',$3,true)`,
-        [this.principal?.accountId ?? '', this.principal?.workspaceId ?? '', this.principal?.legacyOwner ? 'true' : 'false']);
-      // Publishers serialize with adoption writes. Tenant writes serialize within
-      // one workspace, closing revision/parent-cycle races without global writes.
-      await client.query(this.role === 'publisher'
-        ? 'SELECT pg_advisory_xact_lock(17491,1)'
-        : 'SELECT pg_advisory_xact_lock_shared(17491,1)');
-      const writing = statements.some(s => !/^\s*SELECT\b/i.test(s.sql));
-      if (writing && this.principal)
-        await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [this.principal.workspaceId]);
+      await timed("db_connect", () => client.connect());
+      await timed("db_setup", async () => {
+        await client.query('BEGIN');
+        await client.query("SET LOCAL search_path = bytes, pg_catalog");
+        await client.query("SET LOCAL statement_timeout = '15s'");
+        await client.query("SET LOCAL lock_timeout = '5s'");
+        const check = await client.query(`SELECT current_user AS name,rolsuper,rolbypassrls,rolcreaterole,
+          EXISTS(SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+            WHERE n.nspname='bytes' AND pg_has_role(current_user,c.relowner,'MEMBER')) AS owns_data,
+          (SELECT count(*)=15 AND bool_and(c.relrowsecurity AND c.relforcerowsecurity)
+            FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='bytes'
+            AND c.relname IN ('accounts','account_identities','workspace_memberships','workspace','revisions','heads',
+              'tags','edges','requests','library_state','library_decisions','workflow_sessions','revision_workflows','search_documents','private_skills')) AS rls_ready
+          FROM pg_roles WHERE rolname=current_user`);
+        const r = check.rows[0];
+        if (r?.name !== `bytes_${this.role}` || r.rolsuper || r.rolbypassrls || r.rolcreaterole || r.owns_data)
+          throw new Error('Unsafe database runtime role');
+        if (!r.rls_ready) throw new Error('Workspace row security is unavailable');
+        await client.query(`SELECT set_config('bytes.account_id',$1,true),
+          set_config('bytes.workspace_id',$2,true),set_config('bytes.legacy_owner',$3,true)`,
+          [this.principal?.accountId ?? '', this.principal?.workspaceId ?? '', this.principal?.legacyOwner ? 'true' : 'false']);
+        // Publishers serialize with adoption writes. Tenant writes serialize within
+        // one workspace, closing revision/parent-cycle races without global writes.
+        await client.query(this.role === 'publisher'
+          ? 'SELECT pg_advisory_xact_lock(17491,1)'
+          : 'SELECT pg_advisory_xact_lock_shared(17491,1)');
+        const writing = statements.some(s => !/^\s*SELECT\b/i.test(s.sql));
+        if (writing && this.principal)
+          await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [this.principal.workspaceId]);
+      });
       const results = [];
       for (const s of statements) {
-        const result = await client.query(postgresParameters(s.sql), s.values);
+        const result = await timed("db_query", () => client.query(postgresParameters(s.sql), s.values));
         results.push({results:result.rows, meta:{changes:result.rowCount ?? 0}});
       }
-      await client.query('COMMIT');
+      await timed('db_commit', () => client.query('COMMIT'));
       return results;
     } catch (error) {
-      await client.query('ROLLBACK').catch(() => {});
+      await timed('db_rollback', () => client.query('ROLLBACK')).catch(() => {});
       throw error;
-    } finally { await client.end(); }
+    } finally { await timed("db_close", () => client.end()); }
   }
 }
 class PostgresStatement implements Statement {
