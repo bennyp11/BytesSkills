@@ -1,7 +1,7 @@
 import { readFile, readdir, appendFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { verify, sha, version } from './release-artifacts.mjs';
+import { verify, sha, version, deployedVersion } from './release-artifacts.mjs';
 import { checkStorageCutover } from './storage-cutover.mjs';
 import { waitForDeployment } from './deployment-health.mjs';
 const [mode, dirArg] = process.argv.slice(2);
@@ -25,8 +25,9 @@ const health = mode === 'publish'
   ? await waitForDeployment({readHealth: timeout => request('/health',null,false,timeout), target, commit})
   : await request('/health',null,false);
 if (health.service !== 'BytesSkills' || health.status !== 'ok') throw Error('Unexpected service health');
-if (health.release && greater(version(health.release),target)) throw Error('Refusing to deploy an older release');
-if (health.release === target && health.commit !== commit) throw Error('Release already deployed from a different commit');
+const currentVersion = health.release ? deployedVersion(health.release) : null;
+if (currentVersion && greater(currentVersion,target)) throw Error('Refusing to deploy an older release');
+if (currentVersion === target && health.commit !== commit) throw Error('Release already deployed from a different commit');
 if (mode === 'preflight') {
   checkStorageCutover(health, manifest.migrations, manifest.storage_backend);
   const pgNames = (await readdir('postgres/migrations')).filter(n=>n.endsWith('.sql')).sort();
