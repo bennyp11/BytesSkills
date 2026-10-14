@@ -252,14 +252,16 @@ pgTest('login HTTP flow sends a confirmation link, ignores scanner GETs, blocks 
  const nonce=page.headers.get('set-cookie').split(';')[0];assert.match(nonce,/^__Host-bytes-login=/);assert.match(page.headers.get('set-cookie'),/Secure; HttpOnly; SameSite=Lax/);
  const post=(path,data,cookie=nonce,origin=o)=>request(path,{method:'POST',headers:{Cookie:cookie,Origin:origin,'CF-Connecting-IP':'192.0.2.1'},body:new URLSearchParams(data)});
  await assert.rejects(api.loginRoutes(post('/auth/request',{email},nonce,'https://evil.example'),loginEnv),/origin/);
- await api.loginRoutes(post('/auth/request',{email,next:'//evil.example'}),loginEnv);assert.equal(messages.length,1);
+ const target='/app/artifact?pointer='+encodeURIComponent('@brief/12345678-1234-4234-8234-123456789abc:v1');
+ const redirected=await api.loginRoutes(request(target),loginEnv);assert.equal(redirected.headers.get('location'),'/login?next='+encodeURIComponent(target));
+ await api.loginRoutes(post('/auth/request',{email,next:target}),loginEnv);assert.equal(messages.length,1);
  const link=messages[0].text.match(/https:\/\/[^\s]+\/auth\/verify\?token=[a-f0-9]+/)[0],token=new URL(link).searchParams.get('token');
  assert.match(messages[0].text,/10 minutes/);
  const preview=await api.loginRoutes(new Request(link,{headers:{Cookie:nonce}}),loginEnv);assert.equal(preview.status,200);assert.equal(preview.headers.get('referrer-policy'),'strict-origin');
  await assert.rejects(api.loginRoutes(new Request(link),loginEnv),/browser/);
  await assert.rejects(api.loginRoutes(post('/auth/complete',{token},nonce,'null'),loginEnv),/origin/);
  await assert.rejects(api.loginRoutes(post('/auth/complete',{token,owner_key:'wrong-owner-proof'}),loginEnv),/claims are retired/);
- const confirmed=await api.loginRoutes(post('/auth/complete',{token}),loginEnv);assert.equal(confirmed.status,303);assert.equal(confirmed.headers.get('location'),'/app');
+ const confirmed=await api.loginRoutes(post('/auth/complete',{token}),loginEnv);assert.equal(confirmed.status,303);assert.equal(confirmed.headers.get('location'),target);
  const sessionCookie=confirmed.headers.getSetCookie().find(s=>s.startsWith('__Host-bytes-session=')).split(';')[0];
  await assert.rejects(api.loginRoutes(post('/auth/complete',{token}),loginEnv),/already used/);
  const dashboard=await api.loginRoutes(request('/app',{headers:{Cookie:sessionCookie}}),loginEnv);assert.equal(dashboard.status,200);
@@ -273,7 +275,9 @@ pgTest('login HTTP flow sends a confirmation link, ignores scanner GETs, blocks 
  const owner=await api.browserSession(request('/app',{headers:{Cookie:sessionCookie}}),loginEnv);
  const artifact=await save(new api.Store(loginEnv,await access(owner)),'Clickable artifact');
  const listing=await api.loginRoutes(request('/app',{headers:{Cookie:sessionCookie}}),loginEnv);assert.ok((await listing.text()).includes('/app/artifact?pointer='+encodeURIComponent(artifact.pointer)));
- const opened=await api.loginRoutes(request('/app/artifact?pointer='+encodeURIComponent(artifact.pointer),{headers:{Cookie:sessionCookie}}),loginEnv);assert.match(await opened.text(),/a private pineapple/);
+ const opened=await api.loginRoutes(request('/app/artifact?pointer='+encodeURIComponent(artifact.pointer),{headers:{Cookie:sessionCookie}}),loginEnv);const openedText=await opened.text();assert.match(openedText,/a private pineapple/);assert.match(openedText,/Copy link/);assert.ok(openedText.includes('https://app.bytesskills.com/app/artifact?pointer='+encodeURIComponent(artifact.pointer)));
+ const otherTenant=await tenant('web-link-other');const otherArtifact=await save(new api.Store(loginEnv,await access(otherTenant)));
+ await assert.rejects(api.loginRoutes(request('/app/artifact?pointer='+encodeURIComponent(otherArtifact.pointer),{headers:{Cookie:sessionCookie}}),loginEnv),/missing/);
  const core=await api.loginRoutes(request('/app/skill?core=help',{headers:{Cookie:sessionCookie}}),loginEnv);assert.match(await core.text(),/Platform core/);
  const ownerStore=new api.Store(loginEnv,await access(owner));
  for(const mime of ['image/png','image/svg+xml']){

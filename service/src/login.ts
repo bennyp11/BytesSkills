@@ -1,3 +1,5 @@
+import {destination} from './login-destination';
+import {artifactUrl} from './artifact-links';
 import {ApiError,readBody,sha,type Env} from './common';
 import {database} from './database';
 import {WorkspaceAccess} from './access';
@@ -13,7 +15,7 @@ const previewTypes=new Set(['image/png','image/jpeg','image/gif','image/webp','a
 const valid=(s:string)=>/^[a-f0-9]{64}$/.test(s);
 function origin(req:Request,env:Env){const o=new URL(req.url).origin;if(![env.BASE_URL,env.APP_URL].includes(o))throw new ApiError(403,'Invalid login origin');return o;}
 function post(req:Request,env:Env){if(req.method!=='POST')throw new ApiError(405,'POST required');if(req.headers.get('Origin')!==origin(req,env))throw new ApiError(403,'Invalid form origin');}
-function destination(s:string){if(s==='/app')return s;const u=new URL(s,'https://return.invalid');if(s.startsWith('/authorize?')&&u.origin==='https://return.invalid'&&u.pathname==='/authorize'&&!u.hash&&s.length<=12000)return s;return '/app';}
+
 export const loginRedirect=(next:string)=>new Response(null,{status:303,headers:{Location:'/login?next='+encodeURIComponent(destination(next)),'Cache-Control':'no-store'}});
 async function authRow<T>(env:Env,sql:string,...params:unknown[]){return database(env,undefined,'identity').prepare(sql).bind(...params).first<T>();}
 export async function browserSession(req:Request,env:Env){
@@ -55,7 +57,7 @@ export async function loginRoutes(req:Request,env:Env):Promise<Response|null>{
   if(!result)throw new ApiError(400,'Invalid, expired, or already used link. Request a new link.');
   const headers=new Headers({Location:destination(result.destination),'Cache-Control':'no-store'});headers.append('Set-Cookie',setCookie('__Host-bytes-session',session,604800));headers.append('Set-Cookie',setCookie('__Host-bytes-login','',0));return new Response(null,{status:303,headers});
  }
- const session=await browserSession(req,env);if(!session)return loginRedirect('/app');
+ const session=await browserSession(req,env);if(!session)return loginRedirect(req.method==='GET'?u.pathname+u.search:'/app');
  if(p==='/auth/logout'){
   const form=new URLSearchParams(await readBody(req,16000));sessionCsrf(req,env,form,session);
   await authRow(env,'SELECT login_logout(?,?)',await sha(cookie(req,'__Host-bytes-session')),o);
@@ -79,7 +81,7 @@ export async function loginRoutes(req:Request,env:Env):Promise<Response|null>{
   let content='text' in item?`<pre id="artifact-content">${escape(String(item.text))}</pre>`:'<p>Preview unavailable for this file type. Download it below.</p>';
   if(previewTypes.has(item.content.media_type))content=item.content.media_type.startsWith('image/')?`<img src="${url}" alt="${escape(item.title)}">`:item.content.media_type.startsWith('video/')?`<video controls preload="metadata" src="${url}"></video>`:`<audio controls preload="metadata" src="${url}"></audio>`;
   if(item.content.media_type==='application/json')content=`<pre id="artifact-content">${escape(await store.contentText(item.content))}</pre>`;
-  return html(nav+`<p><a href="/app">← all artifacts</a></p><h1>${escape(item.title)}</h1><p class="muted">${escape(item.type)} · ${escape(item.status)} · revision ${item.revision}</p><div class="artifact-actions">${copyButton("Copy reference",item.pointer)}${'text' in item||item.content.media_type==='application/json'?'<button type="button" data-copy="artifact-content" data-label="Content">Copy content</button>':''}${copyButton("Copy command",'/bytes show '+item.pointer)}</div>${copyStatus()}${content}${artifactReferences(item)}<p><a href="/app/content?pointer=${encodeURIComponent(item.pointer)}">Download content</a></p><h2>Revisions</h2>`+history.items.map((r:any)=>`<p><a href="/app/artifact?pointer=${encodeURIComponent(r.pointer)}">Revision ${r.revision}</a></p>`).join(''),new Headers(),undefined,true);
+  return html(nav+`<p><a href="/app">← all artifacts</a></p><h1>${escape(item.title)}</h1><p class="muted">${escape(item.type)} · ${escape(item.status)} · revision ${item.revision}</p><div class="artifact-actions">${copyButton("Copy link",artifactUrl(env,item.pointer))}${copyButton("Copy reference",item.pointer)}${'text' in item||item.content.media_type==='application/json'?'<button type="button" data-copy="artifact-content" data-label="Content">Copy content</button>':''}${copyButton("Copy command",'/bytes show '+item.pointer)}</div>${copyStatus()}${content}${artifactReferences(item)}<p><a href="/app/content?pointer=${encodeURIComponent(item.pointer)}">Download content</a></p><h2>Revisions</h2>`+history.items.map((r:any)=>`<p><a href="/app/artifact?pointer=${encodeURIComponent(r.pointer)}">Revision ${r.revision}</a></p>`).join(''),new Headers(),undefined,true);
 
  }
 
@@ -92,12 +94,12 @@ export async function loginRoutes(req:Request,env:Env):Promise<Response|null>{
  const select=(name:string,label:string,choices:[string,string][],value:string)=>`<label>${label}<br><select name="${name}">${choices.map(([v,t])=>`<option value="${escape(v)}" ${v===value?'selected':''}>${escape(t)}</option>`).join('')}</select></label>`;
  const dates=(s:string)=>{const date=new Date(s);return Number.isNaN(date.valueOf())?'unknown date':date.toLocaleString('en-US',{timeZone:'UTC',year:'numeric',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' UTC';};
  const next=new URLSearchParams(u.searchParams);if(rows.next)next.set('cursor',rows.next);
- return html(nav+`<h1>Your artifacts</h1><form><input aria-label="Search artifacts" name="q" value="${escape(q.text)}" placeholder="Search"><div class="filters">`+
+ return html(nav+`<h1>Your artifacts</h1><p>Browse and open your saved work here. Use /bytes in chat to create or edit it.</p><form action="/app/artifact"><label>Open by reference <input name="pointer" required placeholder="@brief/…:v1"></label><button>Open artifact</button></form><form><input aria-label="Search artifacts" name="q" value="${escape(q.text)}" placeholder="Search"><div class="filters">`+
  select('sort','Sort',[['updated','Recently updated'],['newest','Newest created'],['oldest','Oldest created'],['title','Title A–Z']],q.sort)+
  select('type','Type',[['','All types'],...registry.artifact_types.map(t=>[t,t] as [string,string])],q.type)+
  select('status','Status',[['','Active (not archived)'],['all','All statuses'],...registry.statuses.map(t=>[t,t] as [string,string])],q.status)+
  select('format','Format',[['','All formats'],...formats.map(t=>[t,t] as [string,string])],q.format)+
  `<label><input type="checkbox" name="runs" value="1" ${q.runs?'checked':''}> Show runs</label><button>Apply</button><a href="/app">Reset</a></div></form>${copyStatus()}`+
- (rows.items.length?rows.items.map(r=>`<div class="listing"><h2><a href="/app/artifact?pointer=${encodeURIComponent(r.pointer)}">${escape(r.title)}</a></h2><p class="muted">${escape(r.type)} · ${escape(r.status)}${r.format?' · '+escape(r.format):''}<br>Updated <time datetime="${escape(r.updated)}">${escape(dates(r.updated))}</time> · Created <time datetime="${escape(r.created)}">${escape(dates(r.created))}</time></p><a href="/app/artifact?pointer=${encodeURIComponent(r.pointer)}">open</a>${copyButton('Copy reference',r.pointer)}</div>`).join(''):'<p>No artifacts match these filters.</p>')+
+ (rows.items.length?rows.items.map(r=>`<div class="listing"><h2><a href="/app/artifact?pointer=${encodeURIComponent(r.pointer)}">${escape(r.title)}</a></h2><p class="muted">${escape(r.type)} · ${escape(r.status)}${r.format?' · '+escape(r.format):''}<br>Updated <time datetime="${escape(r.updated)}">${escape(dates(r.updated))}</time> · Created <time datetime="${escape(r.created)}">${escape(dates(r.created))}</time></p><a href="/app/artifact?pointer=${encodeURIComponent(r.pointer)}">open</a>${copyButton('Copy link',artifactUrl(env,r.pointer))}${copyButton('Copy reference',r.pointer)}</div>`).join(''):'<p>No artifacts match these filters.</p>')+
  (rows.next?`<p><a href="/app?${escape(next.toString())}">Next page →</a></p>`:''),new Headers(),undefined,true);
 }

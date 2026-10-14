@@ -1,4 +1,4 @@
 {
-  "version": "0.12.2",
-  "summary": "Speed up artifact reads with direct tool routing and three fewer database setup round trips per operation, preserving per-request authorization and RLS."
+  "version": "0.12.3",
+  "summary": "Open saved artifacts in the web app through direct authenticated links, preserve destinations through sign-in, and resolve pointers in one database transaction."
 }
