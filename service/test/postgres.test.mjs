@@ -522,11 +522,12 @@ pgTest('batched setup applies local settings and parameterized identity before a
  const safe=await row(db,"SELECT current_setting('bytes.account_id') AS account, current_setting('statement_timeout') AS timeout");
  assert.deepEqual(safe,{account:unusual,timeout:'15s'});
  // A failed write batch must roll back; a later operation still has fresh settings.
- const tx=scoped(a),id=crypto.randomUUID();
+ const record=await save(new api.Store(env,await access(a)),'rollback target');
+ const tx=scoped(a),id=record.id;
  await assert.rejects(tx.batch([
-   tx.prepare('INSERT INTO search_documents(workspace_id,id,title,body) VALUES(?,?,?,?)').bind(a.workspace_id,id,'rollback','test'),
+   tx.prepare('DELETE FROM search_documents WHERE workspace_id=? AND id=?').bind(a.workspace_id,id),
    tx.prepare('SELECT 1/0')
  ]),/division by zero/);
- assert.equal(await row(scoped(a),'SELECT id FROM search_documents WHERE id=?',id),null);
+ assert.deepEqual(await row(scoped(a),'SELECT id FROM search_documents WHERE id=?',id),{id});
  assert.equal((await row(scoped(a),"SELECT current_setting('statement_timeout') AS timeout")).timeout,'15s');
 });
