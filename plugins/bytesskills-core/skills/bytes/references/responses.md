@@ -11,7 +11,7 @@ or failed. Then use this order for each result:
 
 1. **Number and title** — a short recognizable label. Numbers are selection aids,
    never artifact IDs.
-2. **Preview** — enough content to choose the item; provide full content when asked.
+2. **Open artifact** — a Markdown link using the server-returned `web_url`. The web app is the default viewer. Add a short preview only when useful; provide full content in chat when explicitly asked.
 3. **ID** — the exact full pinned pointer returned by the runtime, in inline code.
 4. **Next — action label** — one useful follow-up in its own `text` code block,
    with the real pointer already substituted. No shell prompt, bullets, comments
@@ -26,8 +26,7 @@ For a single result, omit the unnecessary candidate number.
 ## Lists and inspection
 
 List/search results use the same title → preview → ID → next-action pattern. Say
-“Found” rather than “Saved”; listing must not create new records. Default to an
-exact `/bytes show POINTER` action when the next creative step is unclear. Keep
+“Found” rather than “Saved”; listing must not create new records. Default to the returned **Open artifact** link when the next creative step is unclear. Do not fetch every item’s content just to build a list. Keep
 results bounded; never claim all results were shown if pagination remains.
 When a cursor is returned, offer a separate next-page command using its exact value
 and the original supported filters. Do not invent cursors or continuation commands.
@@ -96,3 +95,15 @@ that each ID matches returned data, each command references the intended item, a
 flags are supported, and copied commands contain no placeholders. Check quotation
 handling for titles/paths containing spaces and quotes. Review-only suggestions must
 not execute or broaden the original request.
+
+## Web viewing
+
+For connected cloud artifacts, use `web_url` returned by save/author/get/query/history.
+Links point to exact revisions and require sign-in and workspace authorization; they
+are not public shares. Never invent a URL from a title or fabricate a saved record.
+For a known-pointer show/open request, call bytes_get with include_content=false and
+return its title, Open artifact link and reference. Explicit requests to read in chat,
+compare, summarize or edit still fetch the needed content. Browsing without filters
+can link to https://app.bytesskills.com/app without a tool call. Filtered discovery
+uses bytes_query. Local-only artifacts have no cloud link. If web_url is unavailable
+on an older server, retain the pointer/show fallback without claiming this feature.

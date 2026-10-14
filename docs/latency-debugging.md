@@ -94,3 +94,17 @@ Next optimizations, measured independently:
   non-content methods after token validation and fail closed for unknown methods.
 - Benchmark Worker placement near PostgreSQL against current placement. Do not infer
   backend latency from the user's location or the presence of a CDN.
+
+## Web-first viewing (0.12.3)
+
+Cloud MCP artifact results include a presentation-only `web_url` for the exact
+revision; it is not part of stored records or their checksums. Save/author/get and
+paginated artifact results can link to the existing authenticated web viewer without
+an extra content fetch. Show/open defaults to metadata-only retrieval plus a link;
+explicit in-chat reading and analysis continue to fetch content. The public viewer
+URL is not a sharing credential: browser sign-in and workspace authorization apply.
+
+The web app supports browsing/search/sorting, opening a pasted pointer and copying
+a revision link. Signed-out artifact links survive the magic-link sign-in flow.
+This release does not introduce private-content caching, prefetching or an instant
+load guarantee. It avoids model orchestration for ordinary browsing and viewing.

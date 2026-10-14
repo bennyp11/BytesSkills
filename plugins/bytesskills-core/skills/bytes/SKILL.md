@@ -20,7 +20,8 @@ flow for execution; direct artifact reads skip begin/adoption. Ask about ambiguo
 ## Direct artifact reads
 
 For “show this brief” or `/bytes show` with a known pointer, call `bytes_get`
-directly (include content by default). For discovery use `bytes_query`; for history
+directly with include_content=false and return its Open artifact link. Fetch content
+only for explicit in-chat reading, analysis or editing. See [standard responses](references/responses.md). For discovery use `bytes_query`; for history
 or references use `bytes_history` or `bytes_related`. Do not prepend
 `bytes_workspace`, `bytes_begin`, `bytes_updates` or `bytes_library` to these reads.
 If a name matches multiple artifacts, clarify the target instead of guessing.
