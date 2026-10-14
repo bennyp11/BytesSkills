@@ -35,7 +35,7 @@ D1 stores structured records and relationships. R2 stores their actual content. 
 ## Skill lifecycle
 
 1. **Publish:** an authorized editor publishes a new immutable skill version with a summary and complete resource snapshot. Existing versions cannot be overwritten.
-2. **Check:** every new `/bytes` request calls `bytes_begin`. It compares the workspace's selected version with the latest published release.
+2. **Check:** execution/help/sync requests call `bytes_begin`; artifact reads use get/query/history/related directly and private authoring uses `bytes_author`. It compares the workspace's selected version with the latest published release.
 3. **Choose:** offer **Update**, **Stay**, or **Always latest**. Remember the choice per skill, per workspace, across machines. Stay suppresses that offered version; a later release can prompt again.
 4. **Run:** return pinned instructions and a workflow ID. The workflow retains that version even if another machine updates the library.
 5. **Save:** require the workflow ID for MCP artifact writes and stamp the skill version/checksum on the artifact. Reject missing, expired or revoked workflows.

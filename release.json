@@ -1,4 +1,4 @@
 {
-  "version": "0.12.1",
-  "summary": "Add privacy-preserving per-request MCP timings to diagnose server latency and cross-device tool-call overhead."
+  "version": "0.12.2",
+  "summary": "Speed up artifact reads with direct tool routing and three fewer database setup round trips per operation, preserving per-request authorization and RLS."
 }

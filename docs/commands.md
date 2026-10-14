@@ -221,7 +221,7 @@ now use this backend. Native command parsing and automatic generation are not bu
 
 ## Cloud skill releases (0.7.0)
 
-Every new command starts with bytes_begin. Use its immutable instructions/resources
+Execution, help and sync commands start with bytes_begin. Read-only show/list/search/history/references use their artifact tools directly without workspace or begin preflight; reading does not execute or adopt skills. Private authoring uses bytes_author directly. Use its immutable instructions/resources
 and workflow_id throughout that operation. Update prompts offer update, keep, or
 auto; preferences persist per skill in the workspace. Help/inspection workflows
 cannot save creative artifacts. All MCP saves require a valid workflow_id.

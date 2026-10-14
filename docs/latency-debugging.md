@@ -68,3 +68,29 @@ available in ChatGPT's browser interface, not its desktop plugin controls. Refre
 there when tool schemas change, verify the advertised tool names, then test in a new
 desktop chat. Disconnect/reconnect authentication does not prove tool metadata updated.
 This instrumentation release itself adds no tools and does not require a schema refresh.
+
+## Artifact-read optimization (0.12.2)
+
+A known-pointer show should call `bytes_get` directly. Discovery uses `bytes_query`;
+only ambiguous results need clarification. No workspace or workflow preflight is
+required for these read tools. This changes assistant routing, not authorization:
+OAuth, membership checks and database RLS still apply to every artifact read.
+Execution and saves retain their workflow/adoption requirements.
+
+To verify after deployment, ask the same connected client to show the same brief
+pointer several times in fresh requests. Record wall-clock time and the tool list.
+Expect one `bytes_get` tool call, not workspace → begin → get. Compare server get
+latency separately from total chat latency; protocol initialization and model time
+can remain. Instructions guide the host but cannot enforce its tool selection.
+If the host keeps using cached tool descriptions, refresh the connection metadata
+in ChatGPT's browser settings. Refreshing is not a substitute for deployment.
+
+Next optimizations, measured independently:
+- Consolidate pointer resolution's prefix lookup and revision read while preserving
+  missing/ambiguous pointer semantics and workspace filters.
+- Reuse a short transaction for related database work where safe, without retaining
+  a transaction across object-storage calls or AI execution.
+- Investigate protocol housekeeping costs; any fast path must explicitly allowlist
+  non-content methods after token validation and fail closed for unknown methods.
+- Benchmark Worker placement near PostgreSQL against current placement. Do not infer
+  backend latency from the user's location or the presence of a CDN.
