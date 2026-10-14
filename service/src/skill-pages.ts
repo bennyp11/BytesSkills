@@ -1,7 +1,7 @@
 import {PrivateSkills} from './private-skills';
 import {Store} from './store';
 import {Releases} from './releases';
-import {escape,html} from './html';
+import {escape,html,fileCard,fileCopyButton,copyStatus} from './html';
 import {ApiError,readBody,type Env} from './common';
 import type {WorkspaceAccess} from './access';
 import {sessionCsrf} from './login';
@@ -24,7 +24,7 @@ export async function skillPages(req:Request,env:Env,access:WorkspaceAccess,sess
    const name=u.searchParams.get('core'),version=u.searchParams.get('version');
    const row=(await releases.rows()).filter(r=>r.skill===name&&!r.revoked&&(!version||r.version===version)).at(-1);
    if(!row)throw new ApiError(404,'Skill release not found');const s=await releases.verified(row);
-   return html(nav+`<p><a href="/app/skills">← all skills</a></p><h1>${escape(s.skill)}</h1><p class="muted">Platform core · version ${escape(s.version)} · read only</p><p>${escape(s.summary)}</p><h2>Instructions</h2><pre>${escape(s.instructions)}</pre><h2>Included resources</h2>`+Object.entries(s.resources).map(([name,text])=>`<details><summary>${escape(name)}</summary><pre>${escape(text)}</pre></details>`).join(''));
+   return html(nav+`<p><a href="/app/skills">← all skills</a></p><h1>${escape(s.skill)}</h1><p class="muted">Platform core · version ${escape(s.version)} · read only</p><p>${escape(s.summary)}</p><h2>Instructions</h2>`+fileCard('SKILL.md','instructions',s.instructions,'skill-instructions',fileCopyButton('skill-instructions','Copy','Instructions'))+`<h2>Included resources</h2>`+Object.entries(s.resources).map(([name,text],i)=>`<details><summary>${escape(name)}</summary>${fileCard(name,'resource',text,`skill-resource-${i}`,fileCopyButton(`skill-resource-${i}`,'Copy','Resource'))}</details>`).join('')+copyStatus(),new Headers(),undefined,true);
   }
   const id=u.searchParams.get('id')??'';
   if(/^[a-f0-9-]{36}$/.test(id)){
@@ -32,7 +32,7 @@ export async function skillPages(req:Request,env:Env,access:WorkspaceAccess,sess
    catch(e){if(!(e instanceof ApiError)||e.status!==404)throw e;}
   }
   const s=await privateSkills.get(id);
-  return html(nav+`<p><a href="/app/skills">← all skills</a></p><h1>${escape(s.title)}</h1><p class="muted">Private draft · revision ${s.revision}</p><p>Skill ID: <code>${s.id}</code></p><p>${escape(s.summary)}</p><h2>Instructions</h2><pre>${escape(s.instructions)}</pre><p class="muted">Saved only in your workspace. You can copy these instructions into a chat; this draft is not registered as a /bytes command.</p>`);
+  return html(nav+`<p><a href="/app/skills">← all skills</a></p><h1>${escape(s.title)}</h1><p class="muted">Private draft · revision ${s.revision}</p><p>Skill ID: <code>${s.id}</code></p><p>${escape(s.summary)}</p><h2>Instructions</h2>`+fileCard('SKILL.md','instructions',s.instructions,'skill-instructions',fileCopyButton('skill-instructions','Copy','Instructions'))+copyStatus()+`<p class="muted">Saved only in your workspace. You can copy these instructions into a chat; this draft is not registered as a /bytes command.</p>`,new Headers(),undefined,true);
  }
  const catalog=await releases.updates(),own=await privateSkills.list(u.searchParams.get('after')??'');
  const definitions=await store.query({type:u.searchParams.get('kind')==='format'?'format':'skill',after:u.searchParams.get('definition_after')??undefined,limit:30});
