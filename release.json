@@ -1,4 +1,4 @@
 {
-  "version": "0.12.4",
-  "summary": "Automatically refresh the visible artifact browser with saved results, preserving filters and providing pause and retry controls."
+  "version": "0.12.5",
+  "summary": "Simplify artifact copy actions with a clear primary Copy link button and labeled secondary options."
 }
