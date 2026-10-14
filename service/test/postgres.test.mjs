@@ -40,7 +40,7 @@ before(async()=>{
  for(const r of ['runtime','identity','publisher'])await admin.query(`ALTER ROLE bytes_${r} LOGIN`);
  env={STORAGE_BACKEND:'postgres',POSTGRES:{connectionString:urlFor('bytes_runtime')},PUBLISHER_DB:{connectionString:urlFor('bytes_publisher')},IDENTITY_DB:{connectionString:urlFor('bytes_identity')},BLOBS,WORKSPACE_ID:'acc3351e-d092-433c-a7e1-8fc3e807ebd4'};
  dir=await mkdtemp(join(tmpdir(),'bytes-pg-test-'));
- await build({stdin:{contents:`export {PostgresDatabase,postgresParameters} from './src/database';export {WorkspaceAccess} from './src/access';export {Store} from './src/store';export {Releases} from './src/releases';export {Definitions} from './src/definitions';export {PrivateSkills} from './src/private-skills';export {browseArtifacts} from './src/artifact-browser';export {provisionVerifiedIdentity} from './src/accounts';export {loginRoutes,browserSession} from './src/login';`,resolveDir:process.cwd(),loader:'ts'},bundle:true,platform:'node',format:'esm',packages:'external',outfile:join(dir,'api.mjs')});
+ await build({stdin:{contents:`export {observeMcp} from './src/telemetry';export {PostgresDatabase,postgresParameters} from './src/database';export {WorkspaceAccess} from './src/access';export {Store} from './src/store';export {Releases} from './src/releases';export {Definitions} from './src/definitions';export {PrivateSkills} from './src/private-skills';export {browseArtifacts} from './src/artifact-browser';export {provisionVerifiedIdentity} from './src/accounts';export {loginRoutes,browserSession} from './src/login';`,resolveDir:process.cwd(),loader:'ts'},bundle:true,platform:'node',format:'esm',packages:'external',outfile:join(dir,'api.mjs')});
  // Bundle pg's CommonJS dependency too, via an entry created inside service.
  // External package resolution starts at the temporary file, so use the explicit pg path.
  const bundled=await readFile(join(dir,'api.mjs'),'utf8');
@@ -530,4 +530,40 @@ pgTest('batched setup applies local settings and parameterized identity before a
  ]),/division by zero/);
  assert.deepEqual(await row(scoped(a),'SELECT id FROM search_documents WHERE id=?',id),{id});
  assert.equal((await row(scoped(a),"SELECT current_setting('statement_timeout') AS timeout")).timeout,'15s');
+});
+
+pgTest('pointer resolution uses one transaction and preserves revision, ambiguity and isolation semantics',async()=>{
+ const a=await tenant('resolve-a'),b=await tenant('resolve-b');
+ const sa=new api.Store(env,await access(a)),sb=new api.Store(env,await access(b));
+ const first=await save(sa,'lookup fixture');
+ const latest=await sa.save({request_id:crypto.randomUUID(),pointer:first.pointer,expected_revision:1,text:'revision two'});
+ const prefix=`@concept/${first.id.slice(0,8)}`;
+ const events=[];
+ await api.observeMcp(new Request('https://test.example/mcp'),'test',async()=>{
+  assert.deepEqual(await sa.resolve(prefix),latest);return new Response('ok');
+ },e=>events.push(e));
+ assert.equal(events[0].stages.db_setup.count,1);
+ assert.equal(events[0].stages.db_query.count,1);
+ assert.equal(events[0].stages.db_commit.count,1);
+ assert.deepEqual(await sa.resolve(`${prefix}:v1`),first);
+ assert.deepEqual(await sa.resolve(first.pointer),first);
+ assert.deepEqual(await sa.resolve(`@concept/${first.id}`),latest);
+ await assert.rejects(sa.resolve(`${prefix}:v99`),/Revision not found/);
+ await assert.rejects(sa.resolve(`@hook/${first.id}`),/Pointer missing or ambiguous/);
+ await assert.rejects(sb.resolve(first.pointer),/Pointer missing or ambiguous/);
+ await assert.rejects(sa.resolve('@concept/not-valid'),/Invalid/);
+ // Insert a valid second identity sharing the prefix, with only revision 1.
+ // Fixture insertion is administrative; resolution still uses the runtime RLS role.
+ const id=first.id.slice(0,8)+crypto.randomUUID().slice(8);
+ const clone={...first,id,pointer:`@concept/${id}:v1`,record_key:`records/concept/${id}/v00000001.json`};
+ delete clone.record_checksum;clone.record_checksum=sha(canonical(clone));
+ await admin.query(`INSERT INTO bytes.revisions(workspace_id,pointer,id,type,revision,checksum,record)
+ VALUES($1,$2,$3,'concept',1,$4,$5)`,[a.workspace_id,clone.pointer,id,clone.record_checksum,canonical(clone)]);
+ await admin.query(`INSERT INTO bytes.heads(workspace_id,id,pointer,type,revision,title,status,updated)
+ VALUES($1,$2,$3,'concept',1,'collision','draft',$4)`,[a.workspace_id,id,clone.pointer,first.created_at]);
+ for(const p of [prefix,`${prefix}:v1`,`${prefix}:v2`,`${prefix}:v99`]){
+  await assert.rejects(sa.resolve(p),e=>e.status===409&&/ambiguous/.test(e.message));
+ }
+ assert.deepEqual(await sa.resolve(latest.pointer),latest);
+ await assert.rejects(sb.resolve(prefix),e=>e.status===404);
 });

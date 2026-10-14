@@ -95,26 +95,26 @@ export class Store {
   async resolve(input: string): Promise<RecordData> {
     pointer.parse(input);
     const m = /^@([^/]+)\/([^:]+)(?::v(\d+))?$/.exec(input)!;
-    const ids = await this.db.prepare(
-      "SELECT id FROM heads WHERE workspace_id=? AND type=? AND id LIKE ? LIMIT 2",
+    // Limit candidate identities before joining revisions: a missing requested
+    // revision must not turn an ambiguous prefix into a unique match. One SELECT
+    // gives both steps the same snapshot and avoids a second transaction setup.
+    const rows = await this.db.prepare(
+      `SELECT h.id, r.record FROM (
+        SELECT workspace_id, id, pointer FROM heads
+        WHERE workspace_id=? AND type=? AND id LIKE ? LIMIT 2
+      ) h LEFT JOIN revisions r ON r.workspace_id=h.workspace_id AND r.id=h.id AND ${
+        m[3] ? "r.revision=?" : "r.pointer=h.pointer"
+      }`,
     )
-      .bind(this.access.workspaceId, m[1], m[2] + "%")
-      .all<{ id: string }>();
-    if (ids.results.length !== 1)
+      .bind(this.access.workspaceId, m[1], m[2] + "%", ...(m[3] ? [Number(m[3])] : []))
+      .all<{ id: string; record: string | null }>();
+    if (rows.results.length !== 1)
       throw new ApiError(
-        ids.results.length ? 409 : 404,
+        rows.results.length ? 409 : 404,
         "Pointer missing or ambiguous",
       );
-    const row = await (
-      m[3]
-        ? this.db.prepare(
-            "SELECT record FROM revisions WHERE workspace_id=? AND id=? AND revision=?",
-          ).bind(this.access.workspaceId, ids.results[0].id, Number(m[3]))
-        : this.db.prepare(
-            "SELECT r.record FROM heads h JOIN revisions r ON r.workspace_id=h.workspace_id AND r.pointer=h.pointer WHERE h.workspace_id=? AND h.id=?",
-          ).bind(this.access.workspaceId, ids.results[0].id)
-    ).first<{ record: string }>();
-    if (!row) throw new ApiError(404, "Revision not found");
+    const row = rows.results[0];
+    if (row.record === null) throw new ApiError(404, "Revision not found");
     return JSON.parse(row.record);
   }
   async get(input: string, include_content = false) {
