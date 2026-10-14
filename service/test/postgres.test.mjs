@@ -505,3 +505,29 @@ pgTest('MCP authors and executes private definitions with no manage scope and st
  assert.equal(copied.error,false,JSON.stringify(copied));assert.equal(copied.data.provenance.core_source.version,source.data.core_source.version);
  }finally{await mf.dispose();}
 });
+
+pgTest('batched setup applies local settings and parameterized identity before application queries',async()=>{
+ const a=await tenant('batched-setup');
+ const settings=await row(scoped(a),`SELECT current_setting('search_path') AS path,
+   current_setting('statement_timeout') AS statement_timeout,
+   current_setting('lock_timeout') AS lock_timeout,
+   current_setting('bytes.account_id') AS account,
+   current_setting('bytes.workspace_id') AS workspace,
+   current_setting('bytes.legacy_owner') AS legacy`);
+ assert.deepEqual(settings,{path:'bytes, pg_catalog',statement_timeout:'15s',lock_timeout:'5s',
+   account:a.account_id,workspace:a.workspace_id,legacy:'false'});
+ // Identity must remain a bound value, even if it contains SQL punctuation.
+ const unusual="tenant'; SET LOCAL statement_timeout='0'; --";
+ const db=new api.PostgresDatabase(env.POSTGRES.connectionString,{accountId:unusual,workspaceId:a.workspace_id});
+ const safe=await row(db,"SELECT current_setting('bytes.account_id') AS account, current_setting('statement_timeout') AS timeout");
+ assert.deepEqual(safe,{account:unusual,timeout:'15s'});
+ // A failed write batch must roll back; a later operation still has fresh settings.
+ const record=await save(new api.Store(env,await access(a)),'rollback target');
+ const tx=scoped(a),id=record.id;
+ await assert.rejects(tx.batch([
+   tx.prepare('DELETE FROM search_documents WHERE workspace_id=? AND id=?').bind(a.workspace_id,id),
+   tx.prepare('SELECT 1/0')
+ ]),/division by zero/);
+ assert.deepEqual(await row(scoped(a),'SELECT id FROM search_documents WHERE id=?',id),{id});
+ assert.equal((await row(scoped(a),"SELECT current_setting('statement_timeout') AS timeout")).timeout,'15s');
+});
