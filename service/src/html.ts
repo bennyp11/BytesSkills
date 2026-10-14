@@ -84,6 +84,16 @@ export const copyStatus=()=>`<p id="copy-status" class="muted copy-status" role=
 const clipboardIcon='<svg class="copy-icon" aria-hidden="true" viewBox="0 0 20 20"><rect x="6" y="5" width="11" height="13" rx="1.5"></rect><path d="M13 5V3.5A1.5 1.5 0 0 0 11.5 2h-8A1.5 1.5 0 0 0 2 3.5v11A1.5 1.5 0 0 0 3.5 16H6"></path></svg>';
 export function copyButton(label:string,value:string,primary=false){return `<button type="button" class="${primary?'copy-primary':''}" data-copy-value="${escape(value)}" data-label="${escape(label)}">${clipboardIcon}${escape(label)}</button>`;}
 export function copyContentButton(){return `<button type="button" data-copy="artifact-content" data-label="Content">${clipboardIcon}Copy content</button>`;}
+export function copyAiButton(title:string,pointer:string,content?:string){
+ const text=[
+  'BytesSkills artifact',
+  `Title: ${title}`,
+  `Pointer: ${pointer}`,
+  content===undefined?'If BytesSkills is connected to this workspace, retrieve this exact revision.':'Content:',
+  ...(content===undefined?[]:[content]),
+ ].join('\n');
+ return copyButton('Copy for AI',text,true);
+}
 export function copyOptions(actions:string[]){return `<details class="copy-options"><summary>More copy options</summary>${actions.join('')}</details>`;}
 export function artifactReferences(item:{id:string;type:string;pointer:string}) {
  const field=(id:string,label:string,value:string)=>`<label for="${id}">${label}</label><div class="copy-row"><input id="${id}" data-reference readonly value="${escape(value)}" spellcheck="false"><button type="button" data-copy="${id}" data-label="${label}" aria-label="Copy ${label.toLowerCase()}">copy</button></div>`;

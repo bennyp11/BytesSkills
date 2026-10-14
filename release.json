@@ -1,4 +1,4 @@
 {
-  "version": "0.12.5",
-  "summary": "Simplify artifact copy actions with a clear primary Copy link button and labeled secondary options."
+  "version": "0.12.6",
+  "summary": "Add explicit plain-text and AI-context clipboard actions for artifacts, including the exact BytesSkills revision pointer."
 }

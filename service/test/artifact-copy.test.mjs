@@ -17,7 +17,7 @@ test('artifact references copy exact IDs and revisions under CSP, with manual-co
   const response=await page.goto(base);assert.match(response.headers()['content-security-policy'],/script-src 'nonce-/);
   await page.getByRole('button',{name:/Copy link/}).click();assert.match(await page.evaluate(()=>navigator.clipboard.readText()),/^https:\/\/app\.example\/app\/artifact\?/);
   await page.getByText('More copy options',{exact:true}).click();
-  for(const [label,value] of [['Copy reference',item.pointer],['Copy command','/bytes show '+item.pointer],['Copy content','Some <private> content']]) {
+  for(const [label,value] of [['Copy text','Some <private> content'],['Copy for AI',`BytesSkills artifact\nTitle: Test artifact\nPointer: ${item.pointer}\nContent:\nSome <private> content`],['Copy reference',item.pointer],['Copy command','/bytes show '+item.pointer]]) {
    await page.getByRole('button',{name:label,exact:true}).click();assert.equal(await page.evaluate(()=>navigator.clipboard.readText()),value);
   }
   await page.getByText('Reference details',{exact:true}).click();
