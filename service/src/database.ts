@@ -49,10 +49,13 @@ export class PostgresDatabase implements Database {
     try {
       await timed("db_connect", () => client.connect());
       await timed("db_setup", async () => {
-        await client.query('BEGIN');
-        await client.query("SET LOCAL search_path = bytes, pg_catalog");
-        await client.query("SET LOCAL statement_timeout = '15s'");
-        await client.query("SET LOCAL lock_timeout = '5s'");
+        // One simple-query exchange for fixed SQL only. PostgreSQL runs these in
+        // order and stops on error; BEGIN keeps the transaction open afterward.
+        // Identity values stay in the separate parameterized query below.
+        await client.query(`BEGIN;
+          SET LOCAL search_path = bytes, pg_catalog;
+          SET LOCAL statement_timeout = '15s';
+          SET LOCAL lock_timeout = '5s';`);
         const check = await client.query(`SELECT current_user AS name,rolsuper,rolbypassrls,rolcreaterole,
           EXISTS(SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
             WHERE n.nspname='bytes' AND pg_has_role(current_user,c.relowner,'MEMBER')) AS owns_data,
