@@ -5,7 +5,7 @@ import {database} from './database';
 import {WorkspaceAccess} from './access';
 import {Store} from './store';
 import {skillPages} from './skill-pages';
-import {escape,html,artifactReferences,copyButton,copyContentButton,copyOptions,copyStatus} from './html';
+import {escape,html,artifactReferences,copyButton,copyAiButton,copyOptions,copyStatus} from './html';
 import {browseArtifacts,artifactFormats} from './artifact-browser';
 import registry from '../../plugins/bytesskills-core/skills/bytes/contracts/runtime.json';
 const random=()=>Array.from(crypto.getRandomValues(new Uint8Array(32)),x=>x.toString(16).padStart(2,'0')).join('');
@@ -81,7 +81,9 @@ export async function loginRoutes(req:Request,env:Env):Promise<Response|null>{
   let content='text' in item?`<pre id="artifact-content">${escape(String(item.text))}</pre>`:'<p>Preview unavailable for this file type. Download it below.</p>';
   if(previewTypes.has(item.content.media_type))content=item.content.media_type.startsWith('image/')?`<img src="${url}" alt="${escape(item.title)}">`:item.content.media_type.startsWith('video/')?`<video controls preload="metadata" src="${url}"></video>`:`<audio controls preload="metadata" src="${url}"></audio>`;
   if(item.content.media_type==='application/json')content=`<pre id="artifact-content">${escape(await store.contentText(item.content))}</pre>`;
-  return html(nav+`<p><a href="/app">← all artifacts</a></p><h1>${escape(item.title)}</h1><p class="muted">${escape(item.type)} · ${escape(item.status)} · revision ${item.revision}</p><div class="artifact-actions">${copyButton("Copy link",artifactUrl(env,item.pointer),true)}${copyOptions([copyButton("Copy reference",item.pointer),...('text' in item||item.content.media_type==='application/json'?[copyContentButton()]:[]),copyButton("Copy command",'/bytes show '+item.pointer)])}</div>${copyStatus()}${content}${artifactReferences(item)}<p><a href="/app/content?pointer=${encodeURIComponent(item.pointer)}">Download content</a></p><h2>Revisions</h2>`+history.items.map((r:any)=>`<p><a href="/app/artifact?pointer=${encodeURIComponent(r.pointer)}">Revision ${r.revision}</a></p>`).join(''),new Headers(),undefined,true);
+  const copyText='text' in item?String(item.text):item.content.media_type==='application/json'?await store.contentText(item.content):undefined;
+  const moreCopy=[copyButton("Copy link",artifactUrl(env,item.pointer)),copyButton("Copy reference",item.pointer),copyButton("Copy command",'/bytes show '+item.pointer)];
+  return html(nav+`<p><a href="/app">← all artifacts</a></p><h1>${escape(item.title)}</h1><p class="muted">${escape(item.type)} · ${escape(item.status)} · revision ${item.revision}</p><div class="artifact-actions">${copyText!==undefined?copyButton("Copy text",copyText,true):''}${copyAiButton(item.title,item.pointer,copyText)}${copyOptions(moreCopy)}</div>${copyStatus()}${content}${artifactReferences(item)}<p><a href="/app/content?pointer=${encodeURIComponent(item.pointer)}">Download content</a></p><h2>Revisions</h2>`+history.items.map((r:any)=>`<p><a href="/app/artifact?pointer=${encodeURIComponent(r.pointer)}">Revision ${r.revision}</a></p>`).join(''),new Headers(),undefined,true);
 
  }
 
