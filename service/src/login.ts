@@ -100,6 +100,7 @@ export async function loginRoutes(req:Request,env:Env):Promise<Response|null>{
  select('status','Status',[['','Active (not archived)'],['all','All statuses'],...registry.statuses.map(t=>[t,t] as [string,string])],q.status)+
  select('format','Format',[['','All formats'],...formats.map(t=>[t,t] as [string,string])],q.format)+
  `<label><input type="checkbox" name="runs" value="1" ${q.runs?'checked':''}> Show runs</label><button>Apply</button><a href="/app">Reset</a></div></form>${copyStatus()}`+
+ '<p id="artifact-refresh-status" role="status" aria-live="polite">Live updates on. Checking every 5 seconds while this tab is visible.</p><button type="button" id="artifact-refresh-toggle" aria-pressed="false">Pause live updates</button><noscript>Refresh this page to see new artifacts.</noscript><div id="artifact-results">'+
  (rows.items.length?rows.items.map(r=>`<div class="listing"><h2><a href="/app/artifact?pointer=${encodeURIComponent(r.pointer)}">${escape(r.title)}</a></h2><p class="muted">${escape(r.type)} · ${escape(r.status)}${r.format?' · '+escape(r.format):''}<br>Updated <time datetime="${escape(r.updated)}">${escape(dates(r.updated))}</time> · Created <time datetime="${escape(r.created)}">${escape(dates(r.created))}</time></p><a href="/app/artifact?pointer=${encodeURIComponent(r.pointer)}">open</a>${copyButton('Copy link',artifactUrl(env,r.pointer))}${copyButton('Copy reference',r.pointer)}</div>`).join(''):'<p>No artifacts match these filters.</p>')+
- (rows.next?`<p><a href="/app?${escape(next.toString())}">Next page →</a></p>`:''),new Headers(),undefined,true);
+ (rows.next?`<p><a href="/app?${escape(next.toString())}">Next page →</a></p>`:'')+'</div>',new Headers(),undefined,true,true);
 }

@@ -1,4 +1,4 @@
 {
-  "version": "0.12.3",
-  "summary": "Open saved artifacts in the web app through direct authenticated links, preserve destinations through sign-in, and resolve pointers in one database transaction."
+  "version": "0.12.4",
+  "summary": "Automatically refresh the visible artifact browser with saved results, preserving filters and providing pause and retry controls."
 }

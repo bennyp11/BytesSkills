@@ -108,3 +108,19 @@ The web app supports browsing/search/sorting, opening a pasted pointer and copyi
 a revision link. Signed-out artifact links survive the magic-link sign-in flow.
 This release does not introduce private-content caching, prefetching or an instant
 load guarantee. It avoids model orchestration for ordinary browsing and viewing.
+
+## Automatic listing refresh (0.12.4)
+
+The artifact browser checks its existing authenticated page every five seconds
+while visible. It replaces only the result list when it changes, preserving active
+filters, pagination, unsent filter edits and page state. Focused list controls or
+selected text defer replacement. New results must match the current filters/page;
+use Recently updated on the first page to watch newly saved work arrive.
+
+Pause/Resume is available. Hidden tabs do not poll; failures back off to at most one
+check per minute, and explicit authentication/authorization denials stop checks.
+Every check repeats session and workspace authorization. No private response is
+cached in browser storage. This is polling, not streaming: completed saves appear
+on a later successful check, not token by token. Open artifact detail pages stay
+pinned to their selected revision. Each visible browser makes up to 12 checks per
+minute; measure traffic before expanding to large user counts or adding push.
