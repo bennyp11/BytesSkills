@@ -19,6 +19,7 @@ button{font:16px 'Times New Roman',serif;padding:6px 14px;margin:10px 8px 10px 0
 :focus-visible{outline:2px solid #551a8b;outline-offset:3px}
 code{font:14px/1.5 monospace;overflow-wrap:anywhere}
 pre{font:15px/1.6 monospace;white-space:pre-wrap;overflow-wrap:anywhere;border-top:1px solid #ddd;border-bottom:1px solid #ddd;padding:14px 0}
+.file-card{margin:18px 0;border:1px solid #888;background:#fff;padding:0}.file-card-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:#eee;border-bottom:1px solid #aaa;padding:6px 9px;font:14px Arial,sans-serif}.file-card-name{display:flex;align-items:center;gap:9px;min-width:0}.file-card-kind{color:#666;font:12px monospace;text-transform:uppercase;white-space:nowrap}.file-card-name code{color:#222;overflow-wrap:anywhere}.file-card-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.file-card-actions button,.file-download{font:14px Arial,sans-serif;padding:4px 9px;margin:0;border:1px solid #888;background:#fff;color:#222;text-decoration:none}.file-card-actions button:hover,.file-download:hover{background:#f5f5f5}.file-card-actions .copy-primary{background:#551a8b;color:#fff;border-color:#551a8b}.file-card pre.file-content{max-height:620px;overflow:auto;margin:0;padding:14px;border:0;background:#fff}.file-card pre.file-content code{font:14px/1.6 monospace;white-space:pre-wrap;overflow-wrap:anywhere}.file-preview{padding:12px;background:#fff}.file-preview img,.file-preview video,.file-preview audio{display:block;max-width:100%;margin:auto}.file-preview video{max-height:70vh}
 input[readonly]{font:14px/1.5 monospace}.copy-row{display:flex;gap:8px;align-items:center;margin-bottom:14px}.copy-row input{min-width:0;flex:1}.copy-row button{flex-shrink:0;margin:0}.copy-status{margin:4px 0;font-size:15px}.copy-status:empty{display:none}.artifact-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.artifact-actions button{margin:0}.copy-primary{font-weight:bold;background:#551a8b;color:#fff;border:1px solid #551a8b}.copy-primary:hover{background:#3f126b}.copy-icon{width:16px;height:16px;vertical-align:-3px;margin-right:5px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.copy-options{margin:0}.copy-options summary{font:15px Arial,sans-serif;color:#551a8b;padding:6px;cursor:pointer}.copy-options[open]{padding:6px;border:1px solid #ddd}.copy-options button{display:block;margin:4px 0}.filters{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin:16px 0}.filters label{margin:0;font-size:15px}.filters select,.filters input[name=format]{font:16px Georgia,serif;padding:5px;max-width:100%}.filters button{margin:0}.listing h2{font-size:18px;margin:0 0 4px}.listing p{margin:4px 0}.listing button{font-size:15px;padding:2px 8px;margin:4px 0 0 8px}.reference-details{margin-top:24px}
 nav,footer,.muted{font-size:15px}.muted,footer{color:#666}
 .workspace-nav{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;border-bottom:1px solid #ccc;padding-bottom:12px}
@@ -66,7 +67,8 @@ const copyScript = `document.querySelectorAll('time[datetime]').forEach(node=>{c
 document.addEventListener('click', async event => {
  const button=event.target.closest('button[data-copy],button[data-copy-value]');if(!button)return;
  const field=button.dataset.copy?document.getElementById(button.dataset.copy):null;
- const value=field?(field.value??field.textContent):button.dataset.copyValue;
+ const content=field?(field.value??field.textContent):'';
+ const value=button.dataset.copyAiTitle!==undefined?['BytesSkills artifact','Title: '+button.dataset.copyAiTitle,'Pointer: '+button.dataset.copyAiPointer,field?'Content:\\n'+content:button.dataset.copyAiFallback].join('\\n'):field?content:button.dataset.copyValue;
  const status=document.getElementById('copy-status');
  try {await navigator.clipboard.writeText(value);status.textContent=(button.dataset.label??'Reference')+' copied.';}
  catch {
@@ -83,17 +85,10 @@ document.querySelectorAll('input[readonly][data-reference]').forEach(field=>fiel
 export const copyStatus=()=>`<p id="copy-status" class="muted copy-status" role="status" aria-live="polite"></p>`;
 const clipboardIcon='<svg class="copy-icon" aria-hidden="true" viewBox="0 0 20 20"><rect x="6" y="5" width="11" height="13" rx="1.5"></rect><path d="M13 5V3.5A1.5 1.5 0 0 0 11.5 2h-8A1.5 1.5 0 0 0 2 3.5v11A1.5 1.5 0 0 0 3.5 16H6"></path></svg>';
 export function copyButton(label:string,value:string,primary=false){return `<button type="button" class="${primary?'copy-primary':''}" data-copy-value="${escape(value)}" data-label="${escape(label)}">${clipboardIcon}${escape(label)}</button>`;}
-export function copyContentButton(){return `<button type="button" data-copy="artifact-content" data-label="Content">${clipboardIcon}Copy content</button>`;}
-export function copyAiButton(title:string,pointer:string,content?:string){
- const text=[
-  'BytesSkills artifact',
-  `Title: ${title}`,
-  `Pointer: ${pointer}`,
-  content===undefined?'If BytesSkills is connected to this workspace, retrieve this exact revision.':'Content:',
-  ...(content===undefined?[]:[content]),
- ].join('\n');
- return copyButton('Copy for AI',text,true);
-}
+export function fileCopyButton(target:string,label='Copy',status='Content'){return `<button type="button" class="copy-primary" data-copy="${escape(target)}" data-label="${escape(status)}">${clipboardIcon}${escape(label)}</button>`;}
+export function copyAiTargetButton(title:string,pointer:string,target?:string,fallback='If BytesSkills is connected to this workspace, retrieve this exact revision.'){return `<button type="button" class="${target?'':'copy-primary'}" data-copy${target?`="${escape(target)}"`:''} data-copy-ai-title="${escape(title)}" data-copy-ai-pointer="${escape(pointer)}" data-copy-ai-fallback="${escape(fallback)}" data-label="AI reference and content">${clipboardIcon}Copy for AI</button>`;}
+export function fileCard(name:string,kind:string,content:string,target:string,actions:string){return `<section class="file-card" aria-label="${escape(kind)} file"><div class="file-card-bar"><div class="file-card-name"><span class="file-card-kind">${escape(kind)}</span><code>${escape(name)}</code></div><div class="file-card-actions">${actions}</div></div><pre id="${escape(target)}" class="file-content"><code>${escape(content)}</code></pre></section>`;}
+export function mediaCard(name:string,kind:string,preview:string,actions:string){return `<section class="file-card" aria-label="${escape(kind)} file"><div class="file-card-bar"><div class="file-card-name"><span class="file-card-kind">${escape(kind)}</span><code>${escape(name)}</code></div><div class="file-card-actions">${actions}</div></div><div class="file-preview">${preview}</div></section>`;}
 export function copyOptions(actions:string[]){return `<details class="copy-options"><summary>More copy options</summary>${actions.join('')}</details>`;}
 export function artifactReferences(item:{id:string;type:string;pointer:string}) {
  const field=(id:string,label:string,value:string)=>`<label for="${id}">${label}</label><div class="copy-row"><input id="${id}" data-reference readonly value="${escape(value)}" spellcheck="false"><button type="button" data-copy="${id}" data-label="${label}" aria-label="Copy ${label.toLowerCase()}">copy</button></div>`;
