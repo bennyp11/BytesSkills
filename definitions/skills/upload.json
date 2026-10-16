@@ -1,26 +1,27 @@
 {
   "schema_version": 2,
   "id": "upload",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "status": "active",
-  "purpose": "Save an attached image or video as a private Bytes artifact.",
+  "purpose": "Save an attached image, video, or ZIP archive as a private Bytes artifact.",
   "command": "upload",
   "natural_language": {
     "positive": [
       "Using Bytes, save this attached video to my workspace.",
-      "Upload this photo to Bytes."
+      "Upload this photo to Bytes.",
+      "Using Bytes, save this ZIP archive to my workspace."
     ],
     "negative": [
       "Edit this video and add captions.",
       "Tell me how to upload a video."
     ],
-    "ambiguity_question": "Which image or video should I save to Bytes?"
+    "ambiguity_question": "Which image, video, or ZIP archive should I save to Bytes?"
   },
   "parameters": {
     "file": {
       "type": "string",
       "required": true,
-      "question": "Please attach the image or video you want saved.",
+      "question": "Please attach the image, video, or ZIP archive you want saved.",
       "allow_delegation": false,
       "applies_when": "When no attachment is available as an MCP file input.",
       "inherit_from": [],
@@ -68,6 +69,21 @@
       "quality_checks": [
         "The file signature, size and SHA-256 match the transferred bytes."
       ]
+    },
+    {
+      "id": "archive",
+      "artifact_type": "file",
+      "when": "After a ZIP archive has been fully transferred and verified.",
+      "media_types": [
+        "application/zip"
+      ],
+      "persistence": "new-artifact",
+      "delivery": "workspace",
+      "profile": null,
+      "quality_checks": [
+        "The ZIP signature, size and SHA-256 match the transferred bytes.",
+        "The archive remains opaque and is not extracted."
+      ]
     }
   ],
   "capabilities": [
@@ -75,13 +91,14 @@
       "id": "chat-file-input",
       "required_for": [
         "image",
-        "video"
+        "video",
+        "archive"
       ],
       "unavailable": "Ask the user to attach the file or provide the signed-in Bytes web uploader link."
     }
   ],
   "quality_checks": [
-    "The result is a regular private image or video artifact with a real pointer.",
+    "The result is a regular private image, video, or downloadable file artifact with a real pointer.",
     "Report failed or unsupported file handoffs clearly; never claim an unsaved upload succeeded."
   ],
   "handler": "references/upload/instructions.md",

@@ -140,6 +140,17 @@ pgTest('multipart media becomes an ordinary tenant artifact and upload state is 
  const store=new api.Store(env,aa),record=await store.get(saved.pointer,true);
  assert.equal(record.content.media_type,'image/png');assert.equal(record.text,undefined);
  assert.equal((await store.query({type:'image'})).items[0].pointer,saved.pointer);
+ const zip=Uint8Array.from([0x50,0x4b,0x05,0x06,...Array(18).fill(0)]);
+ const zipStart=await uploads.begin({title:'archive.zip',media_type:'application/zip',bytes:zip.length});
+ const zipHash=createHash('sha256').update(zip).digest('hex');
+ await uploads.putPart(new Request('https://bytes.internal/upload',{method:'PUT',headers:{'Content-Length':String(zip.length),'Content-Type':'application/octet-stream','X-Bytes-CSRF':'valid','X-Bytes-Part-SHA256':zipHash},body:zip}),zipStart.upload_id,1,'valid');
+ const zipSaved=await uploads.complete(zipStart.upload_id),zipRecord=await store.get(zipSaved.pointer,true);
+ assert.match(zipSaved.pointer,/^@file\/.+:v1$/);assert.equal(zipRecord.type,'file');assert.equal(zipRecord.content.media_type,'application/zip');
+ assert.equal((await store.query({type:'file'})).items[0].pointer,zipSaved.pointer);
+ const invalidZip=await uploads.begin({title:'not-a-zip.zip',media_type:'application/zip',bytes:image.length});
+ const invalidHash=createHash('sha256').update(image).digest('hex');
+ await uploads.putPart(new Request('https://bytes.internal/upload',{method:'PUT',headers:{'Content-Length':String(image.length),'Content-Type':'application/octet-stream','X-Bytes-CSRF': 'valid','X-Bytes-Part-SHA256':invalidHash},body:image}),invalidZip.upload_id,1,'valid');
+ await assert.rejects(uploads.complete(invalidZip.upload_id),/contents do not match/);
  await assert.rejects(other.inspect(started.upload_id),/not found/);
  const large=await uploads.begin({title:'large source video.mp4',media_type:'video/mp4',bytes:10*1024**3});
  assert.equal(large.part_size,16*1024*1024);assert.equal(large.parts,640);
@@ -172,6 +183,13 @@ pgTest('ChatGPT file handoff streams into the private multipart pipeline with wo
  assert.equal(record.provenance.skill_release.workflow_id,workflow.workflow_id);
  assert.equal(record.provenance.skill_release.skill,'upload');
  await assert.rejects(new api.Store(env,await access(await tenant('chat-file-upload-other'))).get(first.pointer,true),/missing or ambiguous/);
+ const zip=Uint8Array.from([0x50,0x4b,0x05,0x06,...Array(18).fill(0)]);
+ const zipUploads=new api.MediaUploads(env,aa,async()=>new Response(zip,{headers:{'Content-Length':String(zip.length),'Content-Type':'application/octet-stream'}}));
+ const zipInput={...input,request_id:crypto.randomUUID(),file:{download_url:input.file.download_url,file_id:'file_zip_123',file_name:'archive.zip'}};
+ const zipResult=await zipUploads.importChatFile(zipInput,type=>releases.provenance(workflow.workflow_id,scopes,type));
+ const zipRecord=await store.get(zipResult.pointer,true);
+ assert.equal(zipRecord.type,'file');assert.equal(zipRecord.content.media_type,'application/zip');
+ assert.equal(zipRecord.provenance.skill_release.workflow_id,workflow.workflow_id);
 });
 pgTest('FORCE RLS covers every tenant table; role attributes and default privileges are restricted',async()=>{
  const tables=await admin.query("SELECT relname,relrowsecurity,relforcerowsecurity FROM pg_class JOIN pg_namespace n ON n.oid=relnamespace WHERE n.nspname='bytes' AND relkind='r' AND relname NOT IN ('skill_releases','skill_revocations')");

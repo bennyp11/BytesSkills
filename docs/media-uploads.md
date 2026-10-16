@@ -1,8 +1,8 @@
 # Private media uploads
 
-The signed-in web app at `/app/upload` accepts JPEG, PNG, WebP, MP4, WebM and MOV
-files up to 10 GiB. A successful upload is saved as a regular `image` or `video`
-artifact with a stable Bytes pointer, and the artifact list, detail page, download,
+The signed-in web app at `/app/upload` accepts JPEG, PNG, WebP, MP4, WebM, MOV and ZIP
+files up to 10 GiB. A successful upload is saved as a regular `image`, `video`, or
+downloadable `file` artifact with a stable Bytes pointer, and the artifact list, detail page, download,
 history and workspace queries work through the existing artifact system.
 
 The `/bytes upload` MCP operation also accepts one ChatGPT-attached file through
@@ -10,7 +10,7 @@ ChatGPT's `openai/fileParams` handoff. It retrieves the short-lived attachment U
 server-side, streams it in the same 16 MiB R2 multipart flow, and creates the same
 private artifact record with workflow provenance. The source URL must use the
 approved `files.oaiusercontent.com` HTTPS host; redirects, arbitrary URLs, unsupported
-types, unknown sizes and files over 10 GiB are rejected. If the host cannot hand off
+types, unknown sizes and files over 10 GiB are rejected. ZIP archives are signature-checked, stored opaque, and never extracted. If the host cannot hand off
 the file, use the web uploader. Other MCP hosts can continue to use the standard
 web upload flow; this file-input bridge is a ChatGPT extension.
 
@@ -20,8 +20,8 @@ verified while the Worker streams the part into R2, and saved beside its R2 rece
 resume checks already-saved part hashes against the reselected file. The Worker authenticates the browser
 session and workspace before reading upload state, checks Origin and CSRF on every
 write, and owns the R2 multipart key and upload ID. It enforces part count and exact
-part sizes, then checks the completed file's size, SHA-256 and image/video signature.
-Bytes stream through R2; the Worker does not base64 encode or buffer a whole video.
+part sizes, then checks the completed file's size, SHA-256 and image/video/ZIP signature.
+ZIP files are never expanded. Bytes stream through R2; the Worker does not base64 encode or buffer a whole video.
 
 The session and per-part ETag receipts live in PostgreSQL tables with forced RLS,
 using the same account and workspace context as artifact records. The database
