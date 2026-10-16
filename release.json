@@ -1,4 +1,4 @@
 {
-  "version": "0.12.8",
-  "summary": "Format recognizable code for reading in artifact views while preserving original downloads."
+  "version": "0.12.9",
+  "summary": "Support secure multipart image and video uploads in the Bytes web app."
 }
