@@ -24,7 +24,7 @@ const BLOBS={
  async get(key,options){const b=blobMap.get(key);if(!b)return null;let data=b.data;if(options?.range){const {offset=0,length}=options.range;data=data.slice(offset,length===undefined?undefined:offset+length);}return {body:new ReadableStream({start(c){c.enqueue(data);c.close();}}),arrayBuffer:async()=>data.slice().buffer,size:data.length,httpEtag:'"'+createHash('md5').update(b.data).digest('hex')+'"'};},
  async delete(key){blobMap.delete(key);},
  async createMultipartUpload(key,options){const uploadId=crypto.randomUUID();multipartMap.set(uploadId,{key,options,parts:new Map()});return BLOBS.resumeMultipartUpload(key,uploadId);},
- resumeMultipartUpload(key,uploadId){const state=multipartMap.get(uploadId);if(!state||state.key!==key)throw Error('NoSuchUpload');return {
+ resumeMultipartUpload(key,uploadId){const state=multipartMap.get(uploadId);if(!state||state.key!==key)throw Error('NoSuchUpload');return {uploadId,
   async uploadPart(partNumber,body){const data=await collect(body),etag=createHash('sha256').update(data).digest('hex');state.parts.set(partNumber,{data,etag});return {partNumber,etag};},
   async complete(parts){const chunks=parts.map(p=>{const stored=state.parts.get(p.partNumber);if(!stored||stored.etag!==p.etag)throw Error('InvalidPart');return stored.data;});const data=Buffer.concat(chunks);blobMap.set(key,{data:new Uint8Array(data),customMetadata:state.options.customMetadata});multipartMap.delete(uploadId);return {key,size:data.length};},
   async abort(){multipartMap.delete(uploadId);},
@@ -306,7 +306,7 @@ pgTest('login HTTP flow sends a confirmation link, ignores scanner GETs, blocks 
  const detail=await api.loginRoutes(request(createdSkill.headers.get('location'),{headers:{Cookie:sessionCookie}}),loginEnv);assert.match(await detail.text(),/Ask for context, then summarize/);
  const owner=await api.browserSession(request('/app',{headers:{Cookie:sessionCookie}}),loginEnv);
  const uploadPage=await api.loginRoutes(request('/app/upload',{headers:{Cookie:sessionCookie}}),loginEnv);const uploadHtml=await uploadPage.text();
- assert.match(uploadHtml,/id="media-upload-form"/);assert.match(uploadHtml,/connect-src 'self'/);assert.match(uploadHtml,/16 MiB parts/);
+ assert.match(uploadHtml,/id="media-upload-form"/);assert.match(uploadPage.headers.get('content-security-policy'),/connect-src 'self'/);assert.match(uploadHtml,/16 MiB parts/);
  const artifact=await save(new api.Store(loginEnv,await access(owner)),'Clickable artifact');
  const listing=await api.loginRoutes(request('/app',{headers:{Cookie:sessionCookie}}),loginEnv);assert.ok((await listing.text()).includes('/app/artifact?pointer='+encodeURIComponent(artifact.pointer)));
  const opened=await api.loginRoutes(request('/app/artifact?pointer='+encodeURIComponent(artifact.pointer),{headers:{Cookie:sessionCookie}}),loginEnv);const openedText=await opened.text();assert.match(openedText,/a private pineapple/);assert.match(openedText,/Copy link/);assert.ok(openedText.includes('https://app.bytesskills.com/app/artifact?pointer='+encodeURIComponent(artifact.pointer)));
