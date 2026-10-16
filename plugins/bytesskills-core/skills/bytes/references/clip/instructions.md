@@ -122,8 +122,8 @@ the plan deliverable; rendered files with unperformed checks remain unverified.
 
 Save plans and supported media through the connected cloud workspace. Keep temporary
 rendered files outside the source checkout. Preserve local results if upload fails
-and report which files remain local-only. The MVP upload limit is 10 MB; large media
-needs a supported upload path before it can be claimed as remotely saved. Never put
+and report which files remain local-only. Use `/bytes upload` for supported media up
+to 10 GiB; direct `/v1/blobs` writes remain limited to 10 MB. Never put
 workspace media in Git or Git LFS. A source path alone is not a cloud backup.
 
 ## Return

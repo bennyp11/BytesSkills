@@ -169,7 +169,7 @@ export async function mcp(request: Request, env: Env, scopes: string[], access: 
       private_authoring: env.STORAGE_BACKEND==='postgres'&&canWrite,
       private_execution: env.STORAGE_BACKEND==='postgres',
       instructions: workflowInstructions,
-      limits: { text_characters: 100000, upload_bytes: 10000000, media_upload_bytes: 1073741824 },
+      limits: { text_characters: 100000, upload_bytes: 10000000, media_upload_bytes: 10737418240 },
       storage: env.STORAGE_BACKEND === "postgres" ? "PostgreSQL records with RLS and R2 blobs" : "D1 records and R2 blobs",
     })),
   );

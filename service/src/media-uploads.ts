@@ -4,9 +4,9 @@ import { requireAccess, type WorkspaceAccess } from './access';
 import { ApiError, type Env } from './common';
 import { Store } from './store';
 
-export const MEDIA_UPLOAD_LIMIT = 1_073_741_824;
+export const MEDIA_UPLOAD_LIMIT = 10 * 1024 * 1024 * 1024;
 export const MEDIA_UPLOAD_PART_BYTES = 16 * 1024 * 1024;
-const MAX_PARTS = 64;
+const MAX_PARTS = 640;
 const SESSION_HOURS = 24;
 const mediaTypes = new Set([
   'image/jpeg', 'image/png', 'image/webp',
@@ -78,7 +78,7 @@ export class MediaUploads {
     const bytes=typeof input.bytes==='number'?input.bytes:Number(input.bytes);
     if(!mediaTypes.has(type))throw uploadFailure(415,'Choose a JPEG, PNG, or WebP image, or an MP4, WebM, or MOV video');
     if(!Number.isSafeInteger(bytes)||bytes<1||bytes>MEDIA_UPLOAD_LIMIT)
-      throw uploadFailure(413,'Files must be between 1 byte and 1 GiB');
+      throw uploadFailure(413,'Files must be between 1 byte and 10 GiB');
     const parts=Math.ceil(bytes/MEDIA_UPLOAD_PART_BYTES);
     if(parts<1||parts>MAX_PARTS)throw uploadFailure(413,'File exceeds the multipart upload limit');
     const expired=await this.db.prepare(`SELECT id,staging_key,r2_upload_id FROM media_uploads WHERE workspace_id=? AND expires_at<now() LIMIT 50`)
@@ -126,7 +126,7 @@ export class MediaUploads {
     const lengthHeader=response.headers.get('content-length');
     if(!lengthHeader||!/^[1-9]\d*$/.test(lengthHeader))await rejectResponse(411,'The ChatGPT attachment did not include a usable file size; upload it on the Bytes web app instead');
     const bytes=Number(lengthHeader);
-    if(!Number.isSafeInteger(bytes)||bytes>MEDIA_UPLOAD_LIMIT)await rejectResponse(413,'ChatGPT attachment exceeds the Bytes 1 GiB upload limit; use the Bytes web uploader if supported by your account');
+    if(!Number.isSafeInteger(bytes)||bytes>MEDIA_UPLOAD_LIMIT)await rejectResponse(413,'ChatGPT attachment exceeds the Bytes 10 GiB upload limit; use the Bytes web uploader if supported by your account');
     const allowedType=(value:string|undefined)=>typeof value==='string'&&mediaTypes.has(value.toLowerCase().split(';')[0].trim())?value.toLowerCase().split(';')[0].trim():undefined;
     const extensionType:Record<string,string>={jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',mp4:'video/mp4',webm:'video/webm',mov:'video/quicktime'};
     const extension=input.file.file_name?.split('.').at(-1)?.toLowerCase();

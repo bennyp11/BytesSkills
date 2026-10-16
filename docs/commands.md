@@ -36,7 +36,7 @@ code. Missing creative inputs trigger the clarification-first intake below befor
 | `/bytes move PTR --root` | Remove the organizational parent |
 | `/bytes archive PTR` | Archive this object only; no recursive behavior in v0.1 |
 
-`/bytes upload` accepts JPEG, PNG, WebP, MP4, WebM and MOV up to Bytes' 1 GiB
+`/bytes upload` accepts JPEG, PNG, WebP, MP4, WebM and MOV up to Bytes' 10 GiB
 limit. ChatGPT's own attachment limit may be lower. If the host cannot pass the
 attachment to the MCP tool, link to the signed-in [Bytes web uploader](https://app.bytesskills.com/app/upload).
 

@@ -141,6 +141,9 @@ pgTest('multipart media becomes an ordinary tenant artifact and upload state is 
  assert.equal(record.content.media_type,'image/png');assert.equal(record.text,undefined);
  assert.equal((await store.query({type:'image'})).items[0].pointer,saved.pointer);
  await assert.rejects(other.inspect(started.upload_id),/not found/);
+ const large=await uploads.begin({title:'large source video.mp4',media_type:'video/mp4',bytes:10*1024**3});
+ assert.equal(large.part_size,16*1024*1024);assert.equal(large.parts,640);
+ await uploads.abort(large.upload_id);
  const pending=[];for(let i=0;i<3;i++)pending.push(await uploads.begin({title:`pending ${i}`,media_type:'image/png',bytes:1}));
  await assert.rejects(uploads.begin({title:'over quota',media_type:'image/png',bytes:1}),/media_upload_quota/);
  for(const upload of pending)await uploads.abort(upload.upload_id);

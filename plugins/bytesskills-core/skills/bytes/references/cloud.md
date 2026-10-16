@@ -35,9 +35,9 @@ Map `/bytes` operations to the shared tools:
   pointer and expected_revision. Preserve ID; a conflict requires rereading.
 - move/archive: `bytes_save` metadata-only revision with parent/status.
 - history/references: `bytes_history` / `bytes_related`, with bounded pagination.
-- clip: available media tools execute the editing workflow; large-media upload
-  remains outside the 10 MB MVP upload limit. Never claim video saved remotely from
-  a local path alone. Text plans can be saved using bytes_save.
+- clip: available media tools execute the editing workflow; `/bytes upload` saves
+  supported media up to 10 GiB. Never claim video saved remotely from a local path
+  alone. Text plans can be saved using bytes_save.
 
 Pass the workflow_id from bytes_begin to bytes_save; the server records skill-release provenance. Save inputs and derived_from as exact revisions. Use separate run records for
 pending → succeeded/partial/failed execution, linking outputs. Every save requires

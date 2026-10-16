@@ -21,7 +21,7 @@ one transaction alongside a revision. Original local records import unchanged,
 including their IDs, revision numbers, checksums and provenance.
 
 The signed-in web app at `https://app.bytesskills.com` supports private image and video
-uploads up to 1 GiB. It sends 16 MiB raw parts to authenticated same-origin Worker
+uploads up to 10 GiB. It sends 16 MiB raw parts to authenticated same-origin Worker
 routes, which own the R2 multipart identifiers. PostgreSQL holds the short-lived,
 workspace-isolated session and part receipts. Final bytes are streamed into the
 workspace's SHA-256 content-addressed R2 path, verified, then saved as normal `image`
@@ -144,7 +144,7 @@ KV namespace requires clients to authorize again. Do not restore token state fro
 ## MVP boundaries
 
 Single owner and workspace; no team roles, offline writes or cross-workspace sharing.
-Web image/video uploads are capped at 1 GiB per file; direct `/v1/blobs` and MCP
+Web image/video uploads are capped at 10 GiB per file; direct `/v1/blobs` and MCP
 inline content paths retain their 10 MB and 100,000-character limits, and requests at 300 KB.
 Queries page by UUID, not
 relevance, and ordinary pagination is not a frozen snapshot. History/export are

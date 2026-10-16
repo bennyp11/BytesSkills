@@ -22,7 +22,7 @@ not edit, publish or share it.
 
 ## Limits and safety
 
-Bytes accepts only JPEG, PNG, WebP, MP4, WebM and MOV, up to 1 GiB. The service
+Bytes accepts only JPEG, PNG, WebP, MP4, WebM and MOV, up to 10 GiB. The service
 checks the ChatGPT file host, response size, MIME type, file signature and SHA-256,
 then streams the file through tenant-scoped multipart storage. Temporary URLs are
 never saved as artifact content. If the attachment handoff is unavailable, the
