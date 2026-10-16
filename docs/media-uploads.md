@@ -5,6 +5,15 @@ files up to 1 GiB. A successful upload is saved as a regular `image` or `video`
 artifact with a stable Bytes pointer, and the artifact list, detail page, download,
 history and workspace queries work through the existing artifact system.
 
+The `/bytes upload` MCP operation also accepts one ChatGPT-attached file through
+ChatGPT's `openai/fileParams` handoff. It retrieves the short-lived attachment URL
+server-side, streams it in the same 16 MiB R2 multipart flow, and creates the same
+private artifact record with workflow provenance. The source URL must use the
+approved `files.oaiusercontent.com` HTTPS host; redirects, arbitrary URLs, unsupported
+types, unknown sizes and files over 1 GiB are rejected. If the host cannot hand off
+the file, use the web uploader. Other MCP hosts can continue to use the standard
+web upload flow; this file-input bridge is a ChatGPT extension.
+
 The browser slices the selected file into 16 MiB raw parts and sends up to three
 parts at a time to same-origin Worker routes. A browser checksum for each part is
 verified while the Worker streams the part into R2, and saved beside its R2 receipt;

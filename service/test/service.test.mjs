@@ -40,6 +40,7 @@ before(async () => {
   }
   const fixture = [
     "help",
+    "upload",
     "brainstorm",
     "refine",
     "inspect",
@@ -53,11 +54,12 @@ before(async () => {
     version: "0.7.0",
     summary: "Initial test release",
     protocol: 1,
-    required_scopes: ["bytes:read"],
+    required_scopes: ["bytes:read", ...(skill === "upload" ? ["bytes:write"] : [])],
     instructions: "Fixture workflow: " + skill,
     resources: { "format.json": '{"version":1}' },
   }));
-  assert.equal((await api("/v1/releases", { releases: fixture })).status, 200);
+  const published=await api("/v1/releases", { releases: fixture });
+  assert.equal(published.status, 200, JSON.stringify(published.body));
   const preview = await tool("bytes_updates", {});
   await tool("bytes_adopt", {
     request_id: randomUUID(),
@@ -139,6 +141,10 @@ test("MCP initialization, list, and actual artifact save/get", async () => {
   assert.equal(init.body.result.serverInfo.name, "BytesSkills");
   const list = await rpc("tools/list");
   assert.ok(list.body.result.tools.find((t) => t.name === "bytes_save"));
+  const uploadTool = list.body.result.tools.find((t) => t.name === "bytes_upload");
+  assert.ok(uploadTool);
+  assert.deepEqual(uploadTool._meta["openai/fileParams"], ["file"]);
+  assert.deepEqual(uploadTool.inputSchema.properties.file.required.sort(), ["download_url", "file_id"]);
   const created = await rpc("tools/call", {
     name: "bytes_save",
     arguments: {
@@ -175,6 +181,7 @@ test("BytesSkills help is discoverable, read-only and provides the command contr
   const help = JSON.parse(result.body.result.content[0].text);
   assert.ok(help.aliases.includes("/bytes help"));
   assert.ok(help.commands.content.includes("/bytes brainstorm"));
+  assert.ok(help.commands.content.includes("/bytes upload"));
   assert.ok(help.shared_workspace.content.includes("bytes_save"));
   const after = await db.prepare("SELECT COUNT(*) AS n FROM revisions").first();
   assert.equal(after.n, before.n);

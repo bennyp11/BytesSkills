@@ -32,6 +32,14 @@
       "handler": "references/help/instructions.md",
       "include_definitions": false
     },
+    "upload": {
+      "commands": [
+        "upload"
+      ],
+      "can_save": true,
+      "handler": "references/upload/instructions.md",
+      "include_definitions": false
+    },
     "brainstorm": {
       "commands": [
         "brainstorm"

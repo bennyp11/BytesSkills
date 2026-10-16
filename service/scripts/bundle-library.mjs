@@ -18,6 +18,7 @@ for (const p of [
   "plugins/bytesskills-core/skills/bytes/contracts/skill.schema.json",
   "plugins/bytesskills-core/skills/bytes/references/responses.md",
   "plugins/bytesskills-core/skills/bytes/references/edit/instructions.md",
+  "plugins/bytesskills-core/skills/bytes/references/upload/instructions.md",
   "plugins/bytesskills-core/skills/bytes/references/clip/instructions.md",
   "plugins/bytesskills-core/skills/bytes/contracts/runtime.json",
   "plugins/bytesskills-core/skills/bytes/references/routing.md",

@@ -49,7 +49,7 @@ before(async()=>{
  for(const r of ['runtime','identity','publisher'])await admin.query(`ALTER ROLE bytes_${r} LOGIN`);
  env={STORAGE_BACKEND:'postgres',POSTGRES:{connectionString:urlFor('bytes_runtime')},PUBLISHER_DB:{connectionString:urlFor('bytes_publisher')},IDENTITY_DB:{connectionString:urlFor('bytes_identity')},BLOBS,WORKSPACE_ID:'acc3351e-d092-433c-a7e1-8fc3e807ebd4'};
  dir=await mkdtemp(join(tmpdir(),'bytes-pg-test-'));
- await build({stdin:{contents:`export {observeMcp} from './src/telemetry';export {PostgresDatabase,postgresParameters} from './src/database';export {WorkspaceAccess} from './src/access';export {Store} from './src/store';export {MediaUploads} from './src/media-uploads';export {Releases} from './src/releases';export {Definitions} from './src/definitions';export {PrivateSkills} from './src/private-skills';export {browseArtifacts} from './src/artifact-browser';export {provisionVerifiedIdentity} from './src/accounts';export {loginRoutes,browserSession} from './src/login';`,resolveDir:process.cwd(),loader:'ts'},bundle:true,platform:'node',format:'esm',packages:'external',outfile:join(dir,'api.mjs')});
+ await build({stdin:{contents:`export {observeMcp} from './src/telemetry';export {PostgresDatabase,postgresParameters} from './src/database';export {WorkspaceAccess} from './src/access';export {Store} from './src/store';export {MediaUploads,validateChatFileUrl} from './src/media-uploads';export {Releases} from './src/releases';export {Definitions} from './src/definitions';export {PrivateSkills} from './src/private-skills';export {browseArtifacts} from './src/artifact-browser';export {provisionVerifiedIdentity} from './src/accounts';export {loginRoutes,browserSession} from './src/login';`,resolveDir:process.cwd(),loader:'ts'},bundle:true,platform:'node',format:'esm',packages:'external',outfile:join(dir,'api.mjs')});
  // Bundle pg's CommonJS dependency too, via an entry created inside service.
  // External package resolution starts at the temporary file, so use the explicit pg path.
  const bundled=await readFile(join(dir,'api.mjs'),'utf8');
@@ -145,6 +145,30 @@ pgTest('multipart media becomes an ordinary tenant artifact and upload state is 
  await assert.rejects(uploads.begin({title:'over quota',media_type:'image/png',bytes:1}),/media_upload_quota/);
  for(const upload of pending)await uploads.abort(upload.upload_id);
  await assert.rejects(uploads.begin({title:'wrong kind',media_type:'text/html',bytes:1}),/Choose a JPEG/);
+});
+pgTest('ChatGPT file handoff streams into the private multipart pipeline with workflow provenance and safe retry',async()=>{
+ const a=await tenant('chat-file-upload'),aa=await access(a),scopes=['bytes:read','bytes:write'];
+ const release={skill:'upload',version:'1.0.0',summary:'test upload',protocol:1,required_scopes:scopes,instructions:'Save attached media',resources:{}};
+ const payload=canonical(release),checksum=sha(payload);
+ await admin.query('INSERT INTO bytes.skill_releases(skill,version,sequence,checksum,payload,published_at) VALUES($1,$2,1,$3,$4,now())',['upload','1.0.0',checksum,payload]);
+ const releases=new api.Releases(env,aa),updates=await releases.updates();
+ await releases.adopt({request_id:crypto.randomUUID(),expected_revision:updates.state_revision,catalog_hash:updates.catalog_hash,skill:'upload',action:'update'},scopes);
+ const workflow=await releases.begin({request_id:crypto.randomUUID(),command:'/bytes upload'},scopes);
+ const image=Uint8Array.from([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a]);let fetches=0;
+ const uploads=new api.MediaUploads(env,aa,async(url,options)=>{
+  fetches++;assert.equal(url.hostname,'files.oaiusercontent.com');assert.equal(options.redirect,'error');
+  return new Response(image,{headers:{'Content-Length':String(image.length),'Content-Type':'application/octet-stream'}});
+ });
+ const input={request_id:crypto.randomUUID(),workflow_id:workflow.workflow_id,title:'chat image',file:{download_url:'https://files.oaiusercontent.com/signed/file',file_id:'file_test_123',file_name:'chat.png'}};
+ assert.throws(()=>api.validateChatFileUrl('https://attacker.example/file'),/approved ChatGPT file host/);
+ assert.throws(()=>api.validateChatFileUrl('http://files.oaiusercontent.com/file'),/approved ChatGPT file host/);
+ const save=()=>uploads.importChatFile(input,type=>releases.provenance(workflow.workflow_id,scopes,type));
+ const first=await save(),retry=await save();assert.equal(first.pointer,retry.pointer);assert.equal(fetches,2);
+ const store=new api.Store(env,aa),record=await store.get(first.pointer,true);
+ assert.equal(record.type,'image');assert.equal(record.content.media_type,'image/png');
+ assert.equal(record.provenance.skill_release.workflow_id,workflow.workflow_id);
+ assert.equal(record.provenance.skill_release.skill,'upload');
+ await assert.rejects(new api.Store(env,await access(await tenant('chat-file-upload-other'))).get(first.pointer,true),/not found/);
 });
 pgTest('FORCE RLS covers every tenant table; role attributes and default privileges are restricted',async()=>{
  const tables=await admin.query("SELECT relname,relrowsecurity,relforcerowsecurity FROM pg_class JOIN pg_namespace n ON n.oid=relnamespace WHERE n.nspname='bytes' AND relkind='r' AND relname NOT IN ('skill_releases','skill_revocations')");
