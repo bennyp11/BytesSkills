@@ -11,7 +11,7 @@ One private workspace, served at https://api.bytesskills.com. MCP endpoint:
 ## Components
 
 - Cloudflare Worker: authenticated API, stateless Streamable HTTP MCP, connection page.
-- PlanetScale PostgreSQL: immutable records, heads, relationships, tags, full-text search, idempotency receipts, and tenant RLS.
+- PlanetScale PostgreSQL: immutable records, heads, relationships, tags, full-text search, idempotency receipts, multipart session receipts, and tenant RLS.
 - R2: private content blobs at `<workspace UUID>/blobs/sha256/<prefix>/<hash>`.
 - Workers KV: OAuth client registrations, grants and token state managed by Cloudflare's OAuth library. It does not hold artifact state.
 - GitHub: definitions, skills, source, migrations only; workspace records and exports are excluded.
@@ -19,6 +19,15 @@ One private workspace, served at https://api.bytesskills.com. MCP endpoint:
 Cloud records are authoritative in PostgreSQL. Heads, tags and search are derived, updated in
 one transaction alongside a revision. Original local records import unchanged,
 including their IDs, revision numbers, checksums and provenance.
+
+The signed-in web app at `https://app.bytesskills.com` supports private image and video
+uploads up to 1 GiB. It sends 16 MiB raw parts to authenticated same-origin Worker
+routes, which own the R2 multipart identifiers. PostgreSQL holds the short-lived,
+workspace-isolated session and part receipts. Final bytes are streamed into the
+workspace's SHA-256 content-addressed R2 path, verified, then saved as normal `image`
+or `video` artifacts that appear in the artifact browser. A matching file can resume
+from successfully received parts for 24 hours. See
+[media upload design](../docs/media-uploads.md).
 
 ## Connect
 
@@ -135,8 +144,9 @@ KV namespace requires clients to authorize again. Do not restore token state fro
 ## MVP boundaries
 
 Single owner and workspace; no team roles, offline writes or cross-workspace sharing.
-Uploads are capped at 10 MB, inline text at 100,000 characters, requests at 300 KB;
-large video needs a later multipart/direct-upload path. Queries page by UUID, not
+Web image/video uploads are capped at 1 GiB per file; direct `/v1/blobs` and MCP
+inline content paths retain their 10 MB and 100,000-character limits, and requests at 300 KB.
+Queries page by UUID, not
 relevance, and ordinary pagination is not a frozen snapshot. History/export are
 bounded. Text is indexed; audio/video are not automatically transcribed.
 

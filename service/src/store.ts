@@ -22,7 +22,9 @@ const contentSchema = z
   .object({
     key: z.string().regex(/^blobs\/sha256\/[a-f0-9]{2}\/[a-f0-9]{64}$/),
     sha256: z.string().regex(/^[a-f0-9]{64}$/),
-    bytes: z.number().int().min(0).max(10_000_000),
+    // Large media is verified and placed in R2 by the authenticated multipart
+    // flow before its ordinary artifact record is committed.
+    bytes: z.number().int().min(0).max(1_073_741_824),
     media_type: z.string().regex(/^[a-z0-9.+-]+\/[a-z0-9.+-]+$/),
   })
   .strict();
