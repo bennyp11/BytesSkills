@@ -45,7 +45,7 @@ before(async()=>{
  // External package resolution starts at the temporary file, so use the explicit pg path.
  const bundled=await readFile(join(dir,'api.mjs'),'utf8');
  const {writeFile}=await import('node:fs/promises');
- await writeFile(join(dir,'api.mjs'),bundled.replaceAll('from "pg"',`from ${JSON.stringify(pathToFileURL(join(process.cwd(),'node_modules/pg/lib/index.js')).href)}`).replaceAll('from "zod"',`from ${JSON.stringify(pathToFileURL(join(process.cwd(),'node_modules/zod/index.js')).href)}`));
+ await writeFile(join(dir,'api.mjs'),bundled.replaceAll('from "pg"',`from ${JSON.stringify(pathToFileURL(join(process.cwd(),'node_modules/pg/lib/index.js')).href)}`).replaceAll('from "zod"',`from ${JSON.stringify(pathToFileURL(join(process.cwd(),'node_modules/zod/index.js')).href)}`).replace(/from "(prettier\/[^"]+)"/g,(_,specifier)=>`from ${JSON.stringify(import.meta.resolve(specifier))}`));
  api=await import(pathToFileURL(join(dir,'api.mjs')));
 });
 after(async()=>{

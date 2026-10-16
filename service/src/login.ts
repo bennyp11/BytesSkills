@@ -7,6 +7,7 @@ import {Store} from './store';
 import {skillPages} from './skill-pages';
 import {escape,html,artifactReferences,copyButton,copyAiTargetButton,fileCopyButton,fileCard,mediaCard,copyOptions,copyStatus} from './html';
 import {browseArtifacts,artifactFormats} from './artifact-browser';
+import {formatCodeForDisplay} from './code-format';
 import registry from '../../plugins/bytesskills-core/skills/bytes/contracts/runtime.json';
 const random=()=>Array.from(crypto.getRandomValues(new Uint8Array(32)),x=>x.toString(16).padStart(2,'0')).join('');
 const cookie=(req:Request,name:string)=>req.headers.get('Cookie')?.split(';').map(s=>s.trim()).find(s=>s.startsWith(name+'='))?.slice(name.length+1)??'';
@@ -78,16 +79,18 @@ export async function loginRoutes(req:Request,env:Env):Promise<Response|null>{
  if(p==='/app/artifact'){
   const item=await store.get(u.searchParams.get('pointer')??'',true);const history=await store.history(item.pointer);
   const url='/app/content?pointer='+encodeURIComponent(item.pointer)+'&amp;view=1';
-  const copyText='text' in item?String(item.text):item.content.media_type==='application/json'?await store.contentText(item.content):undefined;
+  const sourceText='text' in item?String(item.text):['application/json','application/ld+json'].includes(item.content.media_type)?await store.contentText(item.content):undefined;
+  const copyText=sourceText===undefined?undefined:await formatCodeForDisplay(item.title,item.content.media_type,sourceText);
   const download=`<a class="file-download" href="/app/content?pointer=${encodeURIComponent(item.pointer)}">Download file</a>`;
   const fileActions=copyText!==undefined?fileCopyButton('artifact-content')+copyAiTargetButton(item.title,item.pointer,'artifact-content')+download:copyAiTargetButton(item.title,item.pointer)+download;
   let file=copyText!==undefined?fileCard(item.title,item.content.media_type,copyText,'artifact-content',fileActions):'';
+  const formattingNote=sourceText!==undefined&&copyText!==sourceText?'<p class="muted">Formatted for reading. Download file keeps the original.</p>':'';
   if(copyText===undefined){
    const preview=previewTypes.has(item.content.media_type)?item.content.media_type.startsWith('image/')?`<img src="${url}" alt="${escape(item.title)}">`:item.content.media_type.startsWith('video/')?`<video controls preload="metadata" src="${url}"></video>`:`<audio controls preload="metadata" src="${url}"></audio>`:'<p>Preview unavailable. Download the file to open it.</p>';
    file=mediaCard(item.title,item.content.media_type,preview,fileActions);
   }
   const moreCopy=[copyButton("Copy link",artifactUrl(env,item.pointer)),copyButton("Copy reference",item.pointer),copyButton("Copy command",'/bytes show '+item.pointer)];
-  return html(nav+`<p><a href="/app">← all artifacts</a></p><h1>${escape(item.title)}</h1><p class="muted">${escape(item.type)} · ${escape(item.status)} · revision ${item.revision}</p>${file}${copyStatus()}${copyOptions(moreCopy)}${artifactReferences(item)}<h2>Revisions</h2>`+history.items.map((r:any)=>`<p><a href="/app/artifact?pointer=${encodeURIComponent(r.pointer)}">Revision ${r.revision}</a></p>`).join(''),new Headers(),undefined,true);
+  return html(nav+`<p><a href="/app">← all artifacts</a></p><h1>${escape(item.title)}</h1><p class="muted">${escape(item.type)} · ${escape(item.status)} · revision ${item.revision}</p>${file}${formattingNote}${copyStatus()}${copyOptions(moreCopy)}${artifactReferences(item)}<h2>Revisions</h2>`+history.items.map((r:any)=>`<p><a href="/app/artifact?pointer=${encodeURIComponent(r.pointer)}">Revision ${r.revision}</a></p>`).join(''),new Headers(),undefined,true);
 
  }
 

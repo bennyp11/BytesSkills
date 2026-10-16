@@ -1,4 +1,4 @@
 {
-  "version": "0.12.7",
-  "summary": "Present artifacts and skill instructions in familiar file panels with visible copy actions, while preserving the Craigslist-inspired workspace style."
+  "version": "0.12.8",
+  "summary": "Format recognizable code for reading in artifact views while preserving original downloads."
 }
