@@ -53,11 +53,10 @@ Pointers are scoped to workspace.json's UUID, not a computer path.
 For an update add `pointer` and `expected_revision` with the version just read.
 Omitted fields inherit from the previous revision. Explicit fields replace their
 previous value; a null parent removes it. Never remove body content for a status-only
-change. `file` can replace `text` with `media_type`; media ingest currently reads
-bytes into memory, so this version is intended for text and modest files. For large
-video, keep the existing clipping batch flow until streaming ingestion is added.
+change. `file` can replace `text` with `media_type`. Large images, videos and ZIP
+archives use the streaming upload flow; ZIP files remain opaque and are never extracted.
 
-Allowed types: brief, concept, hook, script, plan, video, image, audio, run.
+Allowed types: brief, concept, hook, script, plan, video, image, file, audio, run.
 Allowed statuses: draft, selected, approved, archived, pending, succeeded, partial,
 failed. These are local lifecycle states; external systems can have different labels.
 Metadata settings/provenance remain JSON objects; their creative schemas belong to

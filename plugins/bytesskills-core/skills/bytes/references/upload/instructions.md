@@ -1,13 +1,14 @@
 # `/bytes upload`
 
-Save a user-attached image or video into the authenticated Bytes workspace as an
-ordinary `image` or `video` artifact. This workflow copies the attachment; it does
-not edit, publish or share it.
+Save a user-attached image, video, or ZIP archive into the authenticated Bytes
+workspace as an ordinary `image`, `video`, or downloadable `file` artifact. ZIP
+archives remain opaque and are never extracted. This workflow copies the attachment;
+it does not edit, publish or share it.
 
 ## Intake and execution
 
 1. If no file is attached or otherwise available as a ChatGPT file input, ask the
-   user to attach one. Accept JPEG, PNG, WebP, MP4, WebM or MOV. If the file is not
+   user to attach one. Accept JPEG, PNG, WebP, MP4, WebM, MOV or ZIP. If the file is not
    available to the MCP tool, give the user the Bytes web uploader link instead.
 2. Ask for a title only when one is not clear from the request or filename; use the
    filename as the title when appropriate. Do not ask for format, music or editing
@@ -22,7 +23,7 @@ not edit, publish or share it.
 
 ## Limits and safety
 
-Bytes accepts only JPEG, PNG, WebP, MP4, WebM and MOV, up to 10 GiB. The service
+Bytes accepts JPEG, PNG, WebP, MP4, WebM, MOV and ZIP, up to 10 GiB. The service
 checks the ChatGPT file host, response size, MIME type, file signature and SHA-256,
 then streams the file through tenant-scoped multipart storage. Temporary URLs are
 never saved as artifact content. If the attachment handoff is unavailable, the

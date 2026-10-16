@@ -143,6 +143,8 @@ test("MCP initialization, list, and actual artifact save/get", async () => {
   assert.ok(list.body.result.tools.find((t) => t.name === "bytes_save"));
   const uploadTool = list.body.result.tools.find((t) => t.name === "bytes_upload");
   assert.ok(uploadTool);
+  assert.match(uploadTool.description, /ZIP.*downloadable file artifact/i);
+  assert.match(uploadTool.description, /never extracted/i);
   assert.deepEqual(uploadTool._meta["openai/fileParams"], ["file"]);
   assert.deepEqual(uploadTool.inputSchema.properties.file.required.sort(), ["download_url", "file_id"]);
   const created = await rpc("tools/call", {

@@ -22,7 +22,7 @@ code. Missing creative inputs trigger the clarification-first intake below befor
 
 | Command | Contract |
 | --- | --- |
-| `/bytes upload [--title="..."]` | Save one attached JPEG, PNG, WebP, MP4, WebM or MOV as a private image/video artifact; asks for the attachment when missing |
+| `/bytes upload [--title="..."]` | Save one attached JPEG, PNG, WebP, MP4, WebM, MOV or ZIP as a private artifact; ZIP is a downloadable `file` and remains intact |
 | `/bytes brainstorm --concepts [--format=ID] [--topic="..."] [--seed="..."] [--strategy=ID] [--parent=PTR or --from=PTR] [--count=N]` | Create new concept candidates; parent/from are mutually exclusive |
 | `/bytes brainstorm --hooks --concept=PTR [--format=ID] [--count=N]` | Create hook candidates using a concept revision |
 | `/bytes brainstorm --hooks --format=ID` | Ask for the premise if absent; do not invent a hidden concept |
@@ -36,7 +36,7 @@ code. Missing creative inputs trigger the clarification-first intake below befor
 | `/bytes move PTR --root` | Remove the organizational parent |
 | `/bytes archive PTR` | Archive this object only; no recursive behavior in v0.1 |
 
-`/bytes upload` accepts JPEG, PNG, WebP, MP4, WebM and MOV up to Bytes' 10 GiB
+`/bytes upload` accepts JPEG, PNG, WebP, MP4, WebM, MOV and ZIP up to Bytes' 10 GiB
 limit. ChatGPT's own attachment limit may be lower. If the host cannot pass the
 attachment to the MCP tool, link to the signed-in [Bytes web uploader](https://app.bytesskills.com/app/upload).
 

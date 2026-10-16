@@ -11,6 +11,7 @@ const SESSION_HOURS = 24;
 const mediaTypes = new Set([
   'image/jpeg', 'image/png', 'image/webp',
   'video/mp4', 'video/webm', 'video/quicktime',
+  'application/zip',
 ]);
 const chatFileHosts = new Set(['files.oaiusercontent.com']);
 const chatFileHostAllowed = (hostname:string) => chatFileHosts.has(hostname.toLowerCase());
@@ -36,6 +37,10 @@ function safeTitle(value:string) {
 
 function checkSignature(type:string, bytes:Uint8Array) {
   const ascii=(start:number,end:number)=>String.fromCharCode(...bytes.slice(start,end));
+  const zipSignature=bytes.length>=4 && bytes[0]===0x50 && bytes[1]===0x4b &&
+    ((bytes[2]===0x03 && bytes[3]===0x04) || // local file header
+     (bytes[2]===0x05 && bytes[3]===0x06) || // empty archive end record
+     (bytes[2]===0x07 && bytes[3]===0x08)); // spanning marker
   const valid = type==='image/png'
     ? bytes.length>=8 && bytes[0]===0x89 && ascii(1,4)==='PNG' && bytes[4]===0x0d && bytes[5]===0x0a && bytes[6]===0x1a && bytes[7]===0x0a
     : type==='image/jpeg'
@@ -46,8 +51,10 @@ function checkSignature(type:string, bytes:Uint8Array) {
           ? bytes.length>=4 && bytes[0]===0x1a && bytes[1]===0x45 && bytes[2]===0xdf && bytes[3]===0xa3
           : (type==='video/mp4' || type==='video/quicktime')
             ? bytes.length>=12 && ascii(4,8)==='ftyp' && (type!=='video/quicktime' || ascii(8,12)==='qt  ')
-            : false;
-  if(!valid) throw uploadFailure(415,'The file contents do not match the selected image or video type');
+            : type==='application/zip'
+              ? zipSignature
+              : false;
+  if(!valid) throw uploadFailure(415,'The file contents do not match the selected image, video, or ZIP type');
 }
 
 export class MediaUploads {
@@ -76,7 +83,7 @@ export class MediaUploads {
   async begin(input:{title?:unknown;media_type?:unknown;bytes?:unknown;request_id?:unknown}) {
     const type=typeof input.media_type==='string'?input.media_type:'';
     const bytes=typeof input.bytes==='number'?input.bytes:Number(input.bytes);
-    if(!mediaTypes.has(type))throw uploadFailure(415,'Choose a JPEG, PNG, or WebP image, or an MP4, WebM, or MOV video');
+    if(!mediaTypes.has(type))throw uploadFailure(415,'Choose a JPEG, PNG, WebP image; MP4, WebM, or MOV video; or ZIP archive');
     if(!Number.isSafeInteger(bytes)||bytes<1||bytes>MEDIA_UPLOAD_LIMIT)
       throw uploadFailure(413,'Files must be between 1 byte and 10 GiB');
     const parts=Math.ceil(bytes/MEDIA_UPLOAD_PART_BYTES);
@@ -112,7 +119,7 @@ export class MediaUploads {
     }catch(error){await multipart.abort().catch(()=>{});throw error;}
     return {upload_id:id,part_size:MEDIA_UPLOAD_PART_BYTES,parts,expires_in_seconds:SESSION_HOURS*3600,status:'receiving'};
   }
-  async importChatFile(input:{file:{download_url:string;file_id:string;mime_type?:string;file_name?:string};title?:string;request_id:string;workflow_id:string},provenanceFor:(artifactType:'image'|'video')=>Promise<unknown>) {
+  async importChatFile(input:{file:{download_url:string;file_id:string;mime_type?:string;file_name?:string};title?:string;request_id:string;workflow_id:string},provenanceFor:(artifactType:'image'|'video'|'file')=>Promise<unknown>) {
     const url=validateChatFileUrl(input.file.download_url);
     if(!/^[A-Za-z0-9_-]{1,256}$/.test(input.file.file_id))throw uploadFailure(400,'ChatGPT file_id is invalid');
     let response:Response;
@@ -127,12 +134,17 @@ export class MediaUploads {
     if(!lengthHeader||!/^[1-9]\d*$/.test(lengthHeader))await rejectResponse(411,'The ChatGPT attachment did not include a usable file size; upload it on the Bytes web app instead');
     const bytes=Number(lengthHeader);
     if(!Number.isSafeInteger(bytes)||bytes>MEDIA_UPLOAD_LIMIT)await rejectResponse(413,'ChatGPT attachment exceeds the Bytes 10 GiB upload limit; use the Bytes web uploader if supported by your account');
-    const allowedType=(value:string|undefined)=>typeof value==='string'&&mediaTypes.has(value.toLowerCase().split(';')[0].trim())?value.toLowerCase().split(';')[0].trim():undefined;
-    const extensionType:Record<string,string>={jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',mp4:'video/mp4',webm:'video/webm',mov:'video/quicktime'};
+    const allowedType=(value:string|undefined)=>{
+      if(typeof value!=='string')return undefined;
+      const normalized=value.toLowerCase().split(';')[0].trim();
+      const canonical=normalized==='application/x-zip-compressed'?'application/zip':normalized;
+      return mediaTypes.has(canonical)?canonical:undefined;
+    };
+    const extensionType:Record<string,string>={jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',mp4:'video/mp4',webm:'video/webm',mov:'video/quicktime',zip:'application/zip'};
     const extension=input.file.file_name?.split('.').at(-1)?.toLowerCase();
     const mediaType=allowedType(input.file.mime_type)||allowedType(response.headers.get('content-type')??undefined)||(extension?extensionType[extension]:undefined);
-    if(!mediaType){await response.body?.cancel().catch(()=>{});throw uploadFailure(415,'Attach a JPEG, PNG, WebP, MP4, WebM, or MOV file');}
-    const artifactType=mediaType.startsWith('image/')?'image':'video';
+    if(!mediaType){await response.body?.cancel().catch(()=>{});throw uploadFailure(415,'Attach a JPEG, PNG, WebP, MP4, WebM, MOV, or ZIP file');}
+    const artifactType=mediaType.startsWith('image/')?'image':mediaType.startsWith('video/')?'video':'file';
     const skillRelease=await provenanceFor(artifactType);
     const title=safeTitle(input.title||input.file.file_name||'Uploaded media');
     const started=await this.begin({request_id:input.request_id,title,media_type:mediaType,bytes});
@@ -253,7 +265,8 @@ export class MediaUploads {
     catch(error){if(error instanceof ApiError&&error.status===415){await this.db.prepare(`UPDATE media_uploads SET status='aborted' WHERE workspace_id=? AND id=?`).bind(this.access.workspaceId,id).run();await this.env.BLOBS.delete(stagingKey).catch(()=>{});}throw error;}
     const contentKey=`blobs/sha256/${sha256.slice(0,2)}/${sha256}`;
     await this.promote(stagingKey,contentKey,sha256,upload.bytes,upload.media_type);
-    const artifact=await new Store(this.env,this.access).save({request_id:upload.request_id,type:upload.media_type.startsWith('image/')?'image':'video',title:upload.title,content:{key:contentKey,sha256,bytes:upload.bytes,media_type:upload.media_type},...(skillRelease?{provenance:{skill_release:skillRelease}}:{})},workflowId);
+    const artifactType=upload.media_type.startsWith('image/')?'image':upload.media_type.startsWith('video/')?'video':'file';
+    const artifact=await new Store(this.env,this.access).save({request_id:upload.request_id,type:artifactType,title:upload.title,content:{key:contentKey,sha256,bytes:upload.bytes,media_type:upload.media_type},...(skillRelease?{provenance:{skill_release:skillRelease}}:{})},workflowId);
     await this.db.prepare(`UPDATE media_uploads SET status='saved',sha256=?,content_key=?,pointer=? WHERE workspace_id=? AND id=?`)
       .bind(sha256,contentKey,artifact.pointer,this.access.workspaceId,id).run();
     await this.env.BLOBS.delete(stagingKey).catch(()=>{});

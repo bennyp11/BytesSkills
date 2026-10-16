@@ -30,7 +30,7 @@ flowchart TD
 
 **Cloudflare is the live source of truth.** GitHub stores core code, schemas, packaged skills and release sources. It is not required for everyday work or personal skill publication. The current source tree excludes workspace snapshots. Older Git commits still retain previously committed data; this change does not rewrite history.
 
-PostgreSQL stores structured records and relationships. R2 stores their actual content. A pointer such as `@concept/<UUID>:v2` resolves through PostgreSQL to a precise, immutable artifact revision and its content hash. Unversioned pointers resolve to the latest revision. Revisions and alternative candidates stay separate. The web app streams authenticated media parts through the Worker to private R2 and saves verified uploads as regular image or video artifacts.
+PostgreSQL stores structured records and relationships. R2 stores their actual content. A pointer such as `@concept/<UUID>:v2` resolves through PostgreSQL to a precise, immutable artifact revision and its content hash. Unversioned pointers resolve to the latest revision. Revisions and alternative candidates stay separate. The web app streams authenticated file parts through the Worker to private R2 and saves verified uploads as regular image, video, or downloadable file artifacts. ZIP archives remain opaque and are never extracted.
 
 ## Skill lifecycle
 
@@ -57,6 +57,6 @@ This deployment serves **one private workspace**, not separate public customer a
 
 Existing custom MCP connections require one refresh for this protocol. Later instruction-only releases are fetched remotely. The server cannot force an AI to invoke tools, push into idle chats, or prove that the model followed every instruction. It can enforce version provenance on saves. Host routing should be tested with @BytesSkills selected.
 
-Media editing depends on connected tools; this service does not render videos. The signed-in web app accepts JPEG, PNG, WebP, MP4, WebM and MOV uploads up to 10 GiB per file, stored in private R2 and surfaced in the artifact browser. Inline text and direct `/v1/blobs` uploads retain smaller limits. Automatic backups and public multi-user onboarding remain future work. Recovery needs authoritative PostgreSQL tables and R2 blobs; the FTS search index is rebuilt separately. Legacy artifact exports alone do not back up skill-adoption state.
+Media editing depends on connected tools; this service does not render videos. The signed-in web app accepts JPEG, PNG, WebP, MP4, WebM, MOV and ZIP uploads up to 10 GiB per file, stored in private R2 and surfaced in the artifact browser. Inline text and direct `/v1/blobs` uploads retain smaller limits. Automatic backups and public multi-user onboarding remain future work. Recovery needs authoritative PostgreSQL tables and R2 blobs; the FTS search index is rebuilt separately. Legacy artifact exports alone do not back up skill-adoption state.
 
 **Acceptance:** publish on one machine, see an update on another; keep/update decisions persist; bulk adoption is atomic; running work stays pinned; missing permissions, stale previews and invalid workflow saves are rejected. Integration tests cover these behaviors; the other ChatGPT instance still needs host-level refresh and verification.

@@ -3,7 +3,8 @@
 ## Upload an attachment
 
 Use `/bytes upload [--title="..."]` to save an attached JPEG, PNG, WebP, MP4,
-WebM or MOV as a private image/video artifact. If no attachment is available,
+WebM, MOV or ZIP as a private artifact. ZIP archives are stored intact as downloadable
+`file` artifacts and are never extracted. If no attachment is available,
 ask the user to attach one. Use its filename as title when appropriate. If the
 ChatGPT file handoff is unavailable or the upload is too large, link to the signed-in
 Bytes web uploader at https://app.bytesskills.com/app/upload.

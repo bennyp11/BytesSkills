@@ -42,7 +42,7 @@ objects; rebuild the FTS search index separately. KV recovery is separate and ma
 instead require reauthorization. Automatic independent backups and scheduled restore
 drills remain future work; cloud persistence is not a claim that those exist.
 
-The signed-in web app supports resumable image and video uploads up to 10 GiB per
+The signed-in web app supports resumable image, video, and ZIP uploads up to 10 GiB per
 file. It stores bytes in private R2 and tenant-scoped upload receipts in PostgreSQL;
 final media is saved into the normal artifact system. Direct `/v1/blobs` and MCP
 inline content retain their smaller limits. See [media upload design](media-uploads.md).
