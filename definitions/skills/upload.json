@@ -1,0 +1,106 @@
+{
+  "schema_version": 2,
+  "id": "upload",
+  "version": "1.0.0",
+  "status": "active",
+  "purpose": "Save an attached image or video as a private Bytes artifact.",
+  "command": "upload",
+  "natural_language": {
+    "positive": [
+      "Using Bytes, save this attached video to my workspace.",
+      "Upload this photo to Bytes."
+    ],
+    "negative": [
+      "Edit this video and add captions.",
+      "Tell me how to upload a video."
+    ],
+    "ambiguity_question": "Which image or video should I save to Bytes?"
+  },
+  "parameters": {
+    "file": {
+      "type": "string",
+      "required": true,
+      "question": "Please attach the image or video you want saved.",
+      "allow_delegation": false,
+      "applies_when": "When no attachment is available as an MCP file input.",
+      "inherit_from": [],
+      "interface": "conversation"
+    },
+    "title": {
+      "type": "string",
+      "required": false,
+      "question": "What title should I use? I can use the filename.",
+      "allow_delegation": true,
+      "applies_when": "When no useful title is supplied by the request or filename.",
+      "inherit_from": [],
+      "interface": "flag"
+    }
+  },
+  "outputs": [
+    {
+      "id": "image",
+      "artifact_type": "image",
+      "when": "After a supported image has been fully transferred and verified.",
+      "media_types": [
+        "image/jpeg",
+        "image/png",
+        "image/webp"
+      ],
+      "persistence": "new-artifact",
+      "delivery": "workspace",
+      "profile": null,
+      "quality_checks": [
+        "The file signature, size and SHA-256 match the transferred bytes."
+      ]
+    },
+    {
+      "id": "video",
+      "artifact_type": "video",
+      "when": "After a supported video has been fully transferred and verified.",
+      "media_types": [
+        "video/mp4",
+        "video/webm",
+        "video/quicktime"
+      ],
+      "persistence": "new-artifact",
+      "delivery": "workspace",
+      "profile": null,
+      "quality_checks": [
+        "The file signature, size and SHA-256 match the transferred bytes."
+      ]
+    }
+  ],
+  "capabilities": [
+    {
+      "id": "chat-file-input",
+      "required_for": [
+        "image",
+        "video"
+      ],
+      "unavailable": "Ask the user to attach the file or provide the signed-in Bytes web uploader link."
+    }
+  ],
+  "quality_checks": [
+    "The result is a regular private image or video artifact with a real pointer.",
+    "Report failed or unsupported file handoffs clearly; never claim an unsaved upload succeeded."
+  ],
+  "handler": "references/upload/instructions.md",
+  "parameter_rules": [
+    "Use an available attachment only; do not fetch arbitrary URLs as files.",
+    "Use the filename as title when useful; the user may explicitly override it."
+  ],
+  "intake_order": [
+    "file",
+    "title"
+  ],
+  "effects": [
+    "workspace-write"
+  ],
+  "failure": {
+    "partial": "preserve-completed-outputs",
+    "retry": "reuse-save-request-id-for-identical-retry",
+    "conflict": "reread-and-resolve-never-overwrite"
+  },
+  "response_contract": "references/responses.md",
+  "execution_contract": "references/skill-contract.md"
+}

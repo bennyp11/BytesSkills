@@ -1,5 +1,13 @@
 # BytesSkills command guide
 
+## Upload an attachment
+
+Use `/bytes upload [--title="..."]` to save an attached JPEG, PNG, WebP, MP4,
+WebM or MOV as a private image/video artifact. If no attachment is available,
+ask the user to attach one. Use its filename as title when appropriate. If the
+ChatGPT file handoff is unavailable or the upload is too large, link to the signed-in
+Bytes web uploader at https://app.bytesskills.com/app/upload.
+
 ## Quick overview
 
 BytesSkills describes content work through commands, saves outputs as addressable

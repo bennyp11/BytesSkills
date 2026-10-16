@@ -55,6 +55,7 @@ content or mutate artifacts. Unknown commands get help rather than another plugi
 
 ```text
 /bytes help
+/bytes upload --title="My video"
 /bytes brainstorm --concepts --format=reductions
 /bytes refine --hook=@hook/<UUID> --req="Make it more personal"
 /bytes edit --app=capcut --source="/path/to/video.mp4" --req="Tighten this edit"

@@ -3,6 +3,19 @@
   "description": "Versioned authoring contracts read by the assistant; not a native command parser or validator for creative semantics.",
   "record_schema_version": 1,
   "operations": {
+    "upload": {
+      "version": "1.0.0",
+      "inputs": [
+        "image",
+        "video"
+      ],
+      "outputs": [
+        "image",
+        "video"
+      ],
+      "persistence": "new-artifacts",
+      "handler": "references/upload/instructions.md"
+    },
     "brainstorm": {
       "version": "1.0.0",
       "inputs": [

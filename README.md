@@ -20,6 +20,7 @@ still requires appropriate tools.
 /bytes refine --hook=@hook/005 --req="Make it more personal"
 /bytes show @concept/002 --tree
 /bytes show @script/008 --settings
+/bytes upload --title="My video"
 ```
 
 ## Start here

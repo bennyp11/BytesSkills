@@ -24,7 +24,7 @@ const contentSchema = z
     sha256: z.string().regex(/^[a-f0-9]{64}$/),
     // Large media is verified and placed in R2 by the authenticated multipart
     // flow before its ordinary artifact record is committed.
-    bytes: z.number().int().min(0).max(1_073_741_824),
+    bytes: z.number().int().min(0).max(10 * 1024 * 1024 * 1024),
     media_type: z.string().regex(/^[a-z0-9.+-]+\/[a-z0-9.+-]+$/),
   })
   .strict();
