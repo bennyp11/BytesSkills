@@ -1,4 +1,4 @@
 {
-  "version": "0.12.9",
-  "summary": "Support secure multipart image and video uploads in the Bytes web app."
+  "version": "0.12.10",
+  "summary": "Support ChatGPT attachment uploads and private videos up to 10 GiB."
 }
