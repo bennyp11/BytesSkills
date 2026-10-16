@@ -1,4 +1,5 @@
 import {artifactRefreshScript} from './artifact-refresh';
+import {mediaUploadScript} from './media-upload-ui';
 export const escape = (s: string) =>
   s.replace(/[&<>"']/g, (c) => "&#" + c.charCodeAt(0) + ";");
 const styles = `
@@ -36,6 +37,7 @@ export function html(
   validatedRedirectUri?: string,
   enableCopy = false,
   enableArtifactRefresh = false,
+  enableMediaUpload = false,
 ) {
   // Chrome applies form-action to the OAuth redirect as well as the form POST.
   // Only accept a redirect already validated by the OAuth provider.
@@ -46,18 +48,18 @@ export function html(
     callbackOrigin && callbackOrigin !== "null"
       ? `'self' ${callbackOrigin}`
       : "'self'";
-  const nonce=(enableCopy||enableArtifactRefresh)?crypto.randomUUID().replaceAll("-", ""):null;
+  const nonce=(enableCopy||enableArtifactRefresh||enableMediaUpload)?crypto.randomUUID().replaceAll("-", ""):null;
   headers.set("Content-Type", "text/html; charset=utf-8");
   headers.set("Cache-Control", "no-store");
   headers.set(
     "Content-Security-Policy",
-    `default-src 'none'; ${nonce ? `script-src 'nonce-${nonce}';` : ''} ${enableArtifactRefresh ? "connect-src 'self';" : ''} img-src 'self'; media-src 'self'; style-src 'unsafe-inline'; form-action ${formAction}; frame-ancestors 'none'; base-uri 'none'`,
+    `default-src 'none'; ${nonce ? `script-src 'nonce-${nonce}';` : ''} ${enableArtifactRefresh||enableMediaUpload ? "connect-src 'self';" : ''} img-src 'self'; media-src 'self'; style-src 'unsafe-inline'; form-action ${formAction}; frame-ancestors 'none'; base-uri 'none'`,
   );
   // Preserve Origin on same-origin form POSTs; suppress cross-origin referrers.
   headers.set("Referrer-Policy", "same-origin");
   headers.set("X-Content-Type-Options", "nosniff");
   return new Response(
-    `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>bytesskills — your workspace</title><style>${styles}</style><body><main><header><p class="brand"><a href="https://bytesskills.com">bytesskills</a></p><p class="tagline">Your AI Coordination System</p></header>${body}${nonce?`<script nonce="${nonce}">${copyScript}${enableArtifactRefresh?artifactRefreshScript:""}</script>`:""}<footer><a href="https://bytesskills.com">bytesskills home</a> &nbsp;|&nbsp; your private workspace</footer></main></body></html>`,
+    `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>bytesskills — your workspace</title><style>${styles}</style><body><main><header><p class="brand"><a href="https://bytesskills.com">bytesskills</a></p><p class="tagline">Your AI Coordination System</p></header>${body}${nonce?`<script nonce="${nonce}">${copyScript}${enableArtifactRefresh?artifactRefreshScript:""}${enableMediaUpload?mediaUploadScript:""}</script>`:""}<footer><a href="https://bytesskills.com">bytesskills home</a> &nbsp;|&nbsp; your private workspace</footer></main></body></html>`,
     { headers },
   );
 }

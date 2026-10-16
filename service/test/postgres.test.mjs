@@ -16,10 +16,19 @@ let admin,control,env,api,dir,dbName,rolesCreated=false;
 const connect=async connectionString=>{const c=new pg.Client({connectionString});await c.connect();return c;};
 const urlFor=(user,db=dbName)=>{const u=new URL(url);u.username=user;u.password='local-only-test';u.pathname='/'+db;return u.toString();};
 const blobMap=new Map();
+const multipartMap=new Map();
+const collect=async value=>{if(value instanceof ReadableStream){const chunks=[];let size=0;const reader=value.getReader();while(true){const {done,value}=await reader.read();if(done)break;chunks.push(value);size+=value.length;}const result=new Uint8Array(size);let at=0;for(const c of chunks){result.set(c,at);at+=c.length;}return result;}return Uint8Array.from(value);};
 const BLOBS={
- async put(key,data,options){blobMap.set(key,{data:Uint8Array.from(data),customMetadata:options.customMetadata});},
- async head(key){const b=blobMap.get(key);return b?{size:b.data.length,customMetadata:b.customMetadata}:null;},
- async get(key){const b=blobMap.get(key);return b?{body:b.data,arrayBuffer:async()=>b.data.buffer}:null;}
+ async put(key,data,options={}){if(options.onlyIf&&blobMap.has(key))return null;blobMap.set(key,{data:await collect(data),customMetadata:options.customMetadata});return {key};},
+ async head(key){const b=blobMap.get(key);return b?{key,size:b.data.length,customMetadata:b.customMetadata,httpEtag:'"'+createHash('md5').update(b.data).digest('hex')+'"'}:null;},
+ async get(key,options){const b=blobMap.get(key);if(!b)return null;let data=b.data;if(options?.range){const {offset=0,length}=options.range;data=data.slice(offset,length===undefined?undefined:offset+length);}return {body:new ReadableStream({start(c){c.enqueue(data);c.close();}}),arrayBuffer:async()=>data.slice().buffer,size:data.length,httpEtag:'"'+createHash('md5').update(b.data).digest('hex')+'"'};},
+ async delete(key){blobMap.delete(key);},
+ async createMultipartUpload(key,options){const uploadId=crypto.randomUUID();multipartMap.set(uploadId,{key,options,parts:new Map()});return BLOBS.resumeMultipartUpload(key,uploadId);},
+ resumeMultipartUpload(key,uploadId){const state=multipartMap.get(uploadId);if(!state||state.key!==key)throw Error('NoSuchUpload');return {
+  async uploadPart(partNumber,body){const data=await collect(body),etag=createHash('sha256').update(data).digest('hex');state.parts.set(partNumber,{data,etag});return {partNumber,etag};},
+  async complete(parts){const chunks=parts.map(p=>{const stored=state.parts.get(p.partNumber);if(!stored||stored.etag!==p.etag)throw Error('InvalidPart');return stored.data;});const data=Buffer.concat(chunks);blobMap.set(key,{data:new Uint8Array(data),customMetadata:state.options.customMetadata});multipartMap.delete(uploadId);return {key,size:data.length};},
+  async abort(){multipartMap.delete(uploadId);},
+ };}
 };
 const tenant=async subject=>api.provisionVerifiedIdentity(env,'https://test.example',subject);
 const access=async t=>api.WorkspaceAccess.authorize(env,t.account_id,t.workspace_id);
@@ -40,7 +49,7 @@ before(async()=>{
  for(const r of ['runtime','identity','publisher'])await admin.query(`ALTER ROLE bytes_${r} LOGIN`);
  env={STORAGE_BACKEND:'postgres',POSTGRES:{connectionString:urlFor('bytes_runtime')},PUBLISHER_DB:{connectionString:urlFor('bytes_publisher')},IDENTITY_DB:{connectionString:urlFor('bytes_identity')},BLOBS,WORKSPACE_ID:'acc3351e-d092-433c-a7e1-8fc3e807ebd4'};
  dir=await mkdtemp(join(tmpdir(),'bytes-pg-test-'));
- await build({stdin:{contents:`export {observeMcp} from './src/telemetry';export {PostgresDatabase,postgresParameters} from './src/database';export {WorkspaceAccess} from './src/access';export {Store} from './src/store';export {Releases} from './src/releases';export {Definitions} from './src/definitions';export {PrivateSkills} from './src/private-skills';export {browseArtifacts} from './src/artifact-browser';export {provisionVerifiedIdentity} from './src/accounts';export {loginRoutes,browserSession} from './src/login';`,resolveDir:process.cwd(),loader:'ts'},bundle:true,platform:'node',format:'esm',packages:'external',outfile:join(dir,'api.mjs')});
+ await build({stdin:{contents:`export {observeMcp} from './src/telemetry';export {PostgresDatabase,postgresParameters} from './src/database';export {WorkspaceAccess} from './src/access';export {Store} from './src/store';export {MediaUploads} from './src/media-uploads';export {Releases} from './src/releases';export {Definitions} from './src/definitions';export {PrivateSkills} from './src/private-skills';export {browseArtifacts} from './src/artifact-browser';export {provisionVerifiedIdentity} from './src/accounts';export {loginRoutes,browserSession} from './src/login';`,resolveDir:process.cwd(),loader:'ts'},bundle:true,platform:'node',format:'esm',packages:'external',outfile:join(dir,'api.mjs')});
  // Bundle pg's CommonJS dependency too, via an entry created inside service.
  // External package resolution starts at the temporary file, so use the explicit pg path.
  const bundled=await readFile(join(dir,'api.mjs'),'utf8');
@@ -114,9 +123,32 @@ pgTest('no identity and mismatched identity fail closed; runtime cannot administ
   await assert.rejects(scoped(a).prepare(sql).run(),/permission denied/);
  await assert.rejects(new api.PostgresDatabase(urlFor(new URL(url).username)).prepare('SELECT 1').run(),/Unsafe database runtime role/);
 });
+pgTest('multipart media becomes an ordinary tenant artifact and upload state is private',async()=>{
+ const a=await tenant('media-upload-a'),b=await tenant('media-upload-b');
+ const aa=await access(a),bb=await access(b),uploads=new api.MediaUploads(env,aa),other=new api.MediaUploads(env,bb);
+ const image=Uint8Array.from([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a]);
+ const started=await uploads.begin({title:'tiny.png',media_type:'image/png',bytes:image.length});
+ assert.deepEqual((await uploads.inspect(started.upload_id)).received,[]);
+ await assert.rejects(uploads.putPart(new Request('https://app.bytesskills.com',{method:'PUT',headers:{'Content-Length':'8','Content-Type':'application/octet-stream','X-Bytes-Part-SHA256':createHash('sha256').update(image).digest('hex')},body:image}),started.upload_id,1,'wrong'),/confirmation/);
+ await assert.rejects(other.inspect(started.upload_id),/not found/);
+ const partHash=createHash('sha256').update(image).digest('hex');
+ await assert.rejects(uploads.putPart(new Request('https://app.bytesskills.com',{method:'PUT',headers:{'Content-Length':'8','Content-Type':'application/octet-stream','X-Bytes-CSRF':'valid','X-Bytes-Part-SHA256':'0'.repeat(64)},body:image}),started.upload_id,1,'valid'),/checksum/);
+ const part=await uploads.putPart(new Request('https://app.bytesskills.com',{method:'PUT',headers:{'Content-Length':'8','Content-Type':'application/octet-stream','X-Bytes-CSRF':'valid','X-Bytes-Part-SHA256':partHash},body:image}),started.upload_id,1,'valid');
+ assert.deepEqual(part,{part:1,bytes:8});
+ const saved=await uploads.complete(started.upload_id);assert.match(saved.pointer,/^@image\/.+:v1$/);
+ assert.deepEqual(await uploads.complete(started.upload_id),saved);
+ const store=new api.Store(env,aa),record=await store.get(saved.pointer,true);
+ assert.equal(record.content.media_type,'image/png');assert.equal(record.text,undefined);
+ assert.equal((await store.query({type:'image'})).items[0].pointer,saved.pointer);
+ await assert.rejects(other.inspect(started.upload_id),/not found/);
+ const pending=[];for(let i=0;i<3;i++)pending.push(await uploads.begin({title:`pending ${i}`,media_type:'image/png',bytes:1}));
+ await assert.rejects(uploads.begin({title:'over quota',media_type:'image/png',bytes:1}),/media_upload_quota/);
+ for(const upload of pending)await uploads.abort(upload.upload_id);
+ await assert.rejects(uploads.begin({title:'wrong kind',media_type:'text/html',bytes:1}),/Choose a JPEG/);
+});
 pgTest('FORCE RLS covers every tenant table; role attributes and default privileges are restricted',async()=>{
  const tables=await admin.query("SELECT relname,relrowsecurity,relforcerowsecurity FROM pg_class JOIN pg_namespace n ON n.oid=relnamespace WHERE n.nspname='bytes' AND relkind='r' AND relname NOT IN ('skill_releases','skill_revocations')");
- assert.equal(tables.rows.length,19);for(const t of tables.rows){assert.equal(t.relrowsecurity,true,t.relname);assert.equal(t.relforcerowsecurity,true,t.relname);}
+ assert.equal(tables.rows.length,21);for(const t of tables.rows){assert.equal(t.relrowsecurity,true,t.relname);assert.equal(t.relforcerowsecurity,true,t.relname);}
  const roles=await admin.query("SELECT rolsuper,rolbypassrls,rolcreaterole,rolcreatedb FROM pg_roles WHERE rolname LIKE 'bytes_%'");
  for(const r of roles.rows)assert.ok(Object.values(r).every(x=>x===false));
 });
@@ -273,6 +305,8 @@ pgTest('login HTTP flow sends a confirmation link, ignores scanner GETs, blocks 
  const createdSkill=await api.loginRoutes(post('/app/skills/new',skillForm,sessionCookie),loginEnv);assert.equal(createdSkill.status,303);
  const detail=await api.loginRoutes(request(createdSkill.headers.get('location'),{headers:{Cookie:sessionCookie}}),loginEnv);assert.match(await detail.text(),/Ask for context, then summarize/);
  const owner=await api.browserSession(request('/app',{headers:{Cookie:sessionCookie}}),loginEnv);
+ const uploadPage=await api.loginRoutes(request('/app/upload',{headers:{Cookie:sessionCookie}}),loginEnv);const uploadHtml=await uploadPage.text();
+ assert.match(uploadHtml,/id="media-upload-form"/);assert.match(uploadHtml,/connect-src 'self'/);assert.match(uploadHtml,/16 MiB parts/);
  const artifact=await save(new api.Store(loginEnv,await access(owner)),'Clickable artifact');
  const listing=await api.loginRoutes(request('/app',{headers:{Cookie:sessionCookie}}),loginEnv);assert.ok((await listing.text()).includes('/app/artifact?pointer='+encodeURIComponent(artifact.pointer)));
  const opened=await api.loginRoutes(request('/app/artifact?pointer='+encodeURIComponent(artifact.pointer),{headers:{Cookie:sessionCookie}}),loginEnv);const openedText=await opened.text();assert.match(openedText,/a private pineapple/);assert.match(openedText,/Copy link/);assert.ok(openedText.includes('https://app.bytesskills.com/app/artifact?pointer='+encodeURIComponent(artifact.pointer)));
@@ -286,7 +320,11 @@ pgTest('login HTTP flow sends a confirmation link, ignores scanner GETs, blocks 
   const view=await api.loginRoutes(request('/app/artifact?pointer='+encodeURIComponent(media.pointer),{headers:{Cookie:sessionCookie}}),loginEnv);
   assert.equal((await view.text()).includes('<img src='),mime==='image/png');
   const download=await api.loginRoutes(request('/app/content?view=1&pointer='+encodeURIComponent(media.pointer),{headers:{Cookie:sessionCookie}}),loginEnv);
-  assert.equal(download.headers.get('content-disposition'),mime==='image/png'?'inline':'attachment');assert.equal((await download.arrayBuffer()).byteLength,bytes.length);
+  assert.equal(download.headers.get('content-disposition'),mime==='image/png'?'inline':`attachment; filename*=UTF-8''Media%20test`);assert.equal((await download.arrayBuffer()).byteLength,bytes.length);
+  const partial=await api.loginRoutes(request('/app/content?view=1&pointer='+encodeURIComponent(media.pointer),{headers:{Cookie:sessionCookie,Range:'bytes=0-3'}}),loginEnv);
+  assert.equal(partial.status,206);assert.equal(partial.headers.get('content-range'),`bytes 0-3/${bytes.length}`);assert.equal((await partial.arrayBuffer()).byteLength,4);
+  const unsatisfiable=await api.loginRoutes(request('/app/content?pointer='+encodeURIComponent(media.pointer),{headers:{Cookie:sessionCookie,Range:`bytes=${bytes.length}-`}}),loginEnv);
+  assert.equal(unsatisfiable.status,416);
   assert.equal((await api.loginRoutes(request('/app/content?view=1&pointer='+encodeURIComponent(media.pointer)),loginEnv)).status,303);
  }
 

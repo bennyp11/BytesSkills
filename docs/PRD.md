@@ -17,9 +17,9 @@ flowchart TD
     A[ChatGPT on machine A] -->|OAuth + remote MCP| W
     B[ChatGPT on machine B] -->|OAuth + remote MCP| W
     C[Other compatible MCP clients] -->|OAuth + remote MCP| W
-    W[Cloudflare Worker\napi.bytesskills.com/mcp]
-    W --> D[Cloudflare D1\nArtifact records + search\nSkill releases + adoption preferences\nWorkflow sessions + retry receipts]
-    W --> R[Private Cloudflare R2\nArtifact content and media blobs]
+    W[Cloudflare Worker\napi.bytesskills.com/mcp + app.bytesskills.com]
+    W --> D[PlanetScale PostgreSQL\nArtifact records + search\nSkill releases + adoption preferences\nWorkflow sessions + upload receipts\nTenant row-level security]
+    W --> R[Private Cloudflare R2\nArtifact content + multipart media]
     W --> K[Cloudflare KV\nOAuth consent, grants and tokens]
     P[Authorized skill editor] -->|Publish text releases\nGit optional| W
     G[GitHub: BytesSkills repo] -->|Code deployment| W
@@ -30,7 +30,7 @@ flowchart TD
 
 **Cloudflare is the live source of truth.** GitHub stores core code, schemas, packaged skills and release sources. It is not required for everyday work or personal skill publication. The current source tree excludes workspace snapshots. Older Git commits still retain previously committed data; this change does not rewrite history.
 
-D1 stores structured records and relationships. R2 stores their actual content. A pointer such as `@concept/<UUID>:v2` resolves through D1 to a precise, immutable artifact revision and its content hash. Unversioned pointers resolve to the latest revision. Revisions and alternative candidates stay separate.
+PostgreSQL stores structured records and relationships. R2 stores their actual content. A pointer such as `@concept/<UUID>:v2` resolves through PostgreSQL to a precise, immutable artifact revision and its content hash. Unversioned pointers resolve to the latest revision. Revisions and alternative candidates stay separate. The web app streams authenticated media parts through the Worker to private R2 and saves verified uploads as regular image or video artifacts.
 
 ## Skill lifecycle
 
@@ -47,7 +47,7 @@ D1 stores structured records and relationships. R2 stores their actual content. 
 - OAuth separates read, write and skill-publication permissions. Auto updates never expand permissions.
 - Skill instructions are text; the service does not execute uploaded code. Artifact content is not implicitly trusted as instructions.
 - Immutable releases have server-computed hashes; artifacts have immutable revision chains. Writes use retry IDs and concurrency checks.
-- Private blobs require authenticated access. Credentials stay outside Git and plugin packages.
+- Private blobs require authenticated access. Upload sessions and part receipts use the same forced workspace RLS as artifact data. Credentials stay outside Git and plugin packages.
 - Administrators can revoke a release. Active workflows expire after 24 hours.
 - Publication, adoption and artifact history are separate, allowing instruction updates without rewriting creative work.
 
@@ -57,6 +57,6 @@ This deployment serves **one private workspace**, not separate public customer a
 
 Existing custom MCP connections require one refresh for this protocol. Later instruction-only releases are fetched remotely. The server cannot force an AI to invoke tools, push into idle chats, or prove that the model followed every instruction. It can enforce version provenance on saves. Host routing should be tested with @BytesSkills selected.
 
-Media editing depends on connected tools; this service does not render videos. The MVP upload cap is 10 MB. Automatic backups and public multi-user onboarding remain future work. Recovery needs authoritative D1 tables and R2 blobs; the FTS search index is rebuilt separately. Legacy artifact exports alone do not back up skill-adoption state.
+Media editing depends on connected tools; this service does not render videos. The signed-in web app accepts JPEG, PNG, WebP, MP4, WebM and MOV uploads up to 1 GiB per file, stored in private R2 and surfaced in the artifact browser. Inline text and direct `/v1/blobs` uploads retain smaller limits. Automatic backups and public multi-user onboarding remain future work. Recovery needs authoritative PostgreSQL tables and R2 blobs; the FTS search index is rebuilt separately. Legacy artifact exports alone do not back up skill-adoption state.
 
 **Acceptance:** publish on one machine, see an update on another; keep/update decisions persist; bulk adoption is atomic; running work stays pinned; missing permissions, stale previews and invalid workflow saves are rejected. Integration tests cover these behaviors; the other ChatGPT instance still needs host-level refresh and verification.

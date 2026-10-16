@@ -9,13 +9,27 @@ import {escape,html,artifactReferences,copyButton,copyAiTargetButton,fileCopyBut
 import {browseArtifacts,artifactFormats} from './artifact-browser';
 import {formatCodeForDisplay} from './code-format';
 import registry from '../../plugins/bytesskills-core/skills/bytes/contracts/runtime.json';
+import {MediaUploads} from './media-uploads';
 const random=()=>Array.from(crypto.getRandomValues(new Uint8Array(32)),x=>x.toString(16).padStart(2,'0')).join('');
 const cookie=(req:Request,name:string)=>req.headers.get('Cookie')?.split(';').map(s=>s.trim()).find(s=>s.startsWith(name+'='))?.slice(name.length+1)??'';
 const setCookie=(name:string,value:string,age:number)=>`${name}=${value}; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=${age}`;
-const previewTypes=new Set(['image/png','image/jpeg','image/gif','image/webp','audio/mpeg','audio/mp4','audio/ogg','audio/wav','video/mp4','video/webm']);
+const previewTypes=new Set(['image/png','image/jpeg','image/gif','image/webp','audio/mpeg','audio/mp4','audio/ogg','audio/wav','video/mp4','video/webm','video/quicktime']);
 const valid=(s:string)=>/^[a-f0-9]{64}$/.test(s);
 function origin(req:Request,env:Env){const o=new URL(req.url).origin;if(![env.BASE_URL,env.APP_URL].includes(o))throw new ApiError(403,'Invalid login origin');return o;}
 function post(req:Request,env:Env){if(req.method!=='POST')throw new ApiError(405,'POST required');if(req.headers.get('Origin')!==origin(req,env))throw new ApiError(403,'Invalid form origin');}
+function byteRange(value:string,total:number){
+ const match=/^bytes=(\d*)-(\d*)$/.exec(value);if(!match||total<1)return null;
+ let start:number,end:number;
+ if(match[1]===''){
+  const suffix=Number(match[2]);if(!Number.isSafeInteger(suffix)||suffix<1)return null;
+  start=Math.max(0,total-suffix);end=total-1;
+ }else{
+  start=Number(match[1]);end=match[2]===''?total-1:Number(match[2]);
+  if(!Number.isSafeInteger(start)||!Number.isSafeInteger(end)||start<0||end<start||start>=total)return null;
+  end=Math.min(end,total-1);
+ }
+ return {offset:start,length:end-start+1,start,end};
+}
 
 export const loginRedirect=(next:string)=>new Response(null,{status:303,headers:{Location:'/login?next='+encodeURIComponent(destination(next)),'Cache-Control':'no-store'}});
 async function authRow<T>(env:Env,sql:string,...params:unknown[]){return database(env,undefined,'identity').prepare(sql).bind(...params).first<T>();}
@@ -28,7 +42,10 @@ export async function browserSession(req:Request,env:Env){
 export function sessionCsrf(req:Request,env:Env,form:URLSearchParams,s:{csrf:string}){post(req,env);if(form.get('csrf')!==s.csrf)throw new ApiError(403,'Invalid session confirmation');}
 export async function loginRoutes(req:Request,env:Env):Promise<Response|null>{
  const u=new URL(req.url),p=u.pathname;
- if(!['/login','/auth/request','/auth/verify','/auth/complete','/auth/logout','/app','/app/artifact','/app/content','/app/skills','/app/skills/new','/app/skill','/app/connections','/app/revoke'].includes(p))return null;
+ const uploadStatus=/^\/app\/upload\/([a-f0-9-]{36})$/.exec(p);
+ const uploadPart=/^\/app\/upload\/([a-f0-9-]{36})\/part\/([1-9][0-9]*)$/.exec(p);
+ const uploadAction=/^\/app\/upload\/([a-f0-9-]{36})\/(complete|abort)$/.exec(p);
+ if(!['/login','/auth/request','/auth/verify','/auth/complete','/auth/logout','/app','/app/artifact','/app/content','/app/skills','/app/skills/new','/app/skill','/app/connections','/app/revoke','/app/upload'].includes(p)&&!uploadStatus&&!uploadPart&&!uploadAction)return null;
  if(env.LOGIN_ENABLED!=='true')throw new ApiError(404,'Not found');
  const o=origin(req,env);
  if(p==='/login'&&req.method==='GET'){
@@ -65,16 +82,56 @@ export async function loginRoutes(req:Request,env:Env):Promise<Response|null>{
   return new Response(null,{status:303,headers:{Location:'/login','Set-Cookie':setCookie('__Host-bytes-session','',0),'Cache-Control':'no-store'}});
  }
  const access=await WorkspaceAccess.authorize(env,session.account_id,session.workspace_id),store=new Store(env,access);
- const nav=`<div class="workspace-nav"><nav aria-label="Workspace"><a href="/app">Artifacts</a> · <a href="/app/skills">Skills</a> · <a href="/app/connections">Connections</a></nav><form method="post" action="/auth/logout"><input type="hidden" name="csrf" value="${session.csrf}"><button>Sign out</button></form></div>`;
+ const nav=`<div class="workspace-nav"><nav aria-label="Workspace"><a href="/app">Artifacts</a> · <a href="/app/upload">Upload media</a> · <a href="/app/skills">Skills</a> · <a href="/app/connections">Connections</a></nav><form method="post" action="/auth/logout"><input type="hidden" name="csrf" value="${session.csrf}"><button>Sign out</button></form></div>`;
  const skillPage=await skillPages(req,env,access,session,nav);if(skillPage)return skillPage;
  if(p==='/app/revoke'){
   const form=new URLSearchParams(await readBody(req,16000));sessionCsrf(req,env,form,session);
   const id=form.get('grant')??'';if(!id||id.length>256)throw new ApiError(400,'Invalid connection');
   await env.OAUTH_PROVIDER.revokeGrant(id,session.account_id);return new Response(null,{status:303,headers:{Location:'/app/connections'}});
  }
+ if(p==='/app/upload'){
+  if(req.method==='GET')return html(nav+`<h1>Upload an image or video</h1><p>Files are stored privately in your workspace and appear as ordinary image or video artifacts. Uploads support JPEG, PNG, WebP, MP4, WebM, and MOV up to 1 GiB.</p><form id="media-upload-form" data-csrf="${session.csrf}"><label for="media-file">Choose a file</label><input id="media-file" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime" required><label for="media-title">Artifact title</label><input id="media-title" name="title" maxlength="500" required><progress id="media-upload-progress" max="100" value="0" aria-label="Upload progress"></progress><p id="media-upload-status" role="status" aria-live="polite">Choose an image or video. Large files upload in resumable 16 MiB parts.</p><button id="media-upload-submit" type="submit">Upload and save artifact</button></form>`,new Headers(),undefined,false,false,true);
+  if(req.method==='POST'){
+   const form=new URLSearchParams(await readBody(req,16000));sessionCsrf(req,env,form,session);
+   const type=form.get('media_type')??'',bytes=form.get('bytes')??'';
+   if(!/^\d{1,10}$/.test(bytes))throw new ApiError(400,'Invalid media size');
+   return Response.json(await new MediaUploads(env,access).begin({title:form.get('title'),media_type:type,bytes:Number(bytes)}),{headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
+  }
+  throw new ApiError(405,'GET or POST required');
+ }
+ if(uploadStatus){
+  if(req.method!=='GET')throw new ApiError(405,'GET required');
+  return Response.json(await new MediaUploads(env,access).inspect(uploadStatus[1]),{headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
+ }
+ if(uploadPart){
+  if(req.method!=='PUT')throw new ApiError(405,'PUT required');
+  if(req.headers.get('Origin')!==o)throw new ApiError(403,'Invalid form origin');
+  const partNumber=Number(uploadPart[2]);if(!Number.isSafeInteger(partNumber))throw new ApiError(400,'Invalid part number');
+  return Response.json(await new MediaUploads(env,access).putPart(req,uploadPart[1],partNumber,session.csrf),{headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
+ }
+ if(uploadAction){
+  const [,id,action]=uploadAction,uploads=new MediaUploads(env,access);
+  if(action==='complete'&&req.method==='POST'){
+   const form=new URLSearchParams(await readBody(req,16000));sessionCsrf(req,env,form,session);
+   return Response.json(await uploads.complete(id),{headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
+  }
+  if(action==='abort'&&req.method==='DELETE'){
+   if(req.headers.get('Origin')!==o)throw new ApiError(403,'Invalid form origin');
+   if(req.headers.get('X-Bytes-CSRF')!==session.csrf)throw new ApiError(403,'Invalid session confirmation');
+   return Response.json(await uploads.abort(id),{headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
+  }
+  throw new ApiError(405,action==='complete'?'POST required':'DELETE required');
+ }
  if(req.method!=='GET')throw new ApiError(405,'GET required');
  if(p==='/app/content'){
-  const record=await store.resolve(u.searchParams.get('pointer')??'');const blob=await env.BLOBS.get(store.objectKey(record.content.key));if(!blob)throw new ApiError(404,'Content missing');const inline=u.searchParams.get('view')==='1'&&previewTypes.has(record.content.media_type);return new Response(blob.body,{headers:{'Content-Type':inline?record.content.media_type:'application/octet-stream','Content-Disposition':inline?'inline':'attachment','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
+  const record=await store.resolve(u.searchParams.get('pointer')??'');const key=store.objectKey(record.content.key);const inline=u.searchParams.get('view')==='1'&&previewTypes.has(record.content.media_type);let rangeHeader=req.headers.get('Range');
+  if(rangeHeader&&req.headers.has('If-Range')){const head=await env.BLOBS.head(key);if(!head)throw new ApiError(404,'Content missing');if(req.headers.get('If-Range')!==head.httpEtag)rangeHeader=null;}
+  const range=rangeHeader?byteRange(rangeHeader,record.content.bytes):undefined;
+  if(rangeHeader&&!range)return new Response(null,{status:416,headers:{'Content-Range':`bytes */${record.content.bytes}`,'Accept-Ranges':'bytes','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
+  const blob=await env.BLOBS.get(key,range?{range:{offset:range.offset,length:range.length}}:undefined);if(!blob)throw new ApiError(404,'Content missing');
+  const filename=encodeURIComponent(record.title).replace(/['()*]/g,c=>'%'+c.charCodeAt(0).toString(16).toUpperCase());const headers=new Headers({'Content-Type':inline?record.content.media_type:'application/octet-stream','Content-Disposition':inline?'inline':`attachment; filename*=UTF-8''${filename}`,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Accept-Ranges':'bytes','Content-Length':String(range?.length??record.content.bytes),'ETag':blob.httpEtag});
+  if(range)headers.set('Content-Range',`bytes ${range.start}-${range.end}/${record.content.bytes}`);
+  return new Response(blob.body,{status:range?206:200,headers});
  }
  if(p==='/app/artifact'){
   const item=await store.get(u.searchParams.get('pointer')??'',true);const history=await store.history(item.pointer);
@@ -103,7 +160,7 @@ export async function loginRoutes(req:Request,env:Env):Promise<Response|null>{
  const select=(name:string,label:string,choices:[string,string][],value:string)=>`<label>${label}<br><select name="${name}">${choices.map(([v,t])=>`<option value="${escape(v)}" ${v===value?'selected':''}>${escape(t)}</option>`).join('')}</select></label>`;
  const dates=(s:string)=>{const date=new Date(s);return Number.isNaN(date.valueOf())?'unknown date':date.toLocaleString('en-US',{timeZone:'UTC',year:'numeric',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' UTC';};
  const next=new URLSearchParams(u.searchParams);if(rows.next)next.set('cursor',rows.next);
- return html(nav+`<h1>Your artifacts</h1><p>Browse and open your saved work here. Use /bytes in chat to create or edit it.</p><form action="/app/artifact"><label>Open by reference <input name="pointer" required placeholder="@brief/…:v1"></label><button>Open artifact</button></form><form><input aria-label="Search artifacts" name="q" value="${escape(q.text)}" placeholder="Search"><div class="filters">`+
+ return html(nav+`<h1>Your artifacts</h1><p>Browse and open your saved work here. Use /bytes in chat to create or edit it.</p><p><a href="/app/upload">Upload an image or video</a> to add media to this workspace.</p><form action="/app/artifact"><label>Open by reference <input name="pointer" required placeholder="@brief/…:v1"></label><button>Open artifact</button></form><form><input aria-label="Search artifacts" name="q" value="${escape(q.text)}" placeholder="Search"><div class="filters">`+
  select('sort','Sort',[['updated','Recently updated'],['newest','Newest created'],['oldest','Oldest created'],['title','Title A–Z']],q.sort)+
  select('type','Type',[['','All types'],...registry.artifact_types.map(t=>[t,t] as [string,string])],q.type)+
  select('status','Status',[['','Active (not archived)'],['all','All statuses'],...registry.statuses.map(t=>[t,t] as [string,string])],q.status)+

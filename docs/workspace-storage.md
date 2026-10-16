@@ -42,9 +42,10 @@ objects; rebuild the FTS search index separately. KV recovery is separate and ma
 instead require reauthorization. Automatic independent backups and scheduled restore
 drills remain future work; cloud persistence is not a claim that those exist.
 
-The service's 10 MB upload limit still applies. Large rendered media must remain
-explicitly local-only until a supported cloud upload path exists; never send it to
-Git or Git LFS as a fallback.
+The signed-in web app supports resumable image and video uploads up to 1 GiB per
+file. It stores bytes in private R2 and tenant-scoped upload receipts in PostgreSQL;
+final media is saved into the normal artifact system. Direct `/v1/blobs` and MCP
+inline content retain their smaller limits. See [media upload design](media-uploads.md).
 
 ## Source checks
 
