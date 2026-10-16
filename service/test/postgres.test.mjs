@@ -168,7 +168,7 @@ pgTest('ChatGPT file handoff streams into the private multipart pipeline with wo
  assert.equal(record.type,'image');assert.equal(record.content.media_type,'image/png');
  assert.equal(record.provenance.skill_release.workflow_id,workflow.workflow_id);
  assert.equal(record.provenance.skill_release.skill,'upload');
- await assert.rejects(new api.Store(env,await access(await tenant('chat-file-upload-other'))).get(first.pointer,true),/not found/);
+ await assert.rejects(new api.Store(env,await access(await tenant('chat-file-upload-other'))).get(first.pointer,true),/missing or ambiguous/);
 });
 pgTest('FORCE RLS covers every tenant table; role attributes and default privileges are restricted',async()=>{
  const tables=await admin.query("SELECT relname,relrowsecurity,relforcerowsecurity FROM pg_class JOIN pg_namespace n ON n.oid=relnamespace WHERE n.nspname='bytes' AND relkind='r' AND relname NOT IN ('skill_releases','skill_revocations')");
