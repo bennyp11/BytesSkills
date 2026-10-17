@@ -1,4 +1,4 @@
 {
-  "version": "0.12.10",
-  "summary": "Support ChatGPT attachment uploads and private videos up to 10 GiB."
+  "version": "0.12.11",
+  "summary": "Add private ZIP archive uploads as downloadable file artifacts."
 }
