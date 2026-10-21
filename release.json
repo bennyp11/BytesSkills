@@ -1,4 +1,4 @@
 {
-  "version": "0.12.11",
-  "summary": "Add private ZIP archive uploads as downloadable file artifacts."
+  "version": "0.12.12",
+  "summary": "Fix multipart uploads by preserving R2 stream length during checksum validation."
 }
