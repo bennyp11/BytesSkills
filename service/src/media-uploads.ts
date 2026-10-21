@@ -3,6 +3,7 @@ import { database, type Database } from './database';
 import { requireAccess, type WorkspaceAccess } from './access';
 import { ApiError, type Env } from './common';
 import { Store } from './store';
+import { uploadVerifiedPart } from './upload-part';
 
 export const MEDIA_UPLOAD_LIMIT = 10 * 1024 * 1024 * 1024;
 export const MEDIA_UPLOAD_PART_BYTES = 16 * 1024 * 1024;
@@ -192,14 +193,8 @@ export class MediaUploads {
     if(req.headers.get('Content-Type')!=='application/octet-stream'||(declaredLength!==null&&Number(declaredLength)!==expected))
       throw uploadFailure(400,'Upload part has the wrong content type or size');
     if(!req.body)throw uploadFailure(400,'Upload part body required');
-    let size=0;const digest=createHash('sha256');
-    const limited=req.body.pipeThrough(new TransformStream<Uint8Array,Uint8Array>({
-      transform(chunk,controller){size+=chunk.byteLength;if(size>expected)throw uploadFailure(413,'Upload part is too large');digest.update(chunk);controller.enqueue(chunk);},
-      flush(){if(size!==expected)throw uploadFailure(400,'Upload part ended before its declared size');},
-    }));
     const multipart=this.env.BLOBS.resumeMultipartUpload(upload.staging_key,upload.r2_upload_id);
-    const part=await multipart.uploadPart(partNumber,limited);
-    const actualHash=digest.digest('hex');
+    const {part,sha256:actualHash,size}=await uploadVerifiedPart(multipart,partNumber,req.body,expected);
     if(actualHash!==expectedHash)throw uploadFailure(409,'Upload part checksum did not match; retry this part');
     await this.db.prepare(`INSERT INTO media_upload_parts(workspace_id,upload_id,part_number,etag,sha256,bytes)
       VALUES(?,?,?,?,?,?) ON CONFLICT(workspace_id,upload_id,part_number) DO UPDATE SET etag=excluded.etag,sha256=excluded.sha256,bytes=excluded.bytes,updated_at=now()`)

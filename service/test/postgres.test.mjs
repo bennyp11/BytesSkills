@@ -10,6 +10,10 @@ import {createHash} from 'node:crypto';
 import {migrate} from '../scripts/postgres-migrate.mjs';
 import {normalize,importSnapshot,verifyDatabase} from '../scripts/postgres-transfer.mjs';
 import {canonical,sha} from '../scripts/release-artifacts.mjs';
+// Node-only storage mock: actual R2 length semantics are covered in upload-part.test.mjs.
+globalThis.FixedLengthStream ??= class extends TransformStream {
+ constructor(expected){let size=0;super({transform(chunk,controller){size+=chunk.byteLength;if(size>expected)throw Error('Length exceeded');controller.enqueue(chunk);},flush(){if(size!==expected)throw Error('Length mismatch');}});}
+};
 const url=process.env.BYTES_POSTGRES_TEST_URL;
 const enabled=Boolean(url);
 let admin,control,env,api,dir,dbName,rolesCreated=false;
