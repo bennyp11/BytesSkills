@@ -23,3 +23,15 @@ test('standalone Worker stamps its revision and preserves API redirects', async 
  assert.equal(redirect.status, 308);
  assert.equal(redirect.headers.get('Location'), 'https://api.bytesskills.com/mcp?test=1');
 });
+
+test('docs routes stay on the website and expose readable agent instructions without a database',async()=>{
+ const {default:site}=await import('../src/index.ts');
+ for(const path of ['/docs','/docs/','/docs/install.md']){
+  const response=await site.fetch(new Request('https://bytesskills.com'+path),{});
+  assert.equal(response.status,200);
+  assert.equal(response.headers.get('Location'),null);
+  assert.match(await response.text(),/https:\/\/api.bytesskills.com\/mcp/);
+  const head=await site.fetch(new Request('https://bytesskills.com'+path,{method:'HEAD'}),{});
+  assert.equal(head.status,200);assert.equal(await head.text(),'');
+ }
+});
